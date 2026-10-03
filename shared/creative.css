@@ -1,0 +1,19 @@
+.empty-state {
+  display: grid;
+  gap: 8px;
+  padding: 36px 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-soft);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.empty-state strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.empty-state span {
+  color: var(--muted);
+}
