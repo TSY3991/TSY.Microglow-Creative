@@ -17,3 +17,44 @@
 .empty-state span {
   color: var(--muted);
 }
+
+/* AI創意生圖工具：沿用 shared/base.css 的品牌色票。 */
+.creative-glyph { color: var(--panel); font-size: 3rem; }
+.image-toolbox .detail-topbar { flex-wrap: wrap; gap: 10px; }
+.image-toolbox .detail-hero h1 { line-height: 1.2; font-size: clamp(1.9rem, 5vw, 3.4rem); }
+.toolbox-note { color: var(--muted); font-size: .9rem; line-height: 1.6; }
+.tool-filters, .tool-tags, .tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink-soft); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; }
+.tool-filters [aria-pressed="true"], .copy-button { background: var(--teal-dark); color: var(--panel); border-color: var(--teal-dark); }
+.tool-button:disabled { background: var(--panel-soft); color: var(--muted); cursor: not-allowed; border-style: dashed; }
+.image-toolbox :focus-visible { outline: 3px solid var(--teal); outline-offset: 4px; }
+.image-tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.image-tool-card { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: var(--soft-shadow); }
+.tool-preview { min-height: 150px; display: grid; gap: 6px; place-content: center; text-align: center; background: linear-gradient(135deg, var(--teal-soft), var(--gold-soft)); color: var(--teal-dark); font-size: .8rem; }
+.preview-glyph { font-size: 3rem; line-height: 1; }
+.tool-preview img { display: block; width: 100%; height: 180px; object-fit: cover; }
+.image-card-copy { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.tool-category { color: var(--teal-dark); font-size: .8rem; font-weight: 800; }
+.image-card-copy h3, .image-card-copy p { margin: 0; }
+.image-card-copy p, .detail-description, .detail-list { color: var(--ink-soft); font-size: .92rem; line-height: 1.8; }
+.tool-title-button { padding: 0; border: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; font-size: 1.2rem; font-weight: 900; line-height: 1.5; cursor: pointer; }
+.tool-tags span { padding: 4px 8px; border-radius: var(--radius); background: var(--panel-soft); color: var(--ink-soft); font-size: .75rem; }
+.platform-badges .tool-tags span { background: var(--teal-soft); color: var(--teal-dark); }
+.detail-button { align-self: flex-start; margin-top: auto; border: 0; padding: 6px 0; min-height: 44px; background: transparent; color: var(--teal-dark); font: inherit; font-size: .9rem; font-weight: 800; cursor: pointer; }
+.tool-actions > * { flex: 1 1 115px; text-align: center; }
+.tool-actions .copy-button { flex-basis: 100%; }
+.copy-status { min-height: 24px; color: var(--teal-dark); font-size: .9rem; }
+.creative-dialog { width: min(740px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: clamp(18px, 4vw, 30px); border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--ink); box-shadow: var(--deep-shadow); overflow: auto; }
+.creative-dialog::backdrop { background: rgba(8, 37, 40, .5); }
+.dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.dialog-heading .eyebrow { margin: 0; }
+.creative-dialog h2 { line-height: 1.4; font-size: 1.6rem; }
+.detail-lists { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 20px; }
+.detail-list h3 { margin-bottom: 6px; color: var(--ink); font-size: 1rem; }
+.detail-list ul { padding-left: 20px; margin: 0; }
+.prompt-details { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+.prompt-details summary { cursor: pointer; color: var(--teal-dark); font-weight: 800; min-height: 44px; }
+.prompt-details pre { padding: 16px; border-radius: var(--radius); background: var(--panel-soft); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: .9rem; line-height: 1.8; user-select: text; }
+.detail-copy-status { color: var(--teal-dark); font-size: .9rem; }
+@media (max-width: 960px) { .image-tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .image-tool-grid, .detail-lists { grid-template-columns: 1fr; } .image-card-copy { padding: 18px; } .detail-lists { gap: 14px; } }
