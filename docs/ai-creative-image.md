@@ -1,4 +1,4 @@
-# AI創意生圖工具 V1
+# AI圖片創作工具 V1
 
 大廳：index.html。工具頁：tools/ai-creative-image/index.html。
 
@@ -19,4 +19,4 @@
 
 ## 尚待提供
 
-ChatGPT Assistant URL、Gemini Gem URL、正式示意圖。V1 可先複製模板使用。入口網站的「創作工具」分類連到本 repo 的大廳，再由大廳進入 AI創意生圖工具。正式網址：https://tsy3991.github.io/TSY.Microglow-Creative/tools/ai-creative-image/
+ChatGPT Assistant URL、Gemini Gem URL、正式示意圖。V1 可先複製模板使用。入口網站的「創作工具」分類連到本 repo 的大廳，再由大廳進入 AI圖片創作工具。正式網址：https://tsy3991.github.io/TSY.Microglow-Creative/tools/ai-creative-image/

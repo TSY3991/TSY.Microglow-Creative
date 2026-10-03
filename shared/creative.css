@@ -18,7 +18,7 @@
   color: var(--muted);
 }
 
-/* AI創意生圖工具：沿用 shared/base.css 的品牌色票。 */
+/* AI圖片創作工具：沿用 shared/base.css 的品牌色票。 */
 .creative-glyph { color: var(--panel); font-size: 3rem; }
 .image-toolbox .detail-topbar { flex-wrap: wrap; gap: 10px; }
 .image-toolbox .detail-hero h1 { line-height: 1.2; font-size: clamp(1.9rem, 5vw, 3.4rem); }
