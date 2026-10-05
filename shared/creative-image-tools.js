@@ -100,7 +100,7 @@ window.creativeImageTools = [
       {
         "id": "gemini",
         "label": "Gemini",
-        "url": null
+        "url": "https://share.gemini.google/CVAFXSika0vC"
       }
     ],
     "status": "active"
