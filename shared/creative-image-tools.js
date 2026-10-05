@@ -46,7 +46,7 @@ window.creativeImageTools = [
       {
         "id": "gemini",
         "label": "Gemini",
-        "url": "https://share.gemini.google/ZavuNzVd4AfQ"
+        "url": "https://share.gemini.google/lcvYu8ptKnOy"
       }
     ],
     "status": "active"
@@ -100,7 +100,7 @@ window.creativeImageTools = [
       {
         "id": "gemini",
         "label": "Gemini",
-        "url": "https://share.gemini.google/Gm1UhnHxAzl8"
+        "url": "https://share.gemini.google/vborIncN685d"
       }
     ],
     "status": "active"
@@ -144,7 +144,7 @@ window.creativeImageTools = [
       {
         "id": "gemini",
         "label": "Gemini",
-        "url": null
+        "url": "https://share.gemini.google/GNAA3b1eSDer"
       }
     ],
     "status": "active"
