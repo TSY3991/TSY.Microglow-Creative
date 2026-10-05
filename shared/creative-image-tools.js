@@ -41,7 +41,7 @@ window.creativeImageTools = [
       {
         "id": "chatgpt",
         "label": "ChatGPT",
-        "url": null
+        "url": "https://chatgpt.com/share/6ac2f452-09c0-83e8-987e-44066ab4a502"
       },
       {
         "id": "gemini",
