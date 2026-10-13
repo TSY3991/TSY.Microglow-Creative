@@ -1,0 +1,125 @@
+"use strict";
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),http=require("node:http"),os=require("node:os");
+const {spawn}=require("node:child_process");
+const root=path.resolve(__dirname,"../../.."),tool="tools/line-sticker-creator/";
+const chrome=process.env.CHROME_PATH||path.join(process.env.ProgramFiles||process.env.PROGRAMFILES||os.homedir(),"Google/Chrome/Application/chrome.exe");
+if(!fs.existsSync(chrome))throw Error("找不到 Chrome，請以 CHROME_PATH 指定瀏覽器執行檔。");
+const profile=fs.mkdtempSync(path.join(os.tmpdir(),"microglow-sticker-ui-"));
+const delay=ms=>new Promise(r=>setTimeout(r,ms)),checks=[],errors=[],responses=[];
+let browser,ws,server;
+(async()=>{
+  server=http.createServer((req,res)=>{
+    try{
+      let file=path.resolve(root,"."+decodeURIComponent(new URL(req.url,"http://localhost").pathname));
+      if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403);return res.end();}
+      if(fs.statSync(file).isDirectory())file=path.join(file,"index.html");
+      const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".png":"image/png"};
+      res.writeHead(200,{"Content-Type":types[path.extname(file)]||"application/octet-stream","Cache-Control":"no-store"});fs.createReadStream(file).pipe(res);
+    }catch{res.writeHead(404);res.end();}
+  });
+  await new Promise(r=>server.listen(0,"127.0.0.1",r));
+  const origin="http://127.0.0.1:"+server.address().port,url=origin+"/"+tool;
+  browser=spawn(chrome,["--headless=new","--disable-gpu","--no-first-run","--remote-debugging-port=0","--user-data-dir="+profile,"about:blank"],{windowsHide:true,stdio:"ignore"});
+  const portFile=path.join(profile,"DevToolsActivePort");
+  for(let i=0;i<100&&!fs.existsSync(portFile);i++)await delay(100);
+  const port=fs.readFileSync(portFile,"utf8").split("\n")[0];
+  const pages=await(await fetch("http://127.0.0.1:"+port+"/json")).json();
+  const page=pages.find(x=>x.type==="page");ws=new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});
+  let seq=0;const pending=new Map();
+  function send(method,params={}){
+    return new Promise((resolve,reject)=>{
+      const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error("CDP 逾時："+method));},15000);
+      pending.set(id,{resolve,reject,timer});ws.send(JSON.stringify({id,method,params}));
+    });
+  }
+  ws.onmessage=e=>{
+    const v=JSON.parse(e.data);
+    if(v.id){const q=pending.get(v.id);if(q){clearTimeout(q.timer);pending.delete(v.id);v.error?q.reject(Error(v.error.message)):q.resolve(v.result);}}
+    if(v.method==="Page.javascriptDialogOpening")send("Page.handleJavascriptDialog",{accept:true}).catch(()=>{});
+    if(v.method==="Runtime.exceptionThrown")errors.push(v.params.exceptionDetails.text);
+    if(v.method==="Network.responseReceived")responses.push({url:v.params.response.url,status:v.params.response.status});
+  };
+  const E=async expression=>{
+    const r=await send("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true,userGesture:true});
+    if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);
+    return r.result.value;
+  };
+  const click=id=>E("document.getElementById("+JSON.stringify(id)+").click()");
+  const set=(id,value)=>E("(()=>{const e=document.getElementById("+JSON.stringify(id)+");e.value="+JSON.stringify(value)+";e.dispatchEvent(new Event(e.tagName==='SELECT'||e.type==='color'?'change':'input',{bubbles:true}));return e.value;})()");
+  const check=(name,value)=>{assert.ok(value,name);checks.push(name);process.stdout.write("PASS "+name+"\n");};
+  async function loaded(){
+    for(let i=0;i<80;i++){if(await E("Boolean(document.getElementById('creator')&&!document.getElementById('creator').hidden)"))return;await delay(50);}throw Error("介面未啟動");
+  }
+  await send("Page.enable");await send("Runtime.enable");await send("Network.enable");
+  await send("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  await send("Page.navigate",{url});await loaded();await E("window.confirm=()=>true");
+  check("四步驟啟動與未預選角色風格",await E("document.querySelectorAll('[data-step]').length===4&&document.getElementById('style').value===''"));
+  await click("next");check("角色未完成時擋下前進",await E("!document.getElementById('validation').hidden&&document.querySelector('[data-panel=\"2\"]').hidden"));
+  await set("source","original");await set("kind","animal");await set("character","虛構橘色貓咪，綠色圍巾與圓眼睛");await set("style","cute");await click("next");
+  check("正常角色可進入台詞步驟",await E("!document.querySelector('[data-panel=\"2\"]').hidden"));
+  await set("mode","manual");await set("bulk",Array.from({length:24},(_,i)=>"測試台詞"+(i+1)).join("\n"));await click("apply-bulk");await click("next");
+  check("台詞超量完整保留且可前往增加張數",await E("document.querySelectorAll('.sticker-item').length===24&&!document.querySelector('[data-panel=\"3\"]').hidden"));
+  await click("next");check("超量阻擋摘要與生成",await E("!document.getElementById('validation').hidden&&document.querySelector('[data-panel=\"4\"]').hidden"));
+  await set("count","24");await click("next");
+  check("合法 24 張摘要顯示兩張母圖",await E("!document.querySelector('[data-panel=\"4\"]').hidden&&document.querySelectorAll('.summary-table').length===2"));
+  check("未確認摘要不能生成",await E("document.getElementById('generate').disabled"));
+  await click("confirm-summary");await click("generate");
+  check("整組提示詞包含完整 24 張與定位規則",await E("document.getElementById('prompt-output').value.includes('貼圖 17～24')&&document.getElementById('prompt-output').value.includes('定位標籤不印')"));
+  await send("Emulation.setFocusEmulationEnabled",{enabled:true});await send("Page.bringToFront");await send("Browser.grantPermissions",{origin,permissions:["clipboardReadWrite","clipboardSanitizedWrite"]});await click("copy");
+  const copied=await E("navigator.clipboard.readText()");
+  check("實際剪貼簿複製整組內容",copied.includes("貼圖 17～24"));
+  await set("platform","gemini");check("換平台清除舊提示詞並要求重新確認",await E("document.getElementById('prompt-area').hidden&&!document.getElementById('confirm-summary').checked&&document.getElementById('generate').disabled"));
+  await click("confirm-summary");await click("generate");
+  await E("Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('denied');}}})");await click("copy");
+  check("剪貼簿拒絕提供手動複製與文字選取",await E("document.getElementById('copy-feedback').textContent.includes('手動複製')&&document.getElementById('prompt-output').selectionEnd>0"));
+  await click("previous");await set("count","16");await click("next");
+  check("減少張數不截斷 24 筆內容",await E("document.querySelectorAll('.sticker-item').length===24&&!document.getElementById('validation').hidden"));
+  await set("count","24");await set("layoutMode","manual");await E("document.getElementById('grid-1').value='16';document.getElementById('grid-1').dispatchEvent(new Event('change',{bubbles:true}))");await click("next");
+  check("不合法母圖總格數擋下",await E("document.getElementById('error-grids').textContent.includes('24')"));
+  await set("layoutMode","auto");await click("previous");await set("textMode","none");await click("next");await click("next");await click("confirm-summary");await click("generate");
+  check("整組無字不印台詞與名稱",await E("document.getElementById('prompt-output').value.includes('整組不放任何文字')&&!document.getElementById('prompt-output').value.includes('要印的文字 '+String.fromCharCode(34)+'測試台詞')"));
+  await click("previous");await click("previous");await set("textMode","per");await E("document.getElementById('item-0-hasText').click()");await click("fill-missing");
+  check("逐張無字保持關閉",await E("!document.getElementById('item-0-hasText').checked"));
+  await set("nameMode","person");await set("name","小曜");await set("item-1-text","您好");await E("document.getElementById('item-1-includeName').click()");
+  await set("item-2-text",'<img src=x onerror="window.__xss=1">');await click("next");await click("next");
+  check("摘要名稱逐張開關有效且輸入不執行 HTML",await E("document.getElementById('summary').textContent.includes('您好')&&!document.getElementById('summary').textContent.includes('小曜您好')&&document.getElementById('summary').textContent.includes('<img src=x')&&!window.__xss&&!document.querySelector('#summary img')"));
+  await E("localStorage.setItem('unrelated-tool','keep')");await click("save-local");
+  await send("Page.reload",{ignoreCache:true});await loaded();await E("window.confirm=()=>true");
+  check("重新載入還原本工具草稿",await E("document.getElementById('save-local').checked&&document.getElementById('name').value==='小曜'"));
+  await click("clear");check("清除只移除本工具，不清空頁面或其他資料",await E("!localStorage.getItem('microglow:line-sticker-creator:v1')&&localStorage.getItem('unrelated-tool')==='keep'&&document.getElementById('name').value==='小曜'"));
+  const raw=await E("JSON.stringify(StickerCore.serialize({settings:{...Object.fromEntries([...document.querySelectorAll('[data-setting]')].map(e=>[e.dataset.setting,e.dataset.setting==='count'?Number(e.value):e.value])),count:16},items:Array.from({length:16},()=>StickerCore.item('匯入測試')),grids:[16]}))");
+  const importResult=await E("(async()=>{const input=document.getElementById('import-file');const data=new DataTransfer();data.items.add(new File(['invalid json'],'bad.json',{type:'application/json'}));input.files=data.files;input.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,100));return document.getElementById('status').textContent;})()");
+  check("壞檔案拒絕且不覆蓋目前設定",importResult.includes("匯入失敗")&&await E("document.getElementById('name').value==='小曜'"));
+  await E("(async()=>{const input=document.getElementById('import-file'),data=new DataTransfer();data.items.add(new File(["+JSON.stringify(raw)+"],'ok.json',{type:'application/json'}));input.files=data.files;input.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,150));})()");
+  check("合法匯入設定可套用、返回第一步並要求重新確認",await E("document.querySelectorAll('.sticker-item').length===16&&document.getElementById('item-0-text').value==='匯入測試'&&!document.getElementById('confirm-summary').checked"));
+  await send("Page.setDownloadBehavior",{behavior:"allow",downloadPath:profile});await click("export");await delay(200);
+  const exported=JSON.parse(fs.readFileSync(path.join(profile,"line-sticker-settings.json"),"utf8"));check("實際下載的設定檔可解析且不含照片",exported.tool==="microglow-line-sticker-creator"&&exported.state.items.length===16&&!JSON.stringify(exported).includes("data:image"));
+  for(const width of [320,390,768,1280]){
+    await send("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<600});
+    await E("window.scrollTo(0,0)");
+    const metric=await E("({width:innerWidth,scroll:document.documentElement.scrollWidth})");check(width+"px 無橫向溢出",metric.scroll<=metric.width);
+    await click("next");await click("next");await click("next");
+    check(width+"px 摘要確實開啟",await E("!document.querySelector('[data-panel=\"4\"]').hidden"));
+    const summaryMetric=await E("({width:innerWidth,scroll:document.documentElement.scrollWidth})");check(width+"px 摘要無橫向溢出",summaryMetric.scroll<=summaryMetric.width);
+    await E("document.querySelector('[data-step=\"1\"]').click()");
+  }
+  const shots=process.argv[2];
+  if(shots){
+    fs.mkdirSync(shots,{recursive:true});
+    for(const [width,height,name]of [[1280,900,"desktop"],[390,844,"mobile"]]){
+      await send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:width<600});
+      await E("window.scrollTo(0,0);document.activeElement.blur()");await delay(100);
+      const metrics=await send("Page.getLayoutMetrics"),shot=await send("Page.captureScreenshot",{format:"png",captureBeyondViewport:true,clip:{x:0,y:0,width,height:Math.ceil(metrics.cssContentSize.height),scale:1}});
+      fs.writeFileSync(path.join(shots,"line-sticker-functional-"+name+".png"),Buffer.from(shot.data,"base64"));
+    }
+  }
+  check("頁面無未處理例外",errors.length===0);
+  check("本工具所有本機資源成功載入",responses.filter(x=>x.url.startsWith(origin)).every(x=>x.status<400));
+  process.stdout.write("SUMMARY passed="+checks.length+" failed=0\n");
+  await send("Browser.close");
+})().catch(e=>{process.stderr.write("FAIL "+e.stack+"\n");process.exitCode=1;}).finally(async()=>{
+  if(ws)ws.close();if(browser&&!browser.killed)browser.kill();if(server)server.close();
+  for(let i=0;i<20;i++){try{fs.rmSync(profile,{recursive:true,force:true});break;}catch{await delay(100);}}
+  if(fs.existsSync(profile)){process.stderr.write("暫存未清理："+profile+"\n");process.exitCode=1;}else process.stdout.write("CLEANUP complete\n");
+});
