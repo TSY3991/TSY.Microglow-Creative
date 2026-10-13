@@ -11,7 +11,7 @@ window.creativeImageTools = [
       "圖片創作",
       "宮廟風格"
     ],
-    "previewImage": null,
+    "previewImage": "../../assets/creative-previews/temple-celebration-poster-neon-v1.jpg?v=20261013a",
     "previewLabel": "宮廟海報・示意預留",
     "useCases": [
       "聖誕千秋",
@@ -62,7 +62,7 @@ window.creativeImageTools = [
       "祝福圖片",
       "圖片創作"
     ],
-    "previewImage": null,
+    "previewImage": "../../assets/creative-previews/festival-greeting-image-neon-v1.jpg?v=20261013a",
     "previewLabel": "節慶祝福・示意預留",
     "useCases": [
       "中秋節",
@@ -116,7 +116,7 @@ window.creativeImageTools = [
       "宣傳圖片",
       "視覺設計"
     ],
-    "previewImage": null,
+    "previewImage": "../../assets/creative-previews/event-announcement-visual-neon-v1.jpg?v=20261013a",
     "previewLabel": "活動視覺・示意預留",
     "useCases": [
       "活動宣傳",

@@ -1,0 +1,12 @@
+.image-tool-card .tool-preview:has(img) {
+  display: block;
+  min-height: 0;
+  background: #030616;
+}
+
+.image-tool-card .tool-preview img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
