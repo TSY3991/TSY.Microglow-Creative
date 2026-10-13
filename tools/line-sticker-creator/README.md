@@ -76,4 +76,4 @@ node tests/ui.smoke.cjs
 
 檢視頁面可直接以瀏覽器開啟 index.html；若瀏覽器限制本機檔案剪貼簿，使用手動複製提示即可。瀏覽器保存資料會依使用的來源位址分開。
 
-大廳預覽圖：assets/creative-previews/line-sticker-entry-v2.jpg（640×640、約 62 KB），採「微光柔和風」生成示意插畫，不是本工具實際產生的貼圖成果、介面快照或使用者照片。
+大廳與工具頁首預覽圖：assets/creative-previews/line-sticker-entry-v2.jpg（640×640、約 62 KB），採「微光柔和風」生成示意插畫，不是本工具實際產生的貼圖成果、介面快照或使用者照片。
