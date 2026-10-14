@@ -4,6 +4,35 @@
   const $=id=>document.getElementById(id);
   const storageKey="microglow:line-sticker-creator:v1";
   let state=C.initial(),step=1,saveEnabled=false,generated=false;
+  let referenceUrl="",referenceRevision=0;
+  function clearReference() {
+    referenceRevision++;
+    if(referenceUrl)URL.revokeObjectURL(referenceUrl);
+    referenceUrl="";$("reference-file").value="";$("reference-image").removeAttribute("src");$("reference-preview").hidden=true;
+    $("reference-status").textContent="尚未選擇參考圖；也可以稍後直接在 AI 平台附圖。";
+  }
+  $("reference-file").addEventListener("change",async()=>{
+    const file=$("reference-file").files[0];if(!file)return;
+    const revision=++referenceRevision;
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>10*1024*1024){
+      $("reference-file").value="";$("reference-status").textContent="請選 JPG、PNG 或 WebP，單張不超過 10 MB。原有參考圖保留。";return;
+    }
+    const url=URL.createObjectURL(file),image=new Image();image.src=url;
+    try{
+      await image.decode();
+      if(revision!==referenceRevision){URL.revokeObjectURL(url);return;}
+      if(referenceUrl)URL.revokeObjectURL(referenceUrl);
+      referenceUrl=url;$("reference-image").src=url;$("reference-preview").hidden=false;
+      $("reference-status").textContent="已選擇參考圖（"+image.naturalWidth+" × "+image.naturalHeight+"）。請在 AI 對話附上同一張圖。";
+      invalidate();
+    }catch{
+      URL.revokeObjectURL(url);
+      if(revision===referenceRevision){$("reference-file").value="";$("reference-status").textContent="無法讀取這張圖片，請改用有效的 JPG、PNG 或 WebP。原有參考圖保留。";}
+    }
+  });
+  $("remove-reference").addEventListener("click",()=>{clearReference();invalidate();});
+  window.addEventListener("pagehide",()=>{referenceRevision++;if(referenceUrl)URL.revokeObjectURL(referenceUrl);});
+  window.addEventListener("pageshow",event=>{if(event.persisted){clearReference();invalidate();}});
   function node(tag,text,cls) { const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el; }
   function status(message) { $("status").textContent=message; }
   function save() {
@@ -68,7 +97,7 @@
       const fields=node("div",undefined,"field-grid");
       const text=inputControl("textarea","item-"+i+"-text",entry.text,value=>{entry.text=value;invalidate();});
       text.disabled=!C.hasText(state,entry);
-      const textLabel=node("label",undefined,"field full-width");textLabel.htmlFor=text.id;textLabel.append(node("span",noText?"情境描述（不印字）":"台詞"),text);
+      const textLabel=node("label",undefined,"field full-width");textLabel.htmlFor=text.id;textLabel.append(node("span",noText?"情境描述（不印字，選填）":"台詞（選填）"),text);
       if(noText){text.disabled=false;textLabel.firstChild.textContent="情境描述（不印字，選填）";}
       textLabel.append(node("span",undefined,"field-error"));textLabel.lastChild.id="error-item-"+i+"-text";text.setAttribute("aria-describedby",textLabel.lastChild.id);
       fields.append(textLabel);
@@ -105,6 +134,7 @@
   function live() {
     const s=state.settings,box=$("live-summary");box.replaceChildren();
     const rows=[["角色來源",s.source?C.label("source",s.source):"尚未選擇"],["角色風格",s.style?C.label("style",s.style):"尚未選擇"],["貼圖總張數",s.count+" 張"],["母圖分配",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")||"尚未設定"],["文字模式",C.label("textMode",s.textMode)]];
+    if(s.source==="photo")rows.push(["參考圖",referenceUrl?"已選擇・需另外附到 AI":"請在 AI 對話附圖"]);
     for(const [title,value]of rows){const row=node("div",undefined,"live-row");row.append(node("span",title),node("strong",value));box.append(row);}
   }
   function summary() {
@@ -113,10 +143,10 @@
     const info=node("dl",undefined,"summary-info");
     const entries=[
       ["角色",C.label("source",s.source)+(s.source==="original"?"・"+C.label("kind",s.kind):"")],
-      ["角色描述",s.character],["角色風格",C.label("style",s.style)+(s.customStyle?"・"+s.customStyle:"")],
+      ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
       ["台詞模式",C.label("mode",s.mode)+"・"+C.label("textMode",s.textMode)],
-      ["共用名稱",s.nameMode==="none"?"不加入":C.label("nameMode",s.nameMode)+"："+s.name],
-      ["字體與大小",(s.font==="custom"?s.customFont:C.label("font",s.font))+"／"+C.label("size",s.size)],
+      ["共用名稱",s.nameMode==="none"||!s.name.trim()?"不加入":C.label("nameMode",s.nameMode)+"："+s.name],
+      ["字體與大小",(s.font==="custom"?(s.customFont.trim()||"由 AI 搭配"):C.label("font",s.font))+"／"+C.label("size",s.size)],
       ["文字顏色",s.textColor==="custom"?s.textCustom:C.label("textColor",s.textColor)],
       ["文字位置",C.label("position",s.position)],
       ["描邊",C.label("stroke",s.stroke)+"／"+(s.strokeColor==="custom"?s.strokeCustom:C.label("strokeColor",s.strokeColor))],
@@ -124,6 +154,7 @@
       ["背景",C.label("background",s.background)+(s.background==="color"?" "+s.backgroundColor:"")],
       ["母圖",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")+"；共 "+s.count+" 張貼圖"]
     ];
+    if(s.source==="photo")entries.push(["參考圖",referenceUrl?"本機已預覽；請將同一張圖附到 AI 對話。":"尚未在本頁選圖；請在 AI 對話附上參考圖。"]);
     entries.forEach(([key,value])=>info.append(node("dt",key),node("dd",value)));box.append(info);
     const details=node("details",undefined,"summary-details");details.open=true;details.append(node("summary","逐張內容與排列順序"));
     const list=node("ol",undefined,"summary-items");
@@ -135,7 +166,7 @@
       head.append(hr);table.append(head);const body=node("tbody");
       for(let i=p.start-1;i<p.end;i++){
         const entry=state.items[i],row=node("tr"),n=i-p.start+1;
-        ["第 "+(Math.floor(n/4)+1)+" 列 第 "+(n%4+1)+" 欄",C.hasText(state,entry)?C.finalText(state,entry):"無文字"+(entry.text?"（情境："+entry.text+"）":""),entry.emotion||"AI 發揮",entry.action||"AI 發揮"].forEach(x=>row.append(node("td",x)));
+        ["第 "+(Math.floor(n/4)+1)+" 列 第 "+(n%4+1)+" 欄",C.hasText(state,entry)?(entry.text.trim()?C.finalText(state,entry):"由 AI 依情境設計台詞"):"無文字"+(entry.text?"（情境："+entry.text+"）":""),entry.emotion||"AI 發揮",entry.action||"AI 發揮"].forEach(x=>row.append(node("td",x)));
         body.append(row);
       }
       table.append(body);const scroll=node("div",undefined,"table-scroll");scroll.append(table);group.append(scroll);list.append(group);
@@ -184,6 +215,7 @@
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled)status("已補入 "+filled+" 句；原有台詞未改動。");}
+    if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
   }));
   $("settings-form").addEventListener("submit",e=>e.preventDefault());
@@ -204,7 +236,7 @@
   $("generate").addEventListener("click",()=>{
     if(!$("confirm-summary").checked)return;
     if(!errors(C.validate(state)))return;
-    $("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;
+    $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;
     status("已產生整組提示詞；請核對內容後複製。");
   });
   $("copy").addEventListener("click",async()=>{
@@ -236,7 +268,7 @@
       if(file.size>250000)throw new Error("設定檔超過 250 KB。");
       const incoming=C.deserialize(await file.text());
       if(!confirm("匯入將取代目前頁面的設定。是否繼續？"))return;
-      state=incoming;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
+      clearReference();state=incoming;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
     }catch(error){status("匯入失敗，原有內容保留："+error.message);}
   });
   try{

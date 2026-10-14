@@ -15,8 +15,8 @@ test("減少張數保留全部內容、阻擋生成",()=>{
 test("無文字模式不補台詞，也不要求台詞",()=>{
   const s=ready();s.settings.textMode="none";s.items=Array.from({length:16},()=>C.item());assert.equal(C.fillMissing(s),0);assert.deepEqual(C.validate(s),[]);assert.equal(C.finalText(s,s.items[0]),"");assert.match(C.prompt(s),/整組不放任何文字/);
 });
-test("逐張無文字不當作缺漏，其餘空缺仍檢查",()=>{
-  const s=ready();s.settings.textMode="per";s.items[0].text="";s.items[0].hasText=false;s.items[1].text="";assert.ok(C.validate(s).some(e=>e.field==="item-1-text"));assert.ok(!C.validate(s).some(e=>e.field==="item-0-text"));C.fillMissing(s);assert.equal(s.items[0].text,"");assert.deepEqual(C.validate(s),[]);
+test("逐張台詞選填，無文字格仍不印字",()=>{
+  const s=ready();s.settings.textMode="per";s.items[0].text="";s.items[0].hasText=false;s.items[1].text="";assert.deepEqual(C.validate(s),[]);assert.match(C.prompt(s),/台詞未填/);assert.ok(!C.validate(s).some(e=>e.field==="item-0-text"));C.fillMissing(s);assert.equal(s.items[0].text,"");assert.deepEqual(C.validate(s),[]);
 });
 test("共用名稱、逐張關閉、手動文字可共存",()=>{
   const s=ready();s.settings.nameMode="person";s.settings.name="小光";s.items[0].text="早安";s.items[1].text="小曜晚安";s.items[1].includeName=false;assert.equal(C.finalText(s,s.items[0]),"小光早安");assert.equal(C.finalText(s,s.items[1]),"小曜晚安");s.settings.textMode="none";assert.equal(C.finalText(s,s.items[0]),"");
@@ -27,8 +27,8 @@ test("不合法母圖總數阻擋，手動合法分配不誤擋",()=>{
 test("原創似顏繪衝突與照片角色正常",()=>{
   const s=ready();s.settings.style="likeness";assert.ok(C.validate(s).some(e=>e.field==="style"));s.settings.source="photo";s.settings.kind="";assert.deepEqual(C.validate(s),[]);assert.match(C.prompt(s),/尚未收到照片時先請我上傳/);
 });
-test("自訂字體與風格必填，正常描述不誤擋",()=>{
-  const s=ready();s.settings.style="custom";s.settings.font="custom";assert.equal(C.validate(s).filter(x=>["customStyle","customFont"].includes(x.field)).length,2);s.settings.customStyle="扁平剪紙";s.settings.customFont="粗圓手寫";assert.deepEqual(C.validate(s),[]);
+test("自訂字體與風格描述選填，留白由 AI 搭配",()=>{
+  const s=ready();s.settings.style="custom";s.settings.font="custom";assert.deepEqual(C.validate(s),[]);assert.match(C.prompt(s),/由 AI 選擇/);s.settings.customStyle="扁平剪紙";s.settings.customFont="粗圓手寫";assert.deepEqual(C.validate(s),[]);
 });
 test("三平台整組指令保留母圖與逐張動作",()=>{
   for(const platform of ["chatgpt","gemini","generic"]){const s=ready(40);s.settings.platform=platform;s.items[0].emotion="開心";s.items[0].action="揮手";const p=C.prompt(s);assert.equal((p.match(/【母圖 \d/g)||[]).length,3);assert.match(p,/貼圖 33～40/);assert.match(p,/揮手/);assert.match(p,/清晰輪廓/);assert.match(p,/不能印在貼圖上/);assert.match(p,/alpha transparency/);assert.match(p,/繼續/);}
@@ -61,3 +61,9 @@ test("整組或逐張全無字不被未填名稱與字體誤擋",()=>{
     assert.deepEqual(C.validate(s),[]);assert.doesNotThrow(()=>C.prompt(s));
   }
 });
+
+test("照片參考可為動物或物件，三平台均提醒另附圖片",()=>{
+  for(const platform of ["chatgpt","gemini","generic"]){const s=ready();s.settings.source="photo";s.settings.platform=platform;s.settings.character="綠色水壺，保留把手與輪廓";const prompt=C.prompt(s);assert.match(prompt,/人物、動物或物件/);assert.match(prompt,/網頁內選圖不代表圖片已傳送/);assert.match(prompt,/尚未收到照片時先請我上傳/);assert.match(prompt,/依指定風格轉成貼圖/);}
+});
+
+test("文字全留白不阻擋，照片／原創與有字／無字意圖正確",()=>{for(const source of ["photo","original"]){for(const mode of ["all","none","per"]){const s=ready();Object.assign(s.settings,{source,character:"",style:"custom",customStyle:"",font:"custom",customFont:"",nameMode:"person",name:"",textMode:mode,mode:"manual"});s.items=Array.from({length:16},()=>C.item());if(mode==="per")s.items[0].hasText=false;assert.deepEqual(C.validate(s),[]);const p=C.prompt(s);assert.match(p,source==="photo"?/直接觀察已附參考圖/:/自行設計一個原創角色/);assert.ok(!p.includes('要印的文字 ""'));if(mode==="none")assert.match(p,/整組不放任何文字/);else assert.match(p,/台詞未填/);}}});

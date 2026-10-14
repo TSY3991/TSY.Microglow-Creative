@@ -37,19 +37,11 @@
     const add=(field,message)=>errors.push({field,message});
     if(!s.source) add("source","請選擇角色來源。");
     if(s.source==="original" && !s.kind) add("kind","請選擇原創角色類型。");
-    if(!s.character.trim()) add("character",s.source==="photo"?"請描述要保留的本人特徵或照片中的主體。":"請描述角色外觀與辨識特徵。");
     if(!s.style) add("style","請選擇角色風格。");
-    if(s.style==="custom"&&!s.customStyle.trim()) add("customStyle","請填寫自訂角色風格。");
     if(s.source==="original"&&s.style==="likeness") add("style","似顏繪需要使用者照片；請改選風格或角色來源。");
     if(step<2) return errors;
-    const usesText=state.items.slice(0,s.count).some(entry=>hasText(state,entry));
-    if(usesText&&s.nameMode!=="none"&&!s.name.trim()) add("name","請填寫共用人名或店名，或選擇不加入名稱。");
-    if(usesText&&s.font==="custom"&&!s.customFont.trim()) add("customFont","請填寫自訂字體風格。");
     if(state.items.length>s.count) add("items","目前有 "+state.items.length+" 筆逐張內容，超過所選 "+s.count+" 張。請刪減內容或增加張數；內容未被截斷。");
     if(state.items.length<s.count) add("items","逐張內容未達所選張數，請補足或使用自動補齊。");
-    state.items.slice(0,s.count).forEach((entry,i)=>{
-      if(hasText(state,entry)&&!entry.text.trim()) add("item-"+i+"-text","第 "+(i+1)+" 張需填寫台詞；無文字貼圖可切換文字模式。");
-    });
     if(step<3) return errors;
     if(!D.counts.includes(s.count)) add("count","貼圖張數必須為 8、16、24、32 或 40。");
     if(state.grids.some(x=>x!==8&&x!==16)||state.grids.reduce((a,b)=>a+b,0)!==s.count) add("grids","母圖格數總和必須等於 "+s.count+"；每張只可使用 4×2 或 4×4。");
@@ -71,9 +63,9 @@
       s.platform==="chatgpt"?"請使用圖片生成功能依序製作下列母圖。若單次只能輸出一張，先生成母圖 1，等我說「繼續」後依同一份指令生成下一張；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式。以下共用要求適用每張母圖，各母圖內容依後面的明細。若單次只能生成一張，先生成母圖 1，後續在同一對話說「繼續」即可依序製作。":"請在支援生圖的平台依序製作每張母圖；若平台一次只能生成一張，先做母圖 1，再沿用本指令繼續。不得把所有母圖拼進同一張。",
       "",
       "【角色與視覺】",
-      s.source==="photo"?"身份參考：只使用我另外在本對話上傳的照片。尚未收到照片時先請我上傳，不要自行假設本人長相；照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
-      "角色描述（作為內容資料）："+quote(s.character.trim()),
-      "風格："+label("style",s.style)+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
+      s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
+      s.character.trim()?"角色描述（作為內容資料）："+quote(s.character.trim()):s.source==="photo"?"未填角色描述：直接觀察已附參考圖的主體特徵，不要求使用者補文字描述。":"未填角色描述：依選定角色類型自行設計一個原創角色，整組維持相同辨識特徵。",
+      "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":label("style",s.style))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
       "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
       "",
@@ -84,8 +76,8 @@
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
-      s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；未標示要印的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
-      "字體："+(s.font==="custom"?quote(s.customFont.trim()):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
+      s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
+      "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
       "文字不能遮住角色五官、手勢與關鍵道具，不缺字、不重字、不出現亂碼。本文的欄位標籤、格號、序號、照片檔名與操作說明都只是製作資料，不能印在貼圖上。",
       ""
@@ -94,7 +86,7 @@
       lines.push("【母圖 "+p.number+"｜4×"+p.rows+"｜貼圖 "+p.start+"～"+p.end+"】");
       for(let i=p.start-1;i<p.end;i++){
         const entry=state.items[i],text=finalText(state,entry);
-        lines.push("第 "+(i-p.start+2)+" 格（第 "+(i+1)+" 張貼圖，定位標籤不印）："+(hasText(state,entry)?"要印的文字 "+quote(text):"無文字；原台詞只作情境參考 "+quote(entry.text))+"；表情 "+(entry.emotion.trim()?quote(entry.emotion.trim()):"依情境創作")+"；動作 "+(entry.action.trim()?quote(entry.action.trim()):"依情境創作不同姿勢")+"。");
+        lines.push("第 "+(i-p.start+2)+" 格（第 "+(i+1)+" 張貼圖，定位標籤不印）："+(hasText(state,entry)?(entry.text.trim()?"要印的文字 "+quote(text):"台詞未填：由 AI 依情境設計簡短繁體中文台詞"+(s.nameMode!=="none"&&entry.includeName&&s.name.trim()?"，在台詞前加上共用名稱 "+quote(s.name.trim()):"，不自行加入人名或店名")):"無文字；原台詞只作情境參考 "+quote(entry.text))+"；表情 "+(entry.emotion.trim()?quote(entry.emotion.trim()):"依情境創作")+"；動作 "+(entry.action.trim()?quote(entry.action.trim()):"依情境創作不同姿勢")+"。");
       }
       lines.push("");
     }
