@@ -9,7 +9,7 @@ function state(count = 8) {
 }
 const rows = input => input.items.map(x => ({ id: x.id, text: "AI台詞" + x.id, emotion: "眉眼彎起露出笑容" + x.id, action: "一手揮手、身體微微前傾" + x.id }));
 const origin = "https://tsy3991.github.io";
-const environment = () => ({ AI_ENABLED: "true", ALLOWED_ORIGIN: origin, GEMINI_API_KEY: "test-only-not-real", GEMINI_MODEL: "gemini-2.5-flash-lite", CLIENT_LIMITER: { limit: async () => ({ success: true }) }, SERVICE_LIMITER: { limit: async () => ({ success: true }) } });
+const environment = () => ({ AI_ENABLED: "true", ALLOWED_ORIGIN: origin, GEMINI_API_KEY: "test-only-not-real", GEMINI_MODEL: "gemini-3.5-flash-lite", CLIENT_LIMITER: { limit: async () => ({ success: true }) }, SERVICE_LIMITER: { limit: async () => ({ success: true }) } });
 const request = (body, headers = {}, method = "POST") => new Request("https://worker.example/arrange", { method, headers: { Origin: origin, "CF-Connecting-IP": "192.0.2.1", "Content-Type": "application/json", ...headers }, ...(method === "POST" ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}) });
 test("前端只傳內容白名單，不傳共用名稱、照片或其他設定", () => {
   const s = state(); s.settings.name = "私人店名"; s.reference = "data:image/png;secret";
@@ -81,7 +81,7 @@ test("Worker 上游額度、權限、截斷與壞結果失敗，不改用其他�
   const { handle } = await worker, input = AI.payload(state());
   for (const [upstreamResponse, code] of [[new Response("secret error", { status: 429 }), 429], [new Response("secret error", { status: 401 }), 503], [Response.json({ candidates: [{ finishReason: "MAX_TOKENS" }] }), 502], [Response.json({ candidates: [{ finishReason: "STOP", content: { parts: [{ text: "not-json" }] } }] }), 502]]) {
     let calls = 0; const response = await handle(request(input), environment(), async () => { calls++; return upstreamResponse; });
-    assert.equal(response.status, code); assert.ok(!(await response.text()).includes("secret error")); assert.equal(calls, 1);
+    assert.equal(response.status, code); if (upstreamResponse.status === 401) assert.equal(response.headers.get("X-AI-Upstream-Status"), "401"); assert.ok(!(await response.text()).includes("secret error")); assert.equal(calls, 1);
   }
 });
 test("Cloudflare fetch 簽名不把 ExecutionContext 當 upstream fetch", async () => {

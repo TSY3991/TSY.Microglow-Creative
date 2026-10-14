@@ -78,7 +78,7 @@ node tests/ui.smoke.cjs
 
 大廳與工具頁首預覽圖：assets/creative-previews/line-sticker-entry-v2.jpg（640×640、約 62 KB），採「微光柔和風」生成示意插畫，不是本工具實際產生的貼圖成果、介面快照或使用者照片。
 
-參考圖支援 JPG／PNG／WebP，單張最多 10 MB；解碼失敗或超限不取代原有預覽。移除、切回原創或成功匯入設定會清除參考圖；重新載入需重新選圖。CSP 僅額外允許 img-src blob:，服務未設定時 connect-src 仍為 none。草稿與匯出不含圖片、檔名或 Blob URL。
+參考圖支援 JPG／PNG／WebP，單張最多 10 MB；解碼失敗或超限不取代原有預覽。移除、切回原創或成功匯入設定會清除參考圖；重新載入需重新選圖。CSP 僅額外允許 img-src blob:，目前 connect-src 只允許 microglow-sticker-ai.microglow-creative.workers.dev。草稿與匯出不含圖片、檔名或 Blob URL。
 
 所有文字輸入皆為選填：角色描述留白時依參考圖辨識／原創類型設計，風格與字體補充留白由 AI 搭配；名稱留白不加名稱。台詞留白由 AI 依情境創作簡短繁體中文台詞；無文字格維持不印字。角色來源、原創類型、風格選項、張數與母圖格數仍需有效。
 
@@ -86,7 +86,7 @@ node tests/ui.smoke.cjs
 
 前端維持靜態 HTML/CSS/JS。新增 sticker-ai-config.js（公開端點，沒有金鑰）、sticker-ai.js（資料白名單／驗證／只補空白）、第二步建議預覽與確認套用。Worker 來源在 worker/，無框架或 SDK 相依，直接呼叫 Gemini REST API；部署 CLI 不影響前端建置。
 
-預設 endpoint 空白、Worker AI_ENABLED=false，網頁 connect-src 為 none。未設定時顯示尚未啟用且不發送 AI 請求。部署設定見 [worker/部署說明.md](worker/部署說明.md)。
+前端已設定專用 Worker HTTPS 位址，connect-src 只允許該精確 origin。Worker 部署範例保留 AI_ENABLED=false；實際正式服務已由管理者設好 Secret 並啟用。未設定端點或停用服務時，仍保留手動流程。部署設定見 [worker/部署說明.md](worker/部署說明.md)。
 
 只傳角色文字描述、風格、情境與逐張 text/emotion/action/hasText；不傳照片、檔名、共用名稱設定或其他外觀欄位。描述／台詞內的個資仍屬傳送文字，介面提醒使用者先移除；同意不儲存，每次載入需重新勾選。結果先預覽，套用只補空白並使舊摘要與提示詞失效。等待期間修改設定、取消或撤回同意會中止瀏覽器等待並拒絕遲到結果，無法保證上游已停止或不計額度。
 
@@ -100,7 +100,19 @@ node tests/ai.ui.cjs
 
 ai.test.cjs 使用模擬 Gemini 回應與限流 binding；ai.ui.cjs 使用真實 headless Chrome，但只在隔離測試伺服器放行測試 origin，透過 CDP 模擬 AI 回應，未呼叫真正 Gemini。正式頁面 CSP 不因此放寬。
 
-尚未驗證：Cloudflare 實際部署、Secret 設定、真實 Gemini 連線／額度／繁體中文與動作多樣性。測試通過不代表 AI 服務已啟用。
+2026-10-14 已實際部署並透過 Worker 呼叫 Gemini 3.5 Flash-Lite，8 張測試完整回傳、保留原台詞與指定表情，8 個動作各不相同。此結果是文字建議，未測試真正圖片生成；免費額度總量與每次服務延遲不保證。
 
-2026-10-14 本機結果：核心與模擬 Worker 共 31 項通過；既有瀏覽器介面 47 項通過；模擬上游的 AI 瀏覽器介面 18 項通過。涵蓋缺金鑰停用、來源／格式／限流拒絕、只補空白、確認後套用、取消與遲到回應、撤回同意，以及 320／390／768／1280px 版面。兩個瀏覽器測試均已清理自身暫存資料。Cloudflare dry-run／部署、真實 Gemini 服務與生成品質尚未驗證。
+2026-10-14 本機結果：核心與模擬 Worker 共 31 項通過；既有瀏覽器介面 47 項通過；模擬上游的 AI 瀏覽器介面 18 項通過。涵蓋缺金鑰停用、來源／格式／限流拒絕、只補空白、確認後套用、取消與遲到回應、撤回同意，以及 320／390／768／1280px 版面。兩個瀏覽器測試均已清理自身暫存資料。此段為串接前的模擬測試；後續真實驗證見下方。
 頁首依需求移除 LOGO／品牌文字與圖片創作工具箱按鈕，保留回創作工具大廳與入口網站。
+
+## 正式服務設定
+
+Worker：https://microglow-sticker-ai.microglow-creative.workers.dev/arrange。Account ID 固定在 worker/wrangler.jsonc，部署使用具名 profile microglow。金鑰只放 Cloudflare Secret，未讀取或寫入 repo。wrangler.jsonc 是停用的部署範例，重新部署前需明確核對 AI_ENABLED；停用不影響手動提示詞。
+
+最初選定的 gemini-2.5-flash-lite 實測回覆 404。2026-10-14 Google 官方模型與 deprecations 頁面指出 2.5 系列限制給先前使用的專案，新專案應使用 3.5 Flash-Lite 或 3.8 Flash；因此明確改用 gemini-3.5-flash-lite（官方列有免費文字額度），沒有執行時自動切模型。
+
+來源：https://ai.google.dev/gemini-api/docs/models 、https://ai.google.dev/gemini-api/docs/deprecations 、https://ai.google.dev/gemini-api/docs/pricing 。
+
+非 429 上游錯誤提供 X-AI-Upstream-Status 與固定錯誤分類，不回傳 Google 原始錯誤或金鑰。
+
+2026-10-14 最大張數實測：40 張真正 Gemini 回應 HTTP 200，約 34 秒完成，40 筆完整通過結構驗證、40 個動作各不相同。Worker 等待上限為 60 秒，前端 65 秒；不是所有次數都保證相同延遲。實際圖片生成仍未測試。

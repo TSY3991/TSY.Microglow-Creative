@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="LINE 貼圖創作工具：設定角色、逐張台詞與母圖排列，整理 ChatGPT、Gemini 或通用生圖提示詞。">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src https://microglow-sticker-ai.microglow-creative.workers.dev; object-src 'none'; base-uri 'self'; form-action 'none'">
   <link rel="canonical" href="https://tsy3991.github.io/TSY.Microglow-Creative/tools/line-sticker-creator/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="LINE 貼圖創作工具｜微光創作工具">
@@ -18,9 +18,9 @@
   <link rel="stylesheet" href="./sticker-creator.css?v=20261014c">
   <script defer src="./sticker-data.js?v=20261014a"></script>
   <script defer src="./sticker-core.js?v=20261014b"></script>
-  <script defer src="./sticker-ai-config.js?v=20261014c"></script>
+  <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261014c"></script>
-  <script defer src="./sticker-app.js?v=20261014c"></script>
+  <script defer src="./sticker-app.js?v=20261014d"></script>
 </head>
 <body class="line-sticker-tool">
   <a class="skip-link" href="#creator">跳到創作設定</a>
@@ -77,7 +77,7 @@
               <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用情境台詞</button><button type="button" class="button" id="fill-missing">自動補齊空缺</button></div>
               <section class="notice ai-planner" aria-labelledby="ai-title">
                 <h3 id="ai-title">AI 安排表情與動作</h3>
-                <p>依角色、風格、情境與逐張台詞補齊空白，保留已填內容。先預覽，確認後再套用；這項功能只安排文字，不會生成圖片。</p>
+                <p>依角色、風格、情境與逐張台詞補齊空白，保留已填內容。先預覽，確認後再套用；這項功能只安排文字，不會生成圖片。張數較多時需稍候，最多等待約一分鐘。</p>
                 <p class="field-hint">使用時會將角色文字描述、風格、情境及逐張台詞／表情／動作傳送至 Gemini；不傳照片、檔名或共用名稱欄位。文字中若有私人資訊，請先移除。免費服務的內容可能用於改善 Google 產品。</p>
                 <label class="check-field"><input id="ai-consent" type="checkbox"><span>同意將上述文字內容傳送至 Gemini 以安排逐張內容</span></label>
                 <div class="inline-actions"><button id="ai-arrange" class="button primary" type="button" disabled>AI 安排表情與動作</button><button id="ai-cancel" class="button" type="button" hidden>取消等待</button></div>

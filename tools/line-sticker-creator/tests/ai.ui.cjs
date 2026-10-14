@@ -15,7 +15,7 @@ let configured=false,mode="good",requests=0,delayed=null;
       let file=path.resolve(root,"."+decodeURIComponent(new URL(req.url,"http://localhost").pathname));
       if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403);return res.end();}
       if(fs.statSync(file).isDirectory())file=path.join(file,"index.html");
-      if(configured&&file.endsWith("index.html")){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8"});return res.end(fs.readFileSync(file,"utf8").replace("connect-src 'none'","connect-src https://ai.mock"));}
+      if(configured&&file.endsWith("index.html")){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8"});return res.end(fs.readFileSync(file,"utf8").replace(/connect-src[^;]*/,"connect-src https://ai.mock"));}
       const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".png":"image/png"};
       res.writeHead(200,{"Content-Type":types[path.extname(file)]||"application/octet-stream","Cache-Control":"no-store"});fs.createReadStream(file).pipe(res);
     }catch{res.writeHead(404);res.end();}

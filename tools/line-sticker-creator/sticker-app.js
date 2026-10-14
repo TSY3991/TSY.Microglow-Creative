@@ -303,7 +303,7 @@
     clearAI();
     const revision=aiRevision,snapshot=JSON.stringify(C.serialize(state)),controller=new AbortController();
     aiController=controller;aiAvailability();$("ai-status").textContent="正在安排逐張內容，完成後會先顯示建議。";
-    const timer=setTimeout(()=>controller.abort(),30000);
+    const timer=setTimeout(()=>controller.abort(),65000);
     try{
       const rows=await AI.request(aiEndpoint,input,controller.signal);
       if(revision!==aiRevision)return;
