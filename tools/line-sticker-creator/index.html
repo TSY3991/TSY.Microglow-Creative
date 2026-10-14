@@ -16,11 +16,11 @@
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261014c">
-  <script defer src="./sticker-data.js?v=20261014a"></script>
-  <script defer src="./sticker-core.js?v=20261014c"></script>
+  <script defer src="./sticker-data.js?v=20261014b"></script>
+  <script defer src="./sticker-core.js?v=20261014d"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261014c"></script>
-  <script defer src="./sticker-app.js?v=20261014e"></script>
+  <script defer src="./sticker-app.js?v=20261014f"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261014a">
   <script defer src="./sticker-crop-core.js?v=20261014a"></script>
   <script defer src="./sticker-crop-app.js?v=20261014b"></script>
@@ -78,13 +78,14 @@
                 <label class="field" for="nameMode"><span>整組共用名稱</span><select id="nameMode" data-setting="nameMode"></select><span id="error-nameMode" class="field-error"></span></label>
                 <div data-visible="nameMode:person,shop"><label class="field" for="name"><span>人名／店名（選填）</span><input id="name" data-setting="name" type="text" maxlength="1000"><span id="error-name" class="field-error"></span><span class="field-hint">會加在台詞前方；逐張可關閉，也可直接編輯台詞。</span></label></div>
               </div>
-              <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用情境台詞</button><button type="button" class="button" id="fill-missing">自動補齊空缺</button></div>
+              <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用預設情境台詞</button><button type="button" class="button" id="fill-missing">補入預設台詞</button><button type="button" class="button" id="ai-reset-text">將台詞交給 AI 重新創作</button></div>
+              <p class="field-hint">「台詞由 AI 發揮」預設留白，不套固定句庫。可交給下方網站 AI 先創作，或由生圖平台依提示詞發想；已有自行輸入與先前 AI 台詞會保留，想重做請按「將台詞交給 AI 重新創作」。字體、顏色的 AI 設定只影響文字外觀。</p>
               <section class="notice ai-planner" aria-labelledby="ai-title">
-                <h3 id="ai-title">AI 安排表情與動作</h3>
+                <h3 id="ai-title">AI 安排台詞、表情與動作</h3>
                 <p>依角色、風格、情境與逐張台詞補齊空白，保留已填內容。先預覽，確認後再套用；這項功能只安排文字，不會生成圖片。張數較多時需稍候，最多等待約一分鐘。</p>
                 <p class="field-hint">使用時會將角色文字描述、風格、情境及逐張台詞／表情／動作傳送至 Gemini；不傳照片、檔名或共用名稱欄位。文字中若有私人資訊，請先移除。免費服務的內容可能用於改善 Google 產品。</p>
                 <label class="check-field"><input id="ai-consent" type="checkbox"><span>同意將上述文字內容傳送至 Gemini 以安排逐張內容</span></label>
-                <div class="inline-actions"><button id="ai-arrange" class="button primary" type="button" disabled>AI 安排表情與動作</button><button id="ai-cancel" class="button" type="button" hidden>取消等待</button></div>
+                <div class="inline-actions"><button id="ai-arrange" class="button primary" type="button" disabled>AI 安排台詞、表情與動作</button><button id="ai-cancel" class="button" type="button" hidden>取消等待</button></div>
                 <p id="ai-status" role="status" aria-live="polite">網站 AI 尚未啟用；仍可手動設定。</p>
                 <div id="ai-preview" hidden><h3>AI 建議｜尚未套用</h3><p>確認內容後按套用，只補空白欄位；角色、文字開關與母圖排列維持原設定。</p><div class="table-scroll"><table class="summary-table"><thead><tr><th>貼圖</th><th>台詞／情境</th><th>表情</th><th>動作</th></tr></thead><tbody id="ai-preview-body"></tbody></table></div><div class="inline-actions"><button id="ai-apply" class="button primary" type="button">確認並套用空白欄位</button><button id="ai-discard" class="button" type="button">捨棄建議</button></div></div>
               </section>

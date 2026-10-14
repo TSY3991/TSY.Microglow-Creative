@@ -58,8 +58,11 @@
       el.querySelectorAll("[data-setting]").forEach(control=>control.disabled=el.hidden);
     });
     $("apply-scene").disabled=state.settings.mode!=="preset"||state.settings.textMode==="none";
-    $("fill-missing").disabled=state.settings.textMode==="none";
-    const scene=$("scene");scene.disabled=state.settings.mode!=="preset";
+    $("fill-missing").disabled=state.settings.textMode==="none"||state.settings.mode==="ai";
+    $("ai-reset-text").hidden=state.settings.mode!=="ai";
+    $("ai-reset-text").disabled=state.settings.textMode==="none";
+    const scene=$("scene");scene.disabled=state.settings.mode==="manual";
+    if(scene.options.length)scene.options[0].disabled=state.settings.mode==="preset";
     const noText=state.settings.textMode==="none";
     document.querySelector(".text-settings").hidden=noText;
   }
@@ -98,7 +101,8 @@
       });
       head.append(del);card.append(head);
       const fields=node("div",undefined,"field-grid");
-      const text=inputControl("textarea","item-"+i+"-text",entry.text,value=>{entry.text=value;invalidate();});
+      const text=inputControl("textarea","item-"+i+"-text",entry.text,value=>{entry.text=value;delete entry.presetText;invalidate();});
+      if(state.settings.mode==="ai")text.placeholder=noText?"情境可留白，由 AI 發揮":"留白交給 AI 創作，不會自動填入預設台詞";
       text.disabled=!C.hasText(state,entry);
       const textLabel=node("label",undefined,"field full-width");textLabel.htmlFor=text.id;textLabel.append(node("span",noText?"情境描述（不印字，選填）":"台詞（選填）"),text);
       if(noText){text.disabled=false;textLabel.firstChild.textContent="情境描述（不印字，選填）";}
@@ -217,6 +221,11 @@
     const key=el.dataset.setting;
     state.settings[key]=key==="count"?Number(el.value):el.value;
     if(key==="count"){C.resize(state,Number(el.value));renderItems();renderGrids();controls();}
+    if(key==="mode"){
+      if(el.value==="ai"){const n=C.releasePreset(state);status(n?"已釋放 "+n+" 句系統預設台詞，改由 AI 發揮；自行修改的台詞保留。":"已改為 AI 發揮。已有內容保留；想重新創作可按「將台詞交給 AI 重新創作」。");}
+      if(el.value==="preset"&&state.settings.scene==="auto"){state.settings.scene="greeting";$("scene").value="greeting";}
+      renderItems();
+    }
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled)status("已補入 "+filled+" 句；原有台詞未改動。");}
@@ -226,7 +235,13 @@
   $("settings-form").addEventListener("submit",e=>e.preventDefault());
   document.querySelectorAll("[data-step]").forEach(el=>el.addEventListener("click",()=>go(Number(el.dataset.step))));
   $("previous").addEventListener("click",()=>go(step-1));$("next").addEventListener("click",()=>go(step+1));
-  $("apply-scene").addEventListener("click",()=>replaceItems(C.pool(state.settings.scene).slice(0,state.settings.count).map(C.item),"套用「"+D.scenes[state.settings.scene].label+"」。"));
+  $("apply-scene").addEventListener("click",()=>replaceItems(C.pool(state.settings.scene).slice(0,state.settings.count).map(C.presetItem),"套用「"+D.scenes[state.settings.scene].label+"」。"));
+  $("ai-reset-text").addEventListener("click",()=>{
+    if(state.settings.mode!=="ai"||state.settings.textMode==="none")return;
+    const targets=state.items.filter(x=>C.hasText(state,x));
+    if(targets.some(x=>x.text.trim())&&!confirm("將所有有文字貼圖的台詞清空，交給 AI 重新創作？包含自行輸入或先前 AI 台詞。角色、表情、動作、無文字格的情境與共用名稱設定保留。"))return;
+    targets.forEach(x=>{x.text="";delete x.presetText;});renderItems();invalidate();status("台詞已改為 AI 發揮。可用網站 AI 先安排，或直接產生提示詞交給生圖平台；不會自動送出 AI 請求。");
+  });
   $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state);renderItems();invalidate();status(n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。");});
   $("apply-bulk").addEventListener("click",()=>{
     const lines=$("bulk").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
@@ -283,7 +298,7 @@
   function aiAvailability() {
     $("ai-arrange").disabled=!aiEndpoint||!$("ai-consent").checked||!!aiController;
     $("ai-cancel").hidden=!aiController;
-    $("ai-arrange").textContent=aiController?"AI 安排中…":"AI 安排表情與動作";
+    $("ai-arrange").textContent=aiController?"AI 安排中…":"AI 安排台詞、表情與動作";
   }
   function clearAI(message) {
     const hadWork=!!aiController||!!aiPending;

@@ -7,7 +7,9 @@
   function autoGrids(count) { const out=[]; while(count>=16){out.push(16);count-=16;} if(count)out.push(8); return out; }
   function pool(scene) { return [...new Set([...D.scenes[scene].lines,...D.common])]; }
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
-  function initial() { return {settings:clone(D.defaults),grids:[16],items:pool("greeting").slice(0,16).map(item)}; }
+  function initial() { return {settings:clone(D.defaults),grids:[16],items:Array.from({length:16},()=>item())}; }
+  function presetItem(text) { return {...item(text),presetText:text}; }
+  function releasePreset(state) {let cleared=0;for(const x of state.items){if(x.presetText!==undefined){if(hasText(state,x)&&x.text===x.presetText){x.text="";cleared++;}delete x.presetText;}}return cleared;}
   function hasText(state,entry) { return state.settings.textMode==="all" || (state.settings.textMode==="per" && entry.hasText); }
   function finalText(state,entry) {
     if (!hasText(state,entry)) return "";
@@ -15,13 +17,14 @@
     return (s.nameMode!=="none" && entry.includeName ? s.name.trim() : "") + entry.text.trim();
   }
   function fillMissing(state) {
+    if(state.settings.mode==="ai")return 0;
     const used=new Set(state.items.map(x=>x.text.trim()).filter(Boolean));
     const candidates=pool(state.settings.scene).filter(x=>!used.has(x));
     let filled=0;
     while(state.items.length<state.settings.count) state.items.push(item());
     for(let i=0;i<state.settings.count;i++){
       const entry=state.items[i];
-      if(hasText(state,entry) && !entry.text.trim() && candidates.length){entry.text=candidates.shift();filled++;}
+      if(hasText(state,entry) && !entry.text.trim() && candidates.length){entry.text=candidates.shift();entry.presetText=entry.text;filled++;}
     }
     return filled;
   }
@@ -76,6 +79,7 @@
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
+      s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+D.scenes[s.scene].label+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
@@ -118,11 +122,12 @@
       const entry={};
       for(const key of ["text","emotion","action"]){if(typeof x[key]!=="string"||x[key].length>300)throw new Error("逐張文字格式不正確或超過 300 字。");entry[key]=x[key];}
       for(const key of ["hasText","includeName"]){if(typeof x[key]!=="boolean")throw new Error("逐張開關格式不正確。");entry[key]=x[key];}
+      if(x.presetText!==undefined){if(typeof x.presetText!=="string"||x.presetText.length>300)throw new Error("預設台詞來源格式不正確。");entry.presetText=x.presetText;}
       return entry;
     });
     if(input.grids.some(x=>x!==8&&x!==16))throw new Error("設定檔母圖只可為 8 或 16 格。");
     return {settings,items,grids:input.grids.slice()};
   }
-  const api={initial,item,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
+  const api={initial,item,presetItem,releasePreset,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

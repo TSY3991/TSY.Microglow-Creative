@@ -1,13 +1,13 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
 const C=require("../sticker-core.js"),D=require("../sticker-data.js");
-function ready(count=16){const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",character:"圓框眼鏡、短捲髮的原創人物",style:"cute"});C.resize(s,count);s.items=C.pool("greeting").slice(0,count).map(C.item);return s;}
+function ready(count=16){const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",character:"圓框眼鏡、短捲髮的原創人物",style:"cute",mode:"preset",scene:"greeting"});C.resize(s,count);s.items=C.pool("greeting").slice(0,count).map(C.item);return s;}
 test("五種官方張數的母圖分配與連續順序",()=>{
   const expected={8:[8],16:[16],24:[16,8],32:[16,16],40:[16,16,8]};
   for(const n of D.counts){const s=ready(n);assert.deepEqual(s.grids,expected[n]);assert.deepEqual(C.validate(s),[]);const plans=C.plans(s);assert.equal(plans.at(-1).end,n);assert.equal(plans[0].start,1);}
 });
 test("七種情境均可補足 40 句且保留已編輯台詞",()=>{
-  for(const scene of Object.keys(D.scenes)){const s=ready(40);s.settings.scene=scene;s.items=Array.from({length:40},()=>C.item());s.items[0].text="我的自訂台詞";assert.equal(C.fillMissing(s),39);assert.equal(s.items[0].text,"我的自訂台詞");assert.equal(new Set(s.items.map(x=>x.text)).size,40);assert.deepEqual(C.validate(s),[]);}
+  for(const scene of Object.keys(D.scenes).filter(k=>k!=="auto")){const s=ready(40);s.settings.scene=scene;s.items=Array.from({length:40},()=>C.item());s.items[0].text="我的自訂台詞";assert.equal(C.fillMissing(s),39);assert.equal(s.items[0].text,"我的自訂台詞");assert.equal(new Set(s.items.map(x=>x.text)).size,40);assert.deepEqual(C.validate(s),[]);}
 });
 test("減少張數保留全部內容、阻擋生成",()=>{
   const s=ready(40);s.items[39].text="必須保留";C.resize(s,8);assert.equal(s.items.length,40);assert.equal(s.items[39].text,"必須保留");assert.ok(C.validate(s).some(e=>e.field==="items"));assert.throws(()=>C.prompt(s));s.items=s.items.slice(0,8);assert.deepEqual(C.validate(s),[]);
