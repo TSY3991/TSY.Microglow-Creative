@@ -87,6 +87,24 @@ let browser,ws,server;
   check('逐張調整後要求重新確認',await E("!document.getElementById('crop-review').checked&&document.getElementById('crop-download').disabled"));
   for(const width of [320,390,768,1280]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 裁切預覽無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
   check('母圖處理未呼叫 AI',responses.every(r=>!r.url.includes('workers.dev')));
+  await send('Emulation.setUserAgentOverride',{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Line/14.0.0'});await send('Page.reload',{ignoreCache:true});await loaded();await E('window.confirm=()=>true');await set('count','8');
+  check('LINE 內建瀏覽器加入圖片前即提示限制',await E("!document.getElementById('crop-browser-help').hidden&&document.getElementById('crop-browser-help').textContent.includes('重新加入母圖')"));
+  await upload();await run(8);await click('crop-review');
+  await E("Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files.length===1&&files[0].type==='application/zip'});Object.defineProperty(navigator,'share',{configurable:true,value:async({files})=>{window.sharedFiles=files.map(f=>({name:f.name,size:f.size}));window.sharedFromClick=navigator.userActivation.isActive;}})");
+  const beforeApp=fs.readdirSync(profile).filter(f=>f.endsWith('.zip')).length;
+  await click('crop-download');await delay(400);
+  check('LINE 打包不自動觸發受阻下載且保留 ZIP',fs.readdirSync(profile).filter(f=>f.endsWith('.zip')).length===beforeApp&&await E("!document.getElementById('crop-ready').hidden&&!document.getElementById('crop-share').hidden"));
+  await click('crop-share');await delay(100);
+  check('分享 ZIP 由新點擊觸發且包含真實 File（模擬 API）',await E("window.sharedFromClick&&window.sharedFiles.length===1&&window.sharedFiles[0].name==='line-stickers-8.zip'&&window.sharedFiles[0].size>100"));
+  await E("Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('cancel','AbortError')}})");await click('crop-share');await delay(100);
+  check('分享取消保留打包檔案，可再次嘗試',await E("document.getElementById('crop-status').textContent.includes('取消')&&!document.getElementById('crop-ready').hidden&&!document.getElementById('crop-share').disabled"));
+  await E("Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files.every(f=>f.type==='image/png')});Object.defineProperty(navigator,'share',{configurable:true,value:async({files})=>{window.sharedFiles=files.map(f=>f.name);}})");await click('crop-download');await delay(400);await click('crop-share');await delay(100);
+  check('ZIP 不可分享時提供全部 PNG，明確標示未打包（模擬 API）',await E("document.getElementById('crop-share').textContent.includes('未打包')&&window.sharedFiles.length===10&&window.sharedFiles.includes('main.png')&&window.sharedFiles.includes('08.png')"));
+  await E("Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false})");await click('crop-download');await delay(400);
+  check('不支援檔案分享則隱藏分享，不假裝成功',await E("document.getElementById('crop-share').hidden&&!document.getElementById('crop-ready').hidden&&document.getElementById('crop-ready-info').textContent.includes('不代表已保存')"));
+  fs.unlinkSync(zipPath);await click('crop-save-zip');for(let i=0;i<80&&!fs.existsSync(zipPath);i++)await delay(100);check('已打包 ZIP 可由獨立按鈕再次實際下載',fs.existsSync(zipPath)&&fs.statSync(zipPath).size>100);
+  await E("document.querySelector('.crop-sticker input[type=range]').dispatchEvent(new Event('input'))");check('修改圖片使已打包舊檔失效',await E("document.getElementById('crop-ready').hidden&&document.getElementById('crop-save-zip').disabled"));
+  for(const width of [320,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:true});check(width+'px 外部瀏覽器提示無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
   if(process.argv[2]){await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});await E("document.getElementById('sticker-crop').scrollIntoView()");await delay(100);const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(process.argv[2],Buffer.from(shot.data,'base64'));}
   check("頁面無未處理例外",errors.length===0);
   check("本工具所有本機資源成功載入",responses.filter(x=>x.url.startsWith(origin)).every(x=>x.status<400));

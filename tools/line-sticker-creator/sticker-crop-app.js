@@ -2,10 +2,18 @@
   'use strict';
   const C=window.StickerCropCore,$=id=>document.getElementById(id),el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
   let plan=window.StickerCropPlan,mothers=[],stickers=[],revision=0,uploadRevision=0,selected=0,busy=false;
+  let prepared=null;
+  const inApp=/Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+  function clearPrepared(){prepared=null;$('crop-ready').hidden=true;}
   const canvas=(w,h)=>{const c=el('canvas');c.width=w;c.height=h;return c;};
   const message=text=>{$('crop-status').textContent=text;};
-  function invalidate(){revision++;stickers=[];$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;}
-  function controls(){ $('crop-run').disabled=busy||!mothers.length;$('crop-files').disabled=busy;$('crop-download').disabled=busy||!stickers.length||stickers.some(s=>!s.source)||!$('crop-review').checked;}
+  function invalidate(){revision++;clearPrepared();stickers=[];$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;}
+  function controls(){if(prepared&&prepared.revision!==revision)clearPrepared();$('crop-run').disabled=busy||!mothers.length;$('crop-files').disabled=busy;$('crop-download').disabled=busy||!stickers.length||stickers.some(s=>!s.source)||!$('crop-review').checked;for(const id of ['crop-save-zip','crop-share'])$(id).disabled=busy||!prepared||!$('crop-review').checked;}
+  function canShare(files){try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files});}catch{return false;}}
+  function downloadPrepared(){if(!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const url=URL.createObjectURL(prepared.file),a=el('a');a.href=url;a.download=prepared.file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);message('已送出下載請求，請確認瀏覽器下載清單。若未收到檔案，可用下方系統分享，或在 Chrome／Safari 開啟本頁重新加入母圖。');}
+  $('crop-save-zip').onclick=downloadPrepared;
+  $('crop-share').onclick=async()=>{if(busy||!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const snapshot=prepared;busy=true;controls();try{await navigator.share({files:snapshot.shareFiles});if(prepared===snapshot)message('已交由系統分享處理，請在選擇的目的地確認檔案是否保存。');}catch(error){if(prepared===snapshot)message(error.name==='AbortError'?'分享已取消或沒有可用的目的地；檔案仍保留，可再次下載或分享。':'系統未能分享檔案；檔案仍保留。請改用 Chrome／Safari 開啟本頁，重新加入母圖並下載。');}finally{busy=false;controls();}};
+  $('crop-copy-url').onclick=async()=>{const url='https://tsy3991.github.io/TSY.Microglow-Creative/tools/line-sticker-creator/#sticker-crop';try{await navigator.clipboard.writeText(url);message('已複製網址。請貼到 Chrome／Safari，重新加入母圖裁切；目前圖片不會自動帶到另一個瀏覽器。');}catch{const input=$('crop-page-url');input.hidden=false;input.value=url;input.focus();input.select();message('無法自動複製，請手動複製已選取的網址。');}};
   function updatePlan(){plan=window.StickerCropPlan;$('crop-plan').textContent='目前 '+plan.count+' 張；母圖依序 '+plan.grids.map(n=>'4×'+n/4).join(' ＋ ');}
   window.addEventListener('sticker-crop-plan',()=>{const next=window.StickerCropPlan;if(JSON.stringify(plan)!==JSON.stringify(next)){updatePlan();invalidate();controls();message('張數或母圖分配已變更，原圖保留，請確認網格後重新裁切。');}});
   function resetCuts(m){m.x=C.cuts(m.image.width,4);m.y=C.cuts(m.image.height,m.rows);}
@@ -61,8 +69,13 @@
     try{
       const jobs=[['main.png',stickers[selected],240,240,10],['tab.png',stickers[selected],96,74,4],...stickers.map((s,i)=>[String(i+1).padStart(2,'0')+'.png',s,370,320,10])];
       for(const [name,s,w,h,pad] of jobs){if(token!==revision)throw Error('圖片設定已變更，請重新檢查後下載。');const c=canvas(w,h);renderSticker(s,c,w,h,pad);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('圖片編碼失敗。');entries.push({name,data:C.png72(new Uint8Array(await blob.arrayBuffer()))});c.width=c.height=1;}
-      const data=C.zip(entries);if(token!==revision||!$('crop-review').checked)throw Error('設定已變更，請重新確認。');const url=URL.createObjectURL(new Blob([data],{type:'application/zip'})),a=el('a');a.href=url;a.download='line-stickers-'+plan.count+'.zip';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);message('已打包 '+entries.length+' 個 PNG（含 main.png、tab.png），'+Math.ceil(data.length/1024)+' KB。請解壓逐張檢查，再至 LINE Creators Market 上傳。');
+      const data=C.zip(entries);if(token!==revision||!$('crop-review').checked)throw Error('設定已變更，請重新確認。');
+      const file=new File([data],'line-stickers-'+plan.count+'.zip',{type:'application/zip'}),pngFiles=entries.map(e=>new File([e.data],e.name,{type:'image/png'}));
+      const shareFiles=canShare([file])?[file]:canShare(pngFiles)?pngFiles:null;
+      prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。';$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
+      if(inApp)message('偵測到 App 內建瀏覽器，未自動下載。可嘗試下方系統分享；若沒有分享功能或無法保存，請在 Chrome／Safari 開啟本頁重新加入母圖。');else downloadPrepared();
     }catch(error){message('下載未完成：'+error.message);}finally{busy=false;controls();}
   };
+  if(inApp)$('crop-browser-help').hidden=false;
   updatePlan();controls();
 })();

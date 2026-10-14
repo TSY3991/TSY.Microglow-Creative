@@ -17,13 +17,13 @@
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261014c">
   <script defer src="./sticker-data.js?v=20261014a"></script>
-  <script defer src="./sticker-core.js?v=20261014b"></script>
+  <script defer src="./sticker-core.js?v=20261014c"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261014c"></script>
   <script defer src="./sticker-app.js?v=20261014e"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261014a">
   <script defer src="./sticker-crop-core.js?v=20261014a"></script>
-  <script defer src="./sticker-crop-app.js?v=20261014a"></script>
+  <script defer src="./sticker-crop-app.js?v=20261014b"></script>
 </head>
 <body class="line-sticker-tool">
   <a class="skip-link" href="#creator">跳到創作設定</a>
@@ -116,7 +116,7 @@
               <p class="notice" id="count-note">調低張數會保留原有逐張內容，請回上一步刪減；不會自動截斷。</p>
               <div id="grids" class="grids"></div><p id="error-grids" class="field-error"></p>
               <div class="inline-actions" data-visible="layoutMode:manual"><button type="button" id="add-grid" class="button">新增一張母圖</button></div>
-              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。每格固定安全留白；比例待生圖測試校準。</p>
+              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。提示詞要求每格四周至少留出各邊長 10% 空白，角色、文字與道具完整置於中央 80% 範圍，方便平均切割。AI 是否遵守仍需生成後檢查；已產生的母圖不會因此改變。</p>
               <p class="notice">透明背景是給 AI 的要求，請核對下載圖片是否真的透明。取得母圖後，可用下方裁切工具分割、選擇去白底並打包 PNG。</p>
               <p class="field-hint">一般靜態貼圖張數依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>與 <a href="https://help2.line.me/creators/web/pc?contentId=20005145&amp;lang=zh-Hant" target="_blank" rel="noopener noreferrer">官方說明</a>；查證 2026-10-13。</p>
             </section>
@@ -142,6 +142,7 @@
       <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="crop-title">母圖裁切與下載</h2><p>把生成的母圖帶回來，整理成一般靜態貼圖素材。</p></div></div>
       <p>圖片只在目前瀏覽器處理，不上傳網站或 Gemini，也不存入瀏覽器草稿。重新整理頁面後需重新選圖。原始檔案保留，可重新裁切。</p>
       <p id="crop-plan" class="notice"></p>
+      <div id="crop-browser-help" class="notice" hidden><strong>App 內建瀏覽器可能不支援 ZIP 下載。</strong><p>建議先用 App 選單在外部瀏覽器開啟，或複製本頁網址貼到 Chrome／Safari。跨瀏覽器不會帶入圖片，請重新加入母圖。也可先打包，再嘗試系統分享；是否支援依裝置與檔案類型而定。</p></div>
       <label class="field" for="crop-files"><span>加入母圖（可多選）</span><input id="crop-files" type="file" multiple accept="image/png,image/jpeg,image/webp"><span class="field-hint">最多 5 張，每張 20 MB／1,600 萬像素，合計 3,200 萬像素。依序由左到右、由上到下裁切；可前移、後移調整母圖順序。</span></label>
       <div id="crop-mothers" class="crop-mothers"></div>
       <div class="field-grid">
@@ -156,6 +157,8 @@
       <div id="crop-special" class="crop-special" data-backdrop="checker"></div>
       <label class="check-field"><input id="crop-review" type="checkbox"><span>我已逐張檢查角色、文字、透明背景與留白，並確認主要圖片與標籤圖片。</span></label>
       <button id="crop-download" class="button primary" type="button" disabled>打包 PNG 並下載 ZIP</button>
+      <div id="crop-ready" class="notice" hidden><p id="crop-ready-info"></p><div class="inline-actions"><button id="crop-save-zip" class="button primary" type="button">下載已打包 ZIP</button><button id="crop-share" class="button" type="button" hidden>系統分享檔案</button></div><p>若下載被攔下，請使用下方外部瀏覽器方式。此頁無法確認 App 是否真的保存了檔案。</p></div>
+      <div class="inline-actions"><button id="crop-copy-url" class="button" type="button">複製網址至 Chrome／Safari 開啟</button></div><input id="crop-page-url" class="full-width" type="text" readonly aria-label="本頁網址，供手動複製" hidden>
       <p class="field-hint">輸出 01.png 起的 370×320 貼圖、main.png（240×240）與 tab.png（96×74），PNG 72 dpi；每張檔案檢查 1 MB 上限，ZIP 小於 60 MB。貼圖保留約 10 px 透明邊距，位移限制在邊距內避免裁掉內容。大小與位置調整只用於貼圖，主要圖片與標籤圖片會完整置中縮放。</p>
       <p class="notice">下載後請解壓檢查，再至 LINE Creators Market 上傳。此工具不會代為發布，也不保證通過審核。一般靜態貼圖可用 8／16／24／32／40 張；透明背景與圖片內容仍需人工確認。</p>
       <p class="field-hint">規格依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>，查證日期：2026-10-14。</p>
