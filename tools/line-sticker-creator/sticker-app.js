@@ -135,6 +135,8 @@
     });
   }
   function live() {
+    window.StickerCropPlan={count:state.settings.count,grids:state.grids.slice()};
+    window.dispatchEvent(new Event("sticker-crop-plan"));
     const s=state.settings,box=$("live-summary");box.replaceChildren();
     const rows=[["角色來源",s.source?C.label("source",s.source):"尚未選擇"],["角色風格",s.style?C.label("style",s.style):"尚未選擇"],["貼圖總張數",s.count+" 張"],["母圖分配",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")||"尚未設定"],["文字模式",C.label("textMode",s.textMode)]];
     if(s.source==="photo")rows.push(["參考圖",referenceUrl?"已選擇・需另外附到 AI":"請在 AI 對話附圖"]);

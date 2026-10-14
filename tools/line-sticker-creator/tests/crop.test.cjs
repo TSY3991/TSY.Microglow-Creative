@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict'),C=require('../sticker-crop-core.js');
+const r=C.rectangles(1491,647,C.cuts(1491,4),C.cuts(647,2));assert.equal(r.length,8);assert.equal(r.reduce((n,r)=>n+r.width*r.height,0),1491*647);assert.equal(r[4].x,0);assert.equal(r[4].y,324);assert.throws(()=>C.rectangles(20,20,[0,10,9,20],[0,20]));assert.throws(()=>C.rectangles(20,20,[0,NaN,20],[0,20]));
+const data=new Uint8ClampedArray(7*7*4).fill(255);for(let y=1;y<6;y++)for(let x=1;x<6;x++)if(x===1||x===5||y===1||y===5){const i=(y*7+x)*4;data[i]=10;data[i+1]=60;data[i+2]=90;}
+const out=C.eraseWhite(data,7,7);assert.equal(out[3],0);assert.equal(out[(3*7+3)*4+3],255);assert.equal(data[3],255);assert.deepEqual(C.bounds(out,7,7),{x:1,y:1,width:5,height:5});assert.equal(C.bounds(new Uint8Array(16),2,2),null);
+for(const [w,h] of [[10,1000],[1000,10],[300,200]])for(const zoom of [50,100])for(const shift of [-999,999]){const f=C.fit(w,h,370,320,zoom,shift,shift);assert.ok(f.x>=10&&f.y>=10&&f.x+f.width<=360.001&&f.y+f.height<=310.001);}
+assert.equal(C.crc(new TextEncoder().encode('123456789')),0xcbf43926);const z=C.zip([{name:'01.png',data:new Uint8Array([1,2,3])}]);assert.equal(new DataView(z.buffer).getUint32(0,true),0x04034b50);assert.equal(new DataView(z.buffer).getUint32(z.length-22,true),0x06054b50);assert.throws(()=>C.zip([{name:'bad.png',data:new Uint8Array(1048577)}]));
+console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit, ZIP and CRC');

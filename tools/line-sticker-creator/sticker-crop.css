@@ -1,0 +1,18 @@
+.line-sticker-tool .crop-panel{margin-top:2rem;scroll-margin-top:1rem}
+.line-sticker-tool .crop-mothers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1rem;margin:1rem 0}
+.line-sticker-tool .crop-mother,.line-sticker-tool .crop-sticker{border:1px solid #d5e5df;border-radius:16px;padding:1rem;min-width:0;background:#fff}
+.line-sticker-tool .crop-mother h3{overflow-wrap:anywhere}
+.line-sticker-tool .crop-mother-preview{width:100%;height:auto;max-height:450px;object-fit:contain;display:block;margin:.8rem 0}
+.line-sticker-tool .crop-mother details label{display:block;margin:.4rem 0}
+.line-sticker-tool .crop-mother input[type=number]{width:7rem;max-width:100%}
+.line-sticker-tool .crop-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin:1.5rem 0}
+.line-sticker-tool .crop-sticker canvas,.line-sticker-tool .crop-special canvas{display:block;max-width:100%;height:auto;background-color:#f4f4f4;background-image:conic-gradient(#ddd 25%,transparent 0 50%,#ddd 0 75%,transparent 0);background-size:20px 20px;border-radius:8px}
+.line-sticker-tool [data-backdrop=dark] canvas{background:#26333a}
+.line-sticker-tool [data-backdrop=light] canvas{background:#fff}
+.line-sticker-tool .crop-sticker label{display:block;margin:.7rem 0;font-size:.85rem}
+.line-sticker-tool .crop-sticker input[type=range]{width:100%;display:block;accent-color:#197c70}
+.line-sticker-tool .crop-special{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
+.line-sticker-tool .crop-special>div{max-width:100%}
+.line-sticker-tool #crop-status{overflow-wrap:anywhere}
+@media(max-width:1000px){.line-sticker-tool .crop-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.line-sticker-tool .crop-results{grid-template-columns:1fr}}
