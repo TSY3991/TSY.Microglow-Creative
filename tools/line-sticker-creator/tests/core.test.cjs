@@ -52,7 +52,7 @@ test("拒絕原型污染欄位，不污染全域",()=>{
   const raw=C.serialize(ready());const json=JSON.stringify(raw).replace('"settings":{','"settings":{"__proto__":{"polluted":true},');assert.throws(()=>C.deserialize(json));assert.equal({}.polluted,undefined);
 });
 test("引號與換行維持資料邊界，標籤僅作定位",()=>{
-  const s=ready();s.items[0].text='早安 "測試"\n第二行';const p=C.prompt(s);assert.ok(p.includes(JSON.stringify(s.items[0].text)));assert.match(p,/定位標籤不印/);
+  const s=ready();s.items[0].text='早安 "測試"\n第二行';const p=C.prompt(s);assert.match(p,/分 2 行，由上到下依序為 "早安 \\"測試\\""、"第二行"/);assert.ok(!p.includes('\\n'));assert.match(p,/定位標籤不印/);
 });
 test("整組或逐張全無字不被未填名稱與字體誤擋",()=>{
   for(const mode of ["none","per"]){
@@ -68,3 +68,18 @@ test("照片參考可為動物或物件，三平台均提醒另附圖片",()=>{
 
 test("文字全留白不阻擋，照片／原創與有字／無字意圖正確",()=>{for(const source of ["photo","original"]){for(const mode of ["all","none","per"]){const s=ready();Object.assign(s.settings,{source,character:"",style:"custom",customStyle:"",font:"custom",customFont:"",nameMode:"person",name:"",textMode:mode,mode:"manual"});s.items=Array.from({length:16},()=>C.item());if(mode==="per")s.items[0].hasText=false;assert.deepEqual(C.validate(s),[]);const p=C.prompt(s);assert.match(p,source==="photo"?/直接觀察已附參考圖/:/自行設計一個原創角色/);assert.ok(!p.includes('要印的文字 ""'));if(mode==="none")assert.match(p,/整組不放任何文字/);else assert.match(p,/台詞未填/);}}});
 test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/寬度 10%/);assert.match(p,/高度 10%/);assert.match(p,/80% 寬 × 80% 高/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
+
+test("縮減張數只移除尾端空白項，有內容的完整保留",()=>{
+  const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",style:"cute"});
+  C.resize(s,40);C.resize(s,16);assert.equal(s.items.length,16);
+  C.resize(s,40);s.items[39].text="尾端內容";C.resize(s,16);assert.equal(s.items.length,40);assert.equal(s.items[39].text,"尾端內容");assert.ok(C.validate(s,3).some(e=>e.field==="items"));
+  s.items[20].emotion="中間的表情";C.resize(s,8);assert.equal(s.items.length,40);
+});
+test("提示詞：無情境不輸出空引號、全部為繁體、自由發想描述正確",()=>{
+  const s=ready(8);s.settings.textMode="none";s.items[0].text="";const p=C.prompt(s);assert.ok(!p.includes('參考 ""'));assert.ok(!/[张贴从]/.test(p));
+  s.settings.textMode="all";s.settings.mode="ai";s.settings.scene="auto";assert.match(C.prompt(s),/發想情境：不限定，自由發想/);
+});
+test("匯入自動分配的設定時重算母圖；預設情境不停在自由發想",()=>{
+  const s=ready(16);s.settings.layoutMode="auto";s.grids=[8,8];const parsed=C.deserialize(JSON.stringify(C.serialize(s)));assert.deepEqual(parsed.grids,[16]);
+  const t=ready(16);t.settings.mode="preset";t.settings.scene="auto";assert.equal(C.deserialize(JSON.stringify(C.serialize(t))).settings.scene,"greeting");
+});

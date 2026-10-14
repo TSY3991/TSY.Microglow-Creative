@@ -44,7 +44,7 @@
   }
   function invalidate() {
     clearAI("設定已變更，請重新安排 AI 建議。");
-    generated=false;$("confirm-summary").checked=false;$("generate").disabled=true;
+    generated=false;
     $("prompt-area").hidden=true;$("prompt-output").value="";$("copy-feedback").textContent="";
     $("validation").hidden=true;
     document.querySelectorAll(".field-error").forEach(e=>e.textContent="");
@@ -57,8 +57,10 @@
       el.hidden=!values.split(",").includes(String(state.settings[key]));
       el.querySelectorAll("[data-setting]").forEach(control=>control.disabled=el.hidden);
     });
-    $("apply-scene").disabled=state.settings.mode!=="preset"||state.settings.textMode==="none";
-    $("fill-missing").disabled=state.settings.textMode==="none"||state.settings.mode==="ai";
+    $("apply-scene").hidden=state.settings.mode!=="preset";
+    $("apply-scene").disabled=state.settings.textMode==="none";
+    $("fill-missing").hidden=state.settings.mode==="ai";
+    $("fill-missing").disabled=state.settings.textMode==="none";
     $("ai-reset-text").hidden=state.settings.mode!=="ai";
     $("ai-reset-text").disabled=state.settings.textMode==="none";
     const scene=$("scene");scene.disabled=state.settings.mode==="manual";
@@ -88,7 +90,7 @@
   function rowField(parent,title,input) { const wrap=node("label",undefined,"field");wrap.htmlFor=input.id;wrap.append(node("span",title),input);parent.append(wrap); }
   function renderItems() {
     const box=$("items");box.replaceChildren();
-    const noText=state.settings.textMode==="none";
+    $("trim-items").hidden=state.items.length<=state.settings.count;
     state.items.forEach((entry,i)=>{
       const card=node("article",undefined,"sticker-item");
       if(i>=state.settings.count)card.classList.add("overflow-item");
@@ -102,15 +104,17 @@
       head.append(del);card.append(head);
       const fields=node("div",undefined,"field-grid");
       const text=inputControl("textarea","item-"+i+"-text",entry.text,value=>{entry.text=value;delete entry.presetText;invalidate();});
-      if(state.settings.mode==="ai")text.placeholder=noText?"情境可留白，由 AI 發揮":"留白交給 AI 創作，不會自動填入預設台詞";
-      text.disabled=!C.hasText(state,entry);
-      const textLabel=node("label",undefined,"field full-width");textLabel.htmlFor=text.id;textLabel.append(node("span",noText?"情境描述（不印字，選填）":"台詞（選填）"),text);
-      if(noText){text.disabled=false;textLabel.firstChild.textContent="情境描述（不印字，選填）";}
+      const printing=C.hasText(state,entry);
+      if(state.settings.mode==="ai")text.placeholder=printing?"留白交給 AI 創作，不會自動填入預設台詞":"情境可留白，由 AI 發揮";
+      const textLabel=node("label",undefined,"field full-width");textLabel.htmlFor=text.id;textLabel.append(node("span",printing?"台詞（選填）":"情境描述（不印字，選填）"),text);
       textLabel.append(node("span",undefined,"field-error"));textLabel.lastChild.id="error-item-"+i+"-text";text.setAttribute("aria-describedby",textLabel.lastChild.id);
       fields.append(textLabel);
       if(state.settings.textMode==="per"){
         const lab=node("label",undefined,"check-field");const check=node("input");check.type="checkbox";check.checked=entry.hasText;check.id="item-"+i+"-hasText";
-        check.addEventListener("change",()=>{entry.hasText=check.checked;renderItems();invalidate();});
+        check.addEventListener("change",()=>{
+          if(check.checked&&entry.text.trim()&&!confirm("這張目前的內容是「不印字的情境描述」，勾選後會變成要印在貼圖上的文字；是否繼續？")){check.checked=false;return;}
+          entry.hasText=check.checked;renderItems();invalidate();
+        });
         lab.append(check,node("span","這張顯示文字"));fields.append(lab);
       }
       if(state.settings.nameMode!=="none"&&C.hasText(state,entry)){
@@ -137,6 +141,8 @@
       del.addEventListener("click",()=>{state.grids.splice(i,1);renderGrids();invalidate();});
       card.append(title,select,range,del);box.append(card);
     });
+    const total=state.grids.reduce((a,b)=>a+b,0),need=state.settings.count;
+    $("grid-total").textContent="母圖合計 "+total+"／"+need+" 格"+(total===need?"。":"，與整組張數不符；請調整母圖格數，或新增／移除母圖。");
   }
   function live() {
     window.StickerCropPlan={count:state.settings.count,grids:state.grids.slice()};
@@ -196,12 +202,7 @@
   function go(target) {
     if(target>step){
       if(state.settings.mode==="preset"){C.fillMissing(state);renderItems();}
-      let issues=C.validate(state,target-1);
-      if(target===3&&state.items.length>state.settings.count){
-        issues=issues.filter(x=>x.field!=="items");
-        status("逐張內容超量：可在母圖設定增加張數，或回上一步刪減。產生提示詞前必須處理完成。");
-      }
-      if(!errors(issues))return;
+      if(!errors(C.validate(state,target-1)))return;
     }
     step=target;
     document.querySelectorAll("[data-panel]").forEach(el=>el.hidden=Number(el.dataset.panel)!==step);
@@ -218,9 +219,24 @@
     state.items=items;renderItems();invalidate();status("已套用；請逐張確認內容。");
   }
   document.querySelectorAll("[data-setting]").forEach(el=>el.addEventListener(el.tagName==="SELECT"||el.type==="color"?"change":"input",()=>{
-    const key=el.dataset.setting;
+    const key=el.dataset.setting,previous=state.settings[key];
+    if(key==="textMode"){
+      const printing=(mode,x)=>mode==="all"||(mode==="per"&&x.hasText);
+      const moved=state.items.filter(x=>x.text.trim()&&!printing(previous,x)&&printing(el.value,x)).length;
+      if(moved&&!confirm("有 "+moved+" 張的內容原本是「不印字的情境描述」，切換後會變成要印在貼圖上的文字；是否繼續？")){el.value=previous;return;}
+    }
     state.settings[key]=key==="count"?Number(el.value):el.value;
-    if(key==="count"){C.resize(state,Number(el.value));renderItems();renderGrids();controls();}
+    if(key==="platform"){
+      if(generated){
+        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
+        catch{invalidate();return;}
+      }
+      save();return;
+    }
+    if(key==="count"){
+      const before=state.items.length;C.resize(state,Number(el.value));renderItems();renderGrids();controls();
+      if(state.items.length<before)status("已移除 "+(before-state.items.length)+" 筆多餘的空白項目。");
+    }
     if(key==="mode"){
       if(el.value==="ai"){const n=C.releasePreset(state);status(n?"已釋放 "+n+" 句系統預設台詞，改由 AI 發揮；自行修改的台詞保留。":"已改為 AI 發揮。已有內容保留；想重新創作可按「將台詞交給 AI 重新創作」。");}
       if(el.value==="preset"&&state.settings.scene==="auto"){state.settings.scene="greeting";$("scene").value="greeting";}
@@ -250,17 +266,20 @@
     const items=lines.map(C.item);while(items.length<state.settings.count)items.push(C.item());
     replaceItems(items,"套用貼上的台詞清單。");
   });
+  $("trim-items").addEventListener("click",()=>{
+    const extra=state.items.slice(state.settings.count);if(!extra.length)return;
+    if(extra.some(x=>!C.blank(x))&&!confirm("將刪除第 "+(state.settings.count+1)+" 筆之後共 "+extra.length+" 筆內容，其中有已填寫的文字；是否繼續？"))return;
+    state.items.length=state.settings.count;renderItems();invalidate();status("已刪除超出張數的 "+extra.length+" 筆內容。");
+  });
   $("add-item").addEventListener("click",()=>{if(state.items.length>=80)return status("最多保留 80 筆內容，請先刪減。");state.items.push(C.item());renderItems();invalidate();});
   $("add-grid").addEventListener("click",()=>{if(state.grids.length>=5)return status("最多 5 張母圖。");state.grids.push(8);renderGrids();invalidate();});
-  $("confirm-summary").addEventListener("change",()=>{$("generate").disabled=!$("confirm-summary").checked;});
   $("generate").addEventListener("click",()=>{
-    if(!$("confirm-summary").checked)return;
     if(!errors(C.validate(state)))return;
     $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;
     status("已產生整組提示詞；請核對內容後複製。");
   });
   $("copy").addEventListener("click",async()=>{
-    if(!generated||!$("confirm-summary").checked)return;
+    if(!generated)return;
     try{await navigator.clipboard.writeText($("prompt-output").value);$("copy-feedback").textContent="已複製整組提示詞，可貼到選用的 AI 平台。";}
     catch{$("prompt-output").focus();$("prompt-output").select();$("copy-feedback").textContent="瀏覽器無法使用剪貼簿；已選取提示詞，請手動複製。";}
   });
@@ -327,7 +346,11 @@
       if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
       aiPending={rows,snapshot};
       const body=$("ai-preview-body");body.replaceChildren();
-      rows.forEach(x=>{const row=node("tr");[String(x.id),x.text||"無文字",x.emotion,x.action].forEach(value=>row.append(node("td",value)));body.append(row);});
+      rows.forEach(x=>{
+        const entry=state.items[x.id-1],printing=!!entry&&C.hasText(state,entry);
+        const shown=printing?x.text:(x.text?"無文字（情境："+x.text+"）":"無文字");
+        const row=node("tr");[String(x.id),shown,x.emotion,x.action].forEach(value=>row.append(node("td",value)));body.append(row);
+      });
       $("ai-preview").hidden=false;$("ai-status").textContent="AI 建議已完成，尚未套用；請先確認內容。";
     }catch(error){
       if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;

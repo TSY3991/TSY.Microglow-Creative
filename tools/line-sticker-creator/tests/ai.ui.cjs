@@ -89,7 +89,7 @@ let configured=false,mode="good",requests=0,delayed=null;
   await set("item-2-action","新設定");check("修改設定清除舊建議",await E("document.getElementById('ai-preview').hidden"));
   await click("ai-arrange");await settled();await click("ai-discard");check("捨棄建議保留設定",await E("document.getElementById('ai-preview').hidden&&document.getElementById('item-1-text').value===''"));
   await click("ai-arrange");await settled();await click("ai-apply");
-  check("套用補空白並保留既有內容",await E("document.getElementById('item-0-text').value==='保留台詞'&&document.getElementById('item-0-emotion').value==='自己的表情'&&document.getElementById('item-1-text').value==='AI台詞2'&&document.getElementById('item-2-action').value==='新設定'&&!document.getElementById('confirm-summary').checked"));
+  check("套用補空白並保留既有內容",await E("document.getElementById('item-0-text').value==='保留台詞'&&document.getElementById('item-0-emotion').value==='自己的表情'&&document.getElementById('item-1-text').value==='AI台詞2'&&document.getElementById('item-2-action').value==='新設定'&&document.getElementById('prompt-area').hidden"));
   await set("item-1-action","");mode="delayed";await click("ai-arrange");
   for(let i=0;i<50&&!delayed;i++)await delay(20);
   await click("ai-cancel");await delayed().catch(()=>{});delayed=null;await delay(100);

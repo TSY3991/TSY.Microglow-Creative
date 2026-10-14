@@ -3,7 +3,13 @@
   const D = typeof module !== "undefined" && module.exports ? require("./sticker-data.js") : root.StickerData;
   const clone = value => JSON.parse(JSON.stringify(value));
   const label = (key,value) => (D.options[key] || []).find(x=>x[0]===value)?.[1] || value;
-  const quote = value => JSON.stringify(String(value));
+  const flat = value => String(value).replace(/\s*\r?\n\s*/g," ").trim();
+  const quote = value => JSON.stringify(flat(value));
+  // 多行台詞改用逐行描述，避免生圖 AI 把 JSON 的反斜線 n 當成字面文字印出來。
+  function printed(value) {
+    const rows = String(value).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    return rows.length > 1 ? "分 "+rows.length+" 行，由上到下依序為 "+rows.map(quote).join("、") : quote(rows[0] || "");
+  }
   function autoGrids(count) { const out=[]; while(count>=16){out.push(16);count-=16;} if(count)out.push(8); return out; }
   function pool(scene) { return [...new Set([...D.scenes[scene].lines,...D.common])]; }
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
@@ -28,8 +34,16 @@
     }
     return filled;
   }
+  const blank = x => !x.text.trim() && !x.emotion.trim() && !x.action.trim();
+  // 只移除超出張數、且完全空白的尾端項目；有內容的一律保留，不自動截斷。
+  function trimEmpty(state) {
+    let removed=0;
+    while(state.items.length>state.settings.count && blank(state.items[state.items.length-1])){state.items.pop();removed++;}
+    return removed;
+  }
   function resize(state,count) {
     state.settings.count=count;
+    trimEmpty(state);
     state.grids=autoGrids(count);
     state.settings.layoutMode="auto";
     while(state.items.length<count) state.items.push(item());
@@ -44,7 +58,7 @@
     if(s.source==="original"&&s.style==="likeness") add("style","似顏繪需要使用者照片；請改選風格或角色來源。");
     if(step<2) return errors;
     if(state.items.length>s.count) add("items","目前有 "+state.items.length+" 筆逐張內容，超過所選 "+s.count+" 張。請刪減內容或增加張數；內容未被截斷。");
-    if(state.items.length<s.count) add("items","逐張內容未達所選張數，請補足或使用自動補齊。");
+    if(state.items.length<s.count) add("items","逐張內容未達所選張數，請按「新增一筆內容」補足。");
     if(step<3) return errors;
     if(!D.counts.includes(s.count)) add("count","貼圖張數必須為 8、16、24、32 或 40。");
     if(state.grids.some(x=>x!==8&&x!==16)||state.grids.reduce((a,b)=>a+b,0)!==s.count) add("grids","母圖格數總和必須等於 "+s.count+"；每張只可使用 4×2 或 4×4。");
@@ -73,13 +87,13 @@
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
       "",
       "【母圖結構】",
-      "每格是一张独立贴图；从左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
+      "每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
       "優先確保可以沿平均網格完整分割：每格左、右各至少保留該格寬度 10% 的空白，上、下各至少保留該格高度 10% 的空白。完整角色、台詞、道具、描邊、陰影與裝飾都須放在格子中央 80% 寬 × 80% 高的安全區內（generous negative space）；相鄰格的可見內容之間，形成至少約一格寬／高 20% 的乾淨分隔帶。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
       "網格限制的是容納區與順序，不固定每格藝術構圖。角色與文字不得跨格、重疊、貼邊或被裁切；空間不足時縮小整組角色與文字。",
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
-      s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+D.scenes[s.scene].label+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
+      s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想":D.scenes[s.scene].label)+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
@@ -90,12 +104,12 @@
       lines.push("【母圖 "+p.number+"｜4×"+p.rows+"｜貼圖 "+p.start+"～"+p.end+"】");
       for(let i=p.start-1;i<p.end;i++){
         const entry=state.items[i],text=finalText(state,entry);
-        lines.push("第 "+(i-p.start+2)+" 格（第 "+(i+1)+" 張貼圖，定位標籤不印）："+(hasText(state,entry)?(entry.text.trim()?"要印的文字 "+quote(text):"台詞未填：由 AI 依情境設計簡短繁體中文台詞"+(s.nameMode!=="none"&&entry.includeName&&s.name.trim()?"，在台詞前加上共用名稱 "+quote(s.name.trim()):"，不自行加入人名或店名")):"無文字；原台詞只作情境參考 "+quote(entry.text))+"；表情 "+(entry.emotion.trim()?quote(entry.emotion.trim()):"依情境創作")+"；動作 "+(entry.action.trim()?quote(entry.action.trim()):"依情境創作不同姿勢")+"。");
+        lines.push("第 "+(i-p.start+2)+" 格（第 "+(i+1)+" 張貼圖，定位標籤不印）："+(hasText(state,entry)?(entry.text.trim()?"要印的文字 "+printed(text):"台詞未填：由 AI 依情境設計簡短繁體中文台詞"+(s.nameMode!=="none"&&entry.includeName&&s.name.trim()?"，在台詞前加上共用名稱 "+quote(s.name.trim()):"，不自行加入人名或店名")):"無文字"+(entry.text.trim()?"；原台詞只作情境參考 "+quote(entry.text):""))+"；表情 "+(entry.emotion.trim()?quote(entry.emotion.trim()):"依情境創作")+"；動作 "+(entry.action.trim()?quote(entry.action.trim()):"依情境創作不同姿勢")+"。");
       }
       lines.push("");
     }
     lines.push("只輸出各張完整母圖，不製作宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。");
-    return lines.join("\n").replace("一张独立贴图；从左到右、由上到下排列","一張獨立貼圖；從左到右、由上到下排列");
+    return lines.join("\n");
   }
   function serialize(state) { return {tool:D.tool,version:D.version,state:clone(state)}; }
   function deserialize(raw) {
@@ -126,8 +140,11 @@
       return entry;
     });
     if(input.grids.some(x=>x!==8&&x!==16))throw new Error("設定檔母圖只可為 8 或 16 格。");
-    return {settings,items,grids:input.grids.slice()};
+    // 自動分配以張數重算；預設情境模式不可停在「自由發想」。
+    const grids=settings.layoutMode==="auto"?autoGrids(settings.count):input.grids.slice();
+    if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
+    return {settings,items,grids};
   }
-  const api={initial,item,presetItem,releasePreset,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
+  const api={initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

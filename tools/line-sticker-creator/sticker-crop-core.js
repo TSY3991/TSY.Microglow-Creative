@@ -3,7 +3,10 @@
   const counts=[8,16,24,32,40];
   function cuts(size,n){if(!Number.isInteger(size)||size<n)throw Error('圖片尺寸不足。');return Array.from({length:n+1},(_,i)=>Math.round(size*i/n));}
   function rectangles(w,h,x,y){
-    for(const [a,size] of [[x,w],[y,h]])if(a[0]!==0||a[a.length-1]!==size||a.some((v,i)=>!Number.isInteger(v)||(i&&v<=a[i-1])))throw Error('分割線須依序遞增，且位於圖片範圍內。');
+    for(const [a,size,name] of [[x,w,'直線'],[y,h,'橫線']]){
+      if(a[0]!==0||a[a.length-1]!==size)throw Error(name+'的首尾須是 0 與圖片邊界。');
+      for(let i=1;i<a.length-1;i++)if(!Number.isInteger(a[i])||a[i]<=a[i-1]||a[i]>=size)throw Error(name+' '+i+' 的位置不合法：須為整數、比前一條大，並在圖片範圍內。');
+    }
     return y.slice(1).flatMap((v,j)=>x.slice(1).map((u,i)=>({x:x[i],y:y[j],width:u-x[i],height:v-y[j]})));
   }
   // Only remove near-white pixels reachable from the frame. Never mutate the source.
