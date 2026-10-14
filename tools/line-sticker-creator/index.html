@@ -15,17 +15,18 @@
   <title>LINE 貼圖創作工具｜微光創作工具</title>
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
-  <link rel="stylesheet" href="./sticker-creator.css?v=20261014b">
+  <link rel="stylesheet" href="./sticker-creator.css?v=20261014c">
   <script defer src="./sticker-data.js?v=20261014a"></script>
   <script defer src="./sticker-core.js?v=20261014b"></script>
-  <script defer src="./sticker-app.js?v=20261014b"></script>
+  <script defer src="./sticker-ai-config.js?v=20261014c"></script>
+  <script defer src="./sticker-ai.js?v=20261014c"></script>
+  <script defer src="./sticker-app.js?v=20261014c"></script>
 </head>
 <body class="line-sticker-tool">
   <a class="skip-link" href="#creator">跳到創作設定</a>
   <main class="sticker-shell">
     <nav class="topbar" aria-label="返回導覽">
-      <a class="brand" href="../../"><img src="../../assets/logo-mark.png" alt="" width="38" height="38"><span>微光<span class="brand-sub">創作工具</span></span></a>
-      <div class="nav-links"><a class="return-link" href="../../">回創作工具大廳</a><a class="return-link" href="https://tsy3991.github.io/TSY.Microglow-Website/">入口網站</a><a class="return-link" href="../ai-creative-image/">圖片創作工具箱 ↗</a></div>
+      <div class="nav-links"><a class="return-link" href="../../">回創作工具大廳</a><a class="return-link" href="https://tsy3991.github.io/TSY.Microglow-Website/">入口網站</a></div>
     </nav>
     <header class="hero">
       <div class="hero-copy"><p class="eyebrow">Microglow Creative</p><h1>LINE 貼圖創作工具</h1><p class="hero-description">讓日常的小表情，<br>成為聊天裡的一點微光。</p><p class="hero-caption">設定角色、寫下台詞，把你的想法整理成生圖提示詞。</p><span class="draft-badge"><span class="status-dot" aria-hidden="true"></span>提示詞產生工具・一般靜態貼圖</span></div>
@@ -39,7 +40,7 @@
         <li>檢查整組摘要，產生並複製完整提示詞。</li>
         <li>前往 <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">ChatGPT</a>、<a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer">Gemini</a> 或其他生圖平台，登入自己的帳號，貼上提示詞生成圖片。使用照片角色時，請一併附上參考圖。</li>
       </ol>
-      <p>目前的「AI 發揮」由你選用的生圖平台安排表情與動作；網站 AI 自動安排功能尚未啟用。生成圖片仍需核對文字、角色、透明背景與排列。</p>
+      <p>未填的「AI 發揮」由你選用的生圖平台處理；也可在第二步使用網站 AI 先安排具體內容。<span id="ai-service-summary">網站 AI 尚未啟用，手動設定與提示詞功能可正常使用。</span>生成圖片仍需核對文字、角色、透明背景與排列。</p>
     </section>
     <noscript><p class="notice">請啟用 JavaScript 以使用設定、摘要與提示詞功能。</p></noscript>
     <div id="creator" class="creator" hidden>
@@ -74,6 +75,15 @@
                 <div data-visible="nameMode:person,shop"><label class="field" for="name"><span>人名／店名（選填）</span><input id="name" data-setting="name" type="text" maxlength="1000"><span id="error-name" class="field-error"></span><span class="field-hint">會加在台詞前方；逐張可關閉，也可直接編輯台詞。</span></label></div>
               </div>
               <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用情境台詞</button><button type="button" class="button" id="fill-missing">自動補齊空缺</button></div>
+              <section class="notice ai-planner" aria-labelledby="ai-title">
+                <h3 id="ai-title">AI 安排表情與動作</h3>
+                <p>依角色、風格、情境與逐張台詞補齊空白，保留已填內容。先預覽，確認後再套用；這項功能只安排文字，不會生成圖片。</p>
+                <p class="field-hint">使用時會將角色文字描述、風格、情境及逐張台詞／表情／動作傳送至 Gemini；不傳照片、檔名或共用名稱欄位。文字中若有私人資訊，請先移除。免費服務的內容可能用於改善 Google 產品。</p>
+                <label class="check-field"><input id="ai-consent" type="checkbox"><span>同意將上述文字內容傳送至 Gemini 以安排逐張內容</span></label>
+                <div class="inline-actions"><button id="ai-arrange" class="button primary" type="button" disabled>AI 安排表情與動作</button><button id="ai-cancel" class="button" type="button" hidden>取消等待</button></div>
+                <p id="ai-status" role="status" aria-live="polite">網站 AI 尚未啟用；仍可手動設定。</p>
+                <div id="ai-preview" hidden><h3>AI 建議｜尚未套用</h3><p>確認內容後按套用，只補空白欄位；角色、文字開關與母圖排列維持原設定。</p><div class="table-scroll"><table class="summary-table"><thead><tr><th>貼圖</th><th>台詞／情境</th><th>表情</th><th>動作</th></tr></thead><tbody id="ai-preview-body"></tbody></table></div><div class="inline-actions"><button id="ai-apply" class="button primary" type="button">確認並套用空白欄位</button><button id="ai-discard" class="button" type="button">捨棄建議</button></div></div>
+              </section>
               <details class="bulk-editor"><summary>一次貼上多句台詞</summary><label class="field" for="bulk"><span>每行一句；套用前會確認是否取代目前逐張內容</span><textarea id="bulk" rows="5" maxlength="24000" placeholder="早安&#10;謝謝你&#10;辛苦了"></textarea></label><button type="button" id="apply-bulk" class="button">套用台詞清單</button></details>
               <div class="items-toolbar"><strong id="items-count"></strong><button type="button" class="button small" id="add-item">新增一筆內容</button></div>
               <p class="field-hint">文字欄位皆為選填；未填台詞、表情或動作時，由 AI 依情境發揮。設為無文字的格子不會自動補入台詞。</p>

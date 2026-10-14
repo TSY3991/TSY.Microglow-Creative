@@ -108,3 +108,9 @@
 .line-sticker-tool .reference-upload { padding:16px; border:1px dashed var(--teal); border-radius:12px; background:var(--panel-soft); }
 .line-sticker-tool #reference-preview { display:grid; justify-items:start; gap:12px; }
 .line-sticker-tool #reference-image { display:block; max-width:100%; width:auto; height:auto; max-height:260px; object-fit:contain; border-radius:10px; }
+
+.line-sticker-tool .ai-planner h3 { margin:0 0 10px; font-size:.95rem; }
+.line-sticker-tool .ai-planner .summary-table { background:var(--panel); }
+.line-sticker-tool #ai-status { min-height:24px; }
+
+.line-sticker-tool .topbar { justify-content:flex-end; }

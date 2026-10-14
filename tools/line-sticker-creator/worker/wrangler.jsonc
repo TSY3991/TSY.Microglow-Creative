@@ -1,0 +1,15 @@
+{
+  "name": "microglow-sticker-ai",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-14",
+  "vars": {
+    "AI_ENABLED": "false",
+    "ALLOWED_ORIGIN": "https://tsy3991.github.io",
+    "GEMINI_MODEL": "gemini-2.5-flash-lite"
+  },
+  "observability": { "enabled": false },
+  "ratelimits": [
+    { "name": "CLIENT_LIMITER", "namespace_id": "2026101401", "simple": { "limit": 3, "period": 60 } },
+    { "name": "SERVICE_LIMITER", "namespace_id": "2026101402", "simple": { "limit": 10, "period": 60 } }
+  ]
+}

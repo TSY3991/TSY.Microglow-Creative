@@ -5,6 +5,8 @@
   const storageKey="microglow:line-sticker-creator:v1";
   let state=C.initial(),step=1,saveEnabled=false,generated=false;
   let referenceUrl="",referenceRevision=0;
+  const AI=window.StickerAI;
+  let aiEndpoint="",aiController=null,aiPending=null,aiRevision=0;
   function clearReference() {
     referenceRevision++;
     if(referenceUrl)URL.revokeObjectURL(referenceUrl);
@@ -41,6 +43,7 @@
     catch{$("save-status").textContent="瀏覽器無法儲存；可改用匯出設定檔。";}
   }
   function invalidate() {
+    clearAI("設定已變更，請重新安排 AI 建議。");
     generated=false;$("confirm-summary").checked=false;$("generate").disabled=true;
     $("prompt-area").hidden=true;$("prompt-output").value="";$("copy-feedback").textContent="";
     $("validation").hidden=true;
@@ -275,5 +278,54 @@
     const raw=localStorage.getItem(storageKey);
     if(raw){state=C.deserialize(raw);saveEnabled=true;$("save-local").checked=true;$("save-status").textContent="已載入這個瀏覽器的草稿。";}
   }catch{$("save-status").textContent="瀏覽器草稿無法讀取，未套用；可匯入有效設定檔。";}
+  function aiAvailability() {
+    $("ai-arrange").disabled=!aiEndpoint||!$("ai-consent").checked||!!aiController;
+    $("ai-cancel").hidden=!aiController;
+    $("ai-arrange").textContent=aiController?"AI 安排中…":"AI 安排表情與動作";
+  }
+  function clearAI(message) {
+    const hadWork=!!aiController||!!aiPending;
+    aiRevision++;
+    if(aiController)aiController.abort();
+    aiController=null;aiPending=null;$("ai-preview").hidden=true;$("ai-preview-body").replaceChildren();
+    if(hadWork&&message)$("ai-status").textContent=message;
+    aiAvailability();
+  }
+  $("ai-consent").addEventListener("change",()=>{if(!$("ai-consent").checked)clearAI("已取消同意，未套用的建議已清除。");aiAvailability();});
+  $("ai-cancel").addEventListener("click",()=>clearAI("已取消等待，原有內容保留；已送出的服務端請求可能仍會計入額度。"));
+  $("ai-discard").addEventListener("click",()=>clearAI("已捨棄建議，原有內容保留。"));
+  $("ai-arrange").addEventListener("click",async()=>{
+    if(!aiEndpoint||!$("ai-consent").checked||aiController)return;
+    let input;
+    try{input=AI.payload(state);}catch(error){$("ai-status").textContent=error.message;return;}
+    const hasBlank=input.items.some(x=>!x.emotion.trim()||!x.action.trim()||(x.hasText&&!x.text.trim()));
+    if(!hasBlank){$("ai-status").textContent="目前沒有空白欄位；如要新的建議，請先清空想重新安排的欄位。";return;}
+    clearAI();
+    const revision=aiRevision,snapshot=JSON.stringify(C.serialize(state)),controller=new AbortController();
+    aiController=controller;aiAvailability();$("ai-status").textContent="正在安排逐張內容，完成後會先顯示建議。";
+    const timer=setTimeout(()=>controller.abort(),30000);
+    try{
+      const rows=await AI.request(aiEndpoint,input,controller.signal);
+      if(revision!==aiRevision)return;
+      if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
+      aiPending={rows,snapshot};
+      const body=$("ai-preview-body");body.replaceChildren();
+      rows.forEach(x=>{const row=node("tr");[String(x.id),x.text||"無文字",x.emotion,x.action].forEach(value=>row.append(node("td",value)));body.append(row);});
+      $("ai-preview").hidden=false;$("ai-status").textContent="AI 建議已完成，尚未套用；請先確認內容。";
+    }catch(error){
+      if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
+    }finally{clearTimeout(timer);if(revision===aiRevision){aiController=null;aiAvailability();}}
+  });
+  $("ai-apply").addEventListener("click",()=>{
+    if(!aiPending)return;
+    if(aiPending.snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
+    try{const n=AI.apply(state,aiPending.rows);renderItems();invalidate();$("ai-status").textContent="已補入 "+n+" 個空白欄位，請逐張確認或修改，再重新確認摘要。";status("已套用 AI 建議；尚未生成圖片。");}
+    catch(error){clearAI(error.message);}
+  });
+  try{
+    aiEndpoint=AI.endpoint(window.StickerAIConfig?.endpoint);
+    if(aiEndpoint){$("ai-service-summary").textContent="網站 AI 已設定服務位址，可在第二步嘗試安排內容。";$("ai-status").textContent="勾選同意後可取得 AI 建議；免費額度由網站共用，服務可用性以實際請求為準。";}
+  }catch(error){$("ai-status").textContent=error.message+"手動設定仍可使用。";}
+  aiAvailability();
   controls();renderItems();renderGrids();live();go(1);$("creator").hidden=false;
 })();

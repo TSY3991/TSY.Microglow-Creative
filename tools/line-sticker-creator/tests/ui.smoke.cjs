@@ -83,7 +83,7 @@ let browser,ws,server;
   check("台詞超量完整保留且可前往增加張數",await E("document.querySelectorAll('.sticker-item').length===24&&!document.querySelector('[data-panel=\"3\"]').hidden"));
   await click("next");check("超量阻擋摘要與生成",await E("!document.getElementById('validation').hidden&&document.querySelector('[data-panel=\"4\"]').hidden"));
   await set("count","24");await click("next");
-  check("合法 24 張摘要顯示兩張母圖",await E("!document.querySelector('[data-panel=\"4\"]').hidden&&document.querySelectorAll('.summary-table').length===2"));
+  check("合法 24 張摘要顯示兩張母圖",await E("!document.querySelector('[data-panel=\"4\"]').hidden&&document.querySelectorAll('#summary .summary-table').length===2"));
   check("未確認摘要不能生成",await E("document.getElementById('generate').disabled"));
   await click("confirm-summary");await click("generate");
   check("整組提示詞包含完整 24 張與定位規則",await E("document.getElementById('prompt-output').value.includes('貼圖 17～24')&&document.getElementById('prompt-output').value.includes('定位標籤不印')"));
