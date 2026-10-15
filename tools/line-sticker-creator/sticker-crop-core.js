@@ -1,8 +1,8 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.StickerCropCore=api;})(typeof window==='object'?window:globalThis,function(){
   'use strict';
   const counts=[8,16,24,32,40];
-  // 與 sticker-core.js 的 CELL 相同：每格 481×416（37:32），中央 370×320 為 LINE 貼圖尺寸。
-  const cell={width:481,height:416};
+  // 與 sticker-core.js 預設留白（wide）相同：每格 592×512（37:32），中央 370×320 為 LINE 貼圖尺寸；留白改變時長寬比不變。
+  const cell={width:592,height:512};
   const expectedSize=rows=>({width:4*cell.width,height:rows*cell.height});
   const ratioGap=(w,h,rows)=>{const e=expectedSize(rows),want=e.width/e.height;return Math.abs(w/h-want)/want;};
   function cuts(size,n){if(!Number.isInteger(size)||size<n)throw Error('圖片尺寸不足。');return Array.from({length:n+1},(_,i)=>Math.round(size*i/n));}

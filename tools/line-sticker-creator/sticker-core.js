@@ -4,7 +4,7 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const label = (key,value) => (D.options[key] || []).find(x=>x[0]===value)?.[1] || value;
   // LINE 一般貼圖最大 370×320；母圖每格在其外各加 15%（481×416，長寬比同為 37:32），讓切割線不貼近圖文。
-  const SAFE = { width: 370, height: 320 }, CELL = { width: 481, height: 416 };
+  const SAFE = { width: 370, height: 320 }, CELL = { width: 592, height: 512 };
   // 各平台常見可選的長寬比（依公開資料；實際以平台畫面為準）。提示詞只做建議，裁切端不要求每格同形。
   const RATIO_HINT = {
     chatgpt: { 4: "1:1（正方形）或 3:2（橫式）", 2: "3:2（橫式，每格會偏直）" },
@@ -13,7 +13,7 @@
   };
   // 格子留白：每格 = 370×320 乘上倍率（長寬比不變，仍為 37:32）；標準 1.3＝481×416。
   const SPACING = { standard: 1.3, wide: 1.6, widest: 1.9 };
-  const cellFor = spacing => { const k = SPACING[spacing] || SPACING.standard; return { width: Math.round(SAFE.width * k), height: Math.round(SAFE.height * k) }; };
+  const cellFor = spacing => { const k = SPACING[spacing] || SPACING.wide; return { width: Math.round(SAFE.width * k), height: Math.round(SAFE.height * k) }; };
   const motherSize = (rows, spacing) => { const cell = cellFor(spacing); return { width: 4 * cell.width, height: rows * cell.height }; };
   const flat = value => String(value).replace(/\s*\r?\n\s*/g," ").trim();
   const quote = value => JSON.stringify(flat(value));

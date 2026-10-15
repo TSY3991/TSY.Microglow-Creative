@@ -229,10 +229,9 @@
       if(moved&&!confirm("有 "+moved+" 張的內容原本是「不印字的情境描述」，切換後會變成要印在貼圖上的文字；是否繼續？")){el.value=previous;return;}
     }
     state.settings[key]=key==="count"?Number(el.value):el.value;
-    if(key==="platform"||key==="spacing"){
-      if(key==="spacing")renderGrids();
+    if(key==="platform"){
       if(generated){
-        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"格子留白已改，提示詞已更新，請重新複製；已生成的母圖不會跟著改變。");}
+        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
       }
       save();if(step===4)renderMulti();return;
@@ -457,6 +456,14 @@
   $("show-single").addEventListener("click",()=>{showSingle=!showSingle;renderMulti();});
   $("to-crop").addEventListener("click",()=>{$("tab-crop").click();$("tab-crop").closest("nav").scrollIntoView({block:"start"});setTimeout(()=>crop().run(),80);});
   window.addEventListener("sticker-mothers-changed",()=>{if(step===4)renderMulti();});
+  // 裁切頁發現母圖有圖被切到：不讓使用者選，直接把之後的提示詞改成更寬的格子留白。
+  window.addEventListener("sticker-clipped",()=>{
+    if(state.settings.spacing==="widest")return;
+    state.settings.spacing="widest";renderGrids();
+    if(generated){try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";}catch{invalidate();}}
+    if(step===4)renderMulti();
+    save();status("裁切時發現母圖有圖被切到，已自動把提示詞的格子留白加到最寬（每格 703×608）。請重新複製提示詞，再生成被切到的那張母圖。");
+  });
   try{
     aiEndpoint=AI.endpoint(window.StickerAIConfig?.endpoint);
     if(aiEndpoint){$("ai-service-summary").textContent="網站 AI 已設定服務位址，可在第二步嘗試安排內容。";$("ai-status").textContent="勾選同意後可取得 AI 建議；免費額度由網站共用，服務可用性以實際請求為準。";}

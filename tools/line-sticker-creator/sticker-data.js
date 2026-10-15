@@ -26,7 +26,7 @@
     textColor: [["auto","AI 配合整體風格"],["multi","多色搭配"],["black","黑"],["white","白"],["red","紅"],["orange","橘"],["yellow","黃"],["green","綠"],["blue","藍"],["purple","紫"],["pink","粉紅"],["custom","自訂顏色"]],
     layoutMode: [["auto","自動分配（建議）：16 格優先，剩餘用 8 格"],["manual","自行調整：自己決定每張母圖放 8 或 16 格"]],
     background: [["transparent","要求 AI 生成透明背景"],["white","純白背景"],["color","自選單一底色"]],
-    spacing: [["standard","標準：481×416 px（四周多留 15%）"],["wide","加寬：592×512 px（四周多留 30%，圖被切到時改選這個）"],["widest","最寬：703×608 px（四周多留 45%，角色常超出格子時用）"]],
+    spacing: [["standard","標準：481×416 px（四周多留 15%）"],["wide","加寬：592×512 px（四周多留 30%，預設）"],["widest","最寬：703×608 px（四周多留 45%，偵測到被切到時自動使用）"]],
     platform: [["chatgpt","ChatGPT"],["gemini","Gemini"],["generic","通用版本"]]
   };
   options.strokeColor = options.textColor.filter(x => x[0] !== "multi");
@@ -38,7 +38,7 @@
     textColor:"auto",textCustom:"#082528",position:"auto",
     stroke:"auto",strokeColor:"auto",strokeCustom:"#ffffff",
     shadow:"auto",shadowColor:"auto",shadowCustom:"#727978",
-    layoutMode:"auto",spacing:"standard",background:"transparent",backgroundColor:"#ffffff",
+    layoutMode:"auto",spacing:"wide",background:"transparent",backgroundColor:"#ffffff",
     platform:"chatgpt"
   };
   const api = { scenes, common, options, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };

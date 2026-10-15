@@ -16,14 +16,14 @@
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261015e">
-  <script defer src="./sticker-data.js?v=20261015b"></script>
-  <script defer src="./sticker-core.js?v=20261015d"></script>
+  <script defer src="./sticker-data.js?v=20261015c"></script>
+  <script defer src="./sticker-core.js?v=20261015e"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015a"></script>
-  <script defer src="./sticker-app.js?v=20261015c"></script>
+  <script defer src="./sticker-app.js?v=20261015d"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
-  <script defer src="./sticker-crop-core.js?v=20261015d"></script>
-  <script defer src="./sticker-crop-app.js?v=20261015h"></script>
+  <script defer src="./sticker-crop-core.js?v=20261015e"></script>
+  <script defer src="./sticker-crop-app.js?v=20261015i"></script>
   <script defer src="./sticker-tabs.js?v=20261015b"></script>
 </head>
 <body class="line-sticker-tool">
@@ -114,14 +114,13 @@
               <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="title-3" tabindex="-1">母圖設定</h2><p>固定排列順序，保留每格不同的表情與動作。</p></div></div>
               <div class="field-grid">
                 <label class="field" for="layoutMode"><span>母圖分配</span><select id="layoutMode" data-setting="layoutMode"></select><span id="error-layoutMode" class="field-error"></span></label>
-                <label class="field" for="spacing"><span>格子留白</span><select id="spacing" data-setting="spacing"></select><span class="field-hint">AI 常把圖畫到格子邊緣而被切到。生成後發現有圖被切掉，就改選「加寬」再重新生成。</span><span id="error-spacing" class="field-error"></span></label>
                 <label class="field" for="background"><span>母圖背景</span><select id="background" data-setting="background"></select><span id="error-background" class="field-error"></span></label>
                 <div data-visible="background:color"><label class="field" for="backgroundColor"><span>單一底色</span><input id="backgroundColor" data-setting="backgroundColor" type="color" maxlength="1000"><span id="error-backgroundColor" class="field-error"></span></label></div>
               </div>
               <p class="notice" id="count-note">張數已在第二步設定；這裡只決定母圖怎麼分配。</p>
               <div id="grids" class="grids"></div><p id="grid-total" class="field-hint" role="status"></p><p id="error-grids" class="field-error"></p>
               <div class="inline-actions" data-visible="layoutMode:manual"><button type="button" id="add-grid" class="button">新增一張母圖</button></div>
-              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。提示詞依 LINE 貼圖尺寸反推母圖大小：每格預設 481×416 px（370×320 再多留約 15% 邊；可在「格子留白」改成較寬），圖文須放在每格中央安全區內。AI 是否遵守仍需生成後檢查；已產生的母圖不會因此改變。</p>
+              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。提示詞依 LINE 貼圖尺寸反推母圖大小：每格 592×512 px（370×320 再多留約 30% 邊），圖文須放在每格中央安全區內；網站在裁切時若發現圖被切到，會自動把之後的提示詞改成更寬的留白（703×608），不用你選。AI 是否遵守仍需生成後檢查；已產生的母圖不會因此改變。</p>
               <details class="why-split"><summary>為什麼這樣分母圖？</summary><ul>
                 <li>LINE 規定的是整組張數（8／16／24／32／40）；一張母圖放幾格是本工具的規則，不是 LINE 規定。</li>
                 <li>每張母圖只用 16 格或 8 格，就能組出所有張數（例如 24＝16＋8、40＝16＋16＋8）。</li>

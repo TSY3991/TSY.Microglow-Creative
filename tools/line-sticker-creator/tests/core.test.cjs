@@ -67,7 +67,7 @@ test("照片參考可為動物或物件，三平台均提醒另附圖片",()=>{
 });
 
 test("文字全留白不阻擋，照片／原創與有字／無字意圖正確",()=>{for(const source of ["photo","original"]){for(const mode of ["all","none","per"]){const s=ready();Object.assign(s.settings,{source,character:"",style:"custom",customStyle:"",font:"custom",customFont:"",nameMode:"person",name:"",textMode:mode,mode:"manual"});s.items=Array.from({length:16},()=>C.item());if(mode==="per")s.items[0].hasText=false;assert.deepEqual(C.validate(s),[]);const p=C.prompt(s);assert.match(p,source==="photo"?/直接觀察已附參考圖/:/自行設計一個原創角色/);assert.ok(!p.includes('要印的文字 ""'));if(mode==="none")assert.match(p,/整組不放任何文字/);else assert.match(p,/台詞未填/);}}});
-test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/理想是每格 481×416 px（長寬比 37:32/);assert.match(p,/【母圖 1｜4×4｜整張 1924×1664 px/);assert.match(p,/【母圖 2｜4×2｜整張 1924×832 px/);assert.match(p,/中央 370×320 px/);assert.match(p,/左右各留約 55 px、上下各留約 48 px/);assert.match(p,/平台無法指定精確像素時，請選最接近的比例/);assert.match(p,/4×4 母圖理想整張 1924×1664 px/);assert.match(p,/4×2 母圖理想整張 1924×832 px/);if(platform==='chatgpt'){assert.match(p,/1:1（正方形）或 3:2（橫式）/);assert.match(p,/3:2（橫式，每格會偏直）/);}if(platform==='gemini'){assert.match(p,/5:4 或 1:1/);assert.match(p,/21:9 或 16:9/);}assert.match(p,/約 11% 的空白/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
+test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/理想是每格 592×512 px（長寬比 37:32/);assert.match(p,/【母圖 1｜4×4｜整張 2368×2048 px/);assert.match(p,/【母圖 2｜4×2｜整張 2368×1024 px/);assert.match(p,/中央 370×320 px/);assert.match(p,/左右各留約 111 px、上下各留約 96 px/);assert.match(p,/平台無法指定精確像素時，請選最接近的比例/);assert.match(p,/4×4 母圖理想整張 2368×2048 px/);assert.match(p,/4×2 母圖理想整張 2368×1024 px/);if(platform==='chatgpt'){assert.match(p,/1:1（正方形）或 3:2（橫式）/);assert.match(p,/3:2（橫式，每格會偏直）/);}if(platform==='gemini'){assert.match(p,/5:4 或 1:1/);assert.match(p,/21:9 或 16:9/);}assert.match(p,/約 18% 的空白/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
 
 test("縮減張數只移除尾端空白項，有內容的完整保留",()=>{
   const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",style:"cute"});
@@ -85,14 +85,14 @@ test("匯入自動分配的設定時重算母圖；預設情境不停在自由�
 });
 test("母圖尺寸由 LINE 貼圖尺寸加外距反推，比例與貼圖一致",()=>{
   assert.equal(C.SAFE.width/C.SAFE.height,C.CELL.width/C.CELL.height);
-  assert.deepEqual(C.motherSize(4),{width:1924,height:1664});assert.deepEqual(C.motherSize(2),{width:1924,height:832});
-  const s=ready(40);assert.deepEqual(C.plans(s).map(x=>[x.width,x.height]),[[1924,1664],[1924,1664],[1924,832]]);
+  assert.deepEqual(C.motherSize(4),{width:2368,height:2048});assert.deepEqual(C.motherSize(2),{width:2368,height:1024});
+  const s=ready(40);assert.deepEqual(C.plans(s).map(x=>[x.width,x.height]),[[2368,2048],[2368,2048],[2368,1024]]);
   const K=require("../sticker-crop-core.js");assert.deepEqual(K.cell,C.CELL);assert.deepEqual(K.expectedSize(4),C.motherSize(4));
-  assert.ok(K.ratioGap(1536,1024,4)>0.05);assert.ok(K.ratioGap(1924,1664,4)<0.001);
+  assert.ok(K.ratioGap(1536,1024,4)>0.05);assert.ok(K.ratioGap(2368,2048,4)<0.001);
 });
 test("只有一種母圖時，尺寸建議只寫該種",()=>{
   const s=ready(8);s.settings.platform="gemini";const p=C.prompt(s);
-  assert.match(p,/4×2 母圖理想整張 1924×832 px/);assert.doesNotMatch(p,/4×4 母圖理想整張/);
+  assert.match(p,/4×2 母圖理想整張 2368×1024 px/);assert.doesNotMatch(p,/4×4 母圖理想整張/);
 });
 test("單張母圖提示詞：只含該張、第 2 張起沿用母圖 1、列出其他母圖已用台詞",()=>{
   const s=ready(40);s.settings.platform="gemini";s.items[0].text="早安";s.items[20].text="";s.items[35].text="";
@@ -107,15 +107,16 @@ test("重複台詞偵測：忽略空白與標點",()=>{
   const d=C.duplicates(s);assert.equal(d.length,1);assert.deepEqual(d[0].indexes,[0,1,2]);
   s.items[1].text="午安";s.items[2].text="夜安";assert.deepEqual(C.duplicates(s),[]);
 });
-test("格子留白：標準／加寬／最寬的格子與母圖尺寸，長寬比不變",()=>{
+test("格子留白：預設加寬，標準／加寬／最寬的尺寸長寬比不變",()=>{
   assert.deepEqual(C.cellFor("standard"),{width:481,height:416});assert.deepEqual(C.cellFor("wide"),{width:592,height:512});assert.deepEqual(C.cellFor("widest"),{width:703,height:608});
-  assert.deepEqual(C.cellFor("unknown"),{width:481,height:416});assert.deepEqual(C.motherSize(4,"wide"),{width:2368,height:2048});
-  const s=ready(16);assert.equal(C.plans(s)[0].width,1924);s.settings.spacing="wide";assert.equal(C.plans(s)[0].width,2368);
-  const p=C.prompt(s);assert.match(p,/每格 592×512 px/);assert.match(p,/整張 2368×2048 px/);assert.match(p,/完整性檢查/);assert.doesNotMatch(p,/481×416/);
+  assert.deepEqual(C.cellFor("unknown"),{width:592,height:512});assert.deepEqual(C.motherSize(4,"widest"),{width:2812,height:2432});
+  const s=ready(16);assert.equal(s.settings.spacing,"wide");assert.equal(C.plans(s)[0].width,2368);
+  let p=C.prompt(s);assert.match(p,/每格 592×512 px/);assert.match(p,/整張 2368×2048 px/);assert.match(p,/完整性檢查/);assert.match(p,/約 18% 的空白/);
+  s.settings.spacing="widest";p=C.prompt(s);assert.match(p,/每格 703×608 px/);assert.match(p,/整張 2812×2432 px/);assert.doesNotMatch(p,/592×512/);
   s.settings.spacing="standard";assert.match(C.prompt(s),/每格 481×416 px/);assert.match(C.prompt(s),/約 11% 的空白/);
 });
-test("格子留白：舊設定檔沒有此欄位仍可匯入，未知值被拒絕",()=>{
-  const s=ready(16),raw=C.serialize(s);delete raw.state.settings.spacing;assert.equal(C.deserialize(raw).settings.spacing,"standard");
+test("格子留白：舊設定檔沒有此欄位視為預設，未知值被拒絕",()=>{
+  const s=ready(16),raw=C.serialize(s);delete raw.state.settings.spacing;assert.equal(C.deserialize(raw).settings.spacing,"wide");
   s.settings.spacing="widest";assert.equal(C.deserialize(JSON.stringify(C.serialize(s))).settings.spacing,"widest");
   s.settings.spacing="huge";assert.throws(()=>C.deserialize(JSON.stringify(C.serialize(s))));
 });
