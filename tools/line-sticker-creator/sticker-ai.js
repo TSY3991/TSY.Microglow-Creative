@@ -28,16 +28,27 @@
     });
     return rows.sort((a, b) => a.id - b.id);
   }
-  function apply(state, rows) {
+  // 只補真正空白的欄位，並記下每個補入處，讓使用者能一鍵復原。
+  function applyDetailed(state, rows) {
     const validated = suggestions({ items: rows }, payload(state));
-    let filled = 0;
+    const changes = [];
     validated.forEach(x => {
       const entry = state.items[x.id - 1];
       for (const key of ["text", "emotion", "action"]) {
-        if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) { entry[key] = x[key]; filled++; }
+        if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) { entry[key] = x[key]; changes.push({ index: x.id - 1, key, value: x[key] }); }
       }
     });
-    return filled;
+    return { filled: changes.length, changes };
+  }
+  function apply(state, rows) { return applyDetailed(state, rows).filled; }
+  // 只復原「仍等於 AI 補入值」的欄位；使用者後來改過的不動。
+  function undo(state, changes) {
+    let restored = 0;
+    for (const { index, key, value } of changes) {
+      const entry = state.items[index];
+      if (entry && entry[key] === value) { entry[key] = ""; restored++; }
+    }
+    return restored;
   }
   function endpoint(value) {
     if (!value) return "";
@@ -55,6 +66,6 @@
     }
     return suggestions(await response.json(), input);
   }
-  const api = { payload, suggestions, apply, endpoint, request };
+  const api = { payload, suggestions, apply, applyDetailed, undo, endpoint, request };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.StickerAI = api;
 })(typeof window !== "undefined" ? window : globalThis);

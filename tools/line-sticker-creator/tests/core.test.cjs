@@ -67,7 +67,7 @@ test("照片參考可為動物或物件，三平台均提醒另附圖片",()=>{
 });
 
 test("文字全留白不阻擋，照片／原創與有字／無字意圖正確",()=>{for(const source of ["photo","original"]){for(const mode of ["all","none","per"]){const s=ready();Object.assign(s.settings,{source,character:"",style:"custom",customStyle:"",font:"custom",customFont:"",nameMode:"person",name:"",textMode:mode,mode:"manual"});s.items=Array.from({length:16},()=>C.item());if(mode==="per")s.items[0].hasText=false;assert.deepEqual(C.validate(s),[]);const p=C.prompt(s);assert.match(p,source==="photo"?/直接觀察已附參考圖/:/自行設計一個原創角色/);assert.ok(!p.includes('要印的文字 ""'));if(mode==="none")assert.match(p,/整組不放任何文字/);else assert.match(p,/台詞未填/);}}});
-test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/寬度 10%/);assert.match(p,/高度 10%/);assert.match(p,/80% 寬 × 80% 高/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
+test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/每格目標 481×416 px（長寬比 37:32/);assert.match(p,/4×4 為 1924×1664 px、4×2 為 1924×832 px/);assert.match(p,/【母圖 1｜4×4｜整張 1924×1664 px/);assert.match(p,/【母圖 2｜4×2｜整張 1924×832 px/);assert.match(p,/中央 370×320 px/);assert.match(p,/左右各留約 55 px、上下各留約 48 px/);assert.match(p,/不要改用 1:1、3:2、16:9/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
 
 test("縮減張數只移除尾端空白項，有內容的完整保留",()=>{
   const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",style:"cute"});
@@ -82,4 +82,11 @@ test("提示詞：無情境不輸出空引號、全部為繁體、自由發想�
 test("匯入自動分配的設定時重算母圖；預設情境不停在自由發想",()=>{
   const s=ready(16);s.settings.layoutMode="auto";s.grids=[8,8];const parsed=C.deserialize(JSON.stringify(C.serialize(s)));assert.deepEqual(parsed.grids,[16]);
   const t=ready(16);t.settings.mode="preset";t.settings.scene="auto";assert.equal(C.deserialize(JSON.stringify(C.serialize(t))).settings.scene,"greeting");
+});
+test("母圖尺寸由 LINE 貼圖尺寸加外距反推，比例與貼圖一致",()=>{
+  assert.equal(C.SAFE.width/C.SAFE.height,C.CELL.width/C.CELL.height);
+  assert.deepEqual(C.motherSize(4),{width:1924,height:1664});assert.deepEqual(C.motherSize(2),{width:1924,height:832});
+  const s=ready(40);assert.deepEqual(C.plans(s).map(x=>[x.width,x.height]),[[1924,1664],[1924,1664],[1924,832]]);
+  const K=require("../sticker-crop-core.js");assert.deepEqual(K.cell,C.CELL);assert.deepEqual(K.expectedSize(4),C.motherSize(4));
+  assert.ok(K.ratioGap(1536,1024,4)>0.05);assert.ok(K.ratioGap(1924,1664,4)<0.001);
 });

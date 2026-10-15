@@ -6,7 +6,7 @@
   let state=C.initial(),step=1,saveEnabled=false,generated=false;
   let referenceUrl="",referenceRevision=0;
   const AI=window.StickerAI;
-  let aiEndpoint="",aiController=null,aiPending=null,aiRevision=0;
+  let aiEndpoint="",aiController=null,aiApplied=null,aiRevision=0;
   function clearReference() {
     referenceRevision++;
     if(referenceUrl)URL.revokeObjectURL(referenceUrl);
@@ -155,6 +155,8 @@
   function summary() {
     const box=$("summary");box.replaceChildren();
     const s=state.settings;
+    const blanks=state.items.slice(0,s.count).filter(x=>C.hasText(state,x)&&!x.text.trim()).length;
+    if(blanks)box.append(node("p","還有 "+blanks+" 張台詞沒填：提示詞會寫成「由生圖平台依情境設計」。"+(aiEndpoint?"想先用網站 AI 設計，請回第二步按「AI 安排台詞、表情與動作」。":"")+"也可以直接交給生圖平台發想。","notice"));
     const info=node("dl",undefined,"summary-info");
     const entries=[
       ["角色",C.label("source",s.source)+(s.source==="original"?"・"+C.label("kind",s.kind):"")],
@@ -307,7 +309,7 @@
       if(file.size>250000)throw new Error("設定檔超過 250 KB。");
       const incoming=C.deserialize(await file.text());
       if(!confirm("匯入將取代目前頁面的設定。是否繼續？"))return;
-      clearReference();state=incoming;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
+      clearReference();hideApplied();state=incoming;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
     }catch(error){status("匯入失敗，原有內容保留："+error.message);}
   });
   try{
@@ -320,47 +322,52 @@
     $("ai-arrange").textContent=aiController?"AI 安排中…":"AI 安排台詞、表情與動作";
   }
   function clearAI(message) {
-    const hadWork=!!aiController||!!aiPending;
+    const hadWork=!!aiController;
     aiRevision++;
     if(aiController)aiController.abort();
-    aiController=null;aiPending=null;$("ai-preview").hidden=true;$("ai-preview-body").replaceChildren();
+    aiController=null;
     if(hadWork&&message)$("ai-status").textContent=message;
     aiAvailability();
   }
-  $("ai-consent").addEventListener("change",()=>{if(!$("ai-consent").checked)clearAI("已取消同意，未套用的建議已清除。");aiAvailability();});
+  function hideApplied() {aiApplied=null;$("ai-preview").hidden=true;$("ai-preview-body").replaceChildren();}
+  function showApplied(result) {
+    const body=$("ai-preview-body");body.replaceChildren();
+    state.items.slice(0,state.settings.count).forEach((entry,i)=>{
+      const printing=C.hasText(state,entry),shown=printing?entry.text:(entry.text?"無文字（情境："+entry.text+"）":"無文字");
+      const row=node("tr");[String(i+1),shown,entry.emotion,entry.action].forEach(value=>row.append(node("td",value)));body.append(row);
+    });
+    aiApplied={changes:result.changes};$("ai-preview").hidden=false;
+    $("ai-status").textContent="AI 已補入 "+result.filled+" 個空白欄位，原有內容未更動；提示詞會直接使用這些內容。可在下方逐張修改，或按「復原這次補入」。";
+    status("已套用 AI 內容；尚未生成圖片。");
+  }
+  $("ai-consent").addEventListener("change",()=>{if(!$("ai-consent").checked)clearAI("已取消同意，已中止等待。");aiAvailability();});
   $("ai-cancel").addEventListener("click",()=>clearAI("已取消等待，原有內容保留；已送出的服務端請求可能仍會計入額度。"));
-  $("ai-discard").addEventListener("click",()=>clearAI("已捨棄建議，原有內容保留。"));
+  $("ai-discard").addEventListener("click",()=>{hideApplied();$("ai-status").textContent="已關閉補入清單；補入的內容仍保留，可在逐張欄位修改。";});
+  $("ai-undo").addEventListener("click",()=>{
+    if(!aiApplied)return;
+    const restored=AI.undo(state,aiApplied.changes);hideApplied();renderItems();invalidate();
+    $("ai-status").textContent="已復原 "+restored+" 個 AI 補入的欄位；你之後自己改過的欄位不受影響。";
+  });
   $("ai-arrange").addEventListener("click",async()=>{
     if(!aiEndpoint||!$("ai-consent").checked||aiController)return;
     let input;
     try{input=AI.payload(state);}catch(error){$("ai-status").textContent=error.message;return;}
     const hasBlank=input.items.some(x=>!x.emotion.trim()||!x.action.trim()||(x.hasText&&!x.text.trim()));
     if(!hasBlank){$("ai-status").textContent="目前沒有空白欄位；如要新的建議，請先清空想重新安排的欄位。";return;}
-    clearAI();
+    clearAI();hideApplied();
     const revision=aiRevision,snapshot=JSON.stringify(C.serialize(state)),controller=new AbortController();
-    aiController=controller;aiAvailability();$("ai-status").textContent="正在安排逐張內容，完成後會先顯示建議。";
+    aiController=controller;aiAvailability();$("ai-status").textContent="正在安排逐張內容，完成後會自動補入空白欄位。";
     const timer=setTimeout(()=>controller.abort(),65000);
     try{
       const rows=await AI.request(aiEndpoint,input,controller.signal);
       if(revision!==aiRevision)return;
       if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
-      aiPending={rows,snapshot};
-      const body=$("ai-preview-body");body.replaceChildren();
-      rows.forEach(x=>{
-        const entry=state.items[x.id-1],printing=!!entry&&C.hasText(state,entry);
-        const shown=printing?x.text:(x.text?"無文字（情境："+x.text+"）":"無文字");
-        const row=node("tr");[String(x.id),shown,x.emotion,x.action].forEach(value=>row.append(node("td",value)));body.append(row);
-      });
-      $("ai-preview").hidden=false;$("ai-status").textContent="AI 建議已完成，尚未套用；請先確認內容。";
+      let result;
+      try{result=AI.applyDetailed(state,rows);}catch(error){$("ai-status").textContent=error.message;return;}
+      aiController=null;renderItems();invalidate();showApplied(result);
     }catch(error){
       if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
     }finally{clearTimeout(timer);if(revision===aiRevision){aiController=null;aiAvailability();}}
-  });
-  $("ai-apply").addEventListener("click",()=>{
-    if(!aiPending)return;
-    if(aiPending.snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
-    try{const n=AI.apply(state,aiPending.rows);renderItems();invalidate();$("ai-status").textContent="已補入 "+n+" 個空白欄位，請逐張確認或修改，再重新確認摘要。";status("已套用 AI 建議；尚未生成圖片。");}
-    catch(error){clearAI(error.message);}
   });
   try{
     aiEndpoint=AI.endpoint(window.StickerAIConfig?.endpoint);

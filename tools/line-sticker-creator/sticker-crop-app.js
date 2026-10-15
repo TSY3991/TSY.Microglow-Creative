@@ -48,7 +48,10 @@
   function button(text,fn){const b=el('button',text);b.type='button';b.className='button small';b.onclick=fn;return b;}
   function renderMothers(){
     $('crop-mothers').replaceChildren();mothers.forEach((m,i)=>{
-      const box=el('article');box.className='crop-mother';box.append(el('h3','母圖 '+(i+1)+'｜'+m.file.name),el('p',m.image.width+' × '+m.image.height+' px'));
+      const box=el('article');box.className='crop-mother';const want=C.expectedSize(m.rows),gap=C.ratioGap(m.image.width,m.image.height,m.rows),cw=m.image.width/4,ch=m.image.height/m.rows;
+      box.append(el('h3','母圖 '+(i+1)+'｜'+m.file.name),el('p',m.image.width+' × '+m.image.height+' px；每格約 '+Math.round(cw)+' × '+Math.round(ch)+' px'));
+      const note=el('p','建議尺寸 '+want.width+' × '+want.height+' px（每格 '+C.cell.width+' × '+C.cell.height+'）。'+(gap>0.05?'此圖長寬比與建議相差約 '+Math.round(gap*100)+'%，每格形狀會和 370×320 不同；仍可裁切，輸出會等比縮放進 370×320。':'長寬比符合建議。')+(cw<370||ch<320?' 每格小於 370×320，輸出時會放大而略顯模糊。':''));
+      note.className='field-hint';box.append(note);
       const grid=el('select');grid.setAttribute('aria-label','母圖 '+(i+1)+' 裁切網格');grid.add(new Option('4×2（8 格）',2));grid.add(new Option('4×4（16 格）',4));grid.value=m.rows;
       grid.onchange=()=>{m.rows=Number(grid.value);resetCuts(m);invalidate();renderMothers();controls();};box.append(grid);
       const previewScale=Math.min(600/m.image.width,450/m.image.height),c=canvas(Math.max(1,Math.round(m.image.width*previewScale)),Math.max(1,Math.round(m.image.height*previewScale)));c.className='crop-mother-preview';c.setAttribute('aria-label','母圖與分割線預覽');drawMother(m,c);box.append(c);

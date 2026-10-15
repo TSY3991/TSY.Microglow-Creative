@@ -3,6 +3,9 @@
   const D = typeof module !== "undefined" && module.exports ? require("./sticker-data.js") : root.StickerData;
   const clone = value => JSON.parse(JSON.stringify(value));
   const label = (key,value) => (D.options[key] || []).find(x=>x[0]===value)?.[1] || value;
+  // LINE 一般貼圖最大 370×320；母圖每格在其外各加 15%（481×416，長寬比同為 37:32），讓切割線不貼近圖文。
+  const SAFE = { width: 370, height: 320 }, CELL = { width: 481, height: 416 };
+  const motherSize = rows => ({ width: 4 * CELL.width, height: rows * CELL.height });
   const flat = value => String(value).replace(/\s*\r?\n\s*/g," ").trim();
   const quote = value => JSON.stringify(flat(value));
   // 多行台詞改用逐行描述，避免生圖 AI 把 JSON 的反斜線 n 當成字面文字印出來。
@@ -67,7 +70,7 @@
   function plans(state) {
     let offset=0;
     return state.grids.map((size,i)=>{
-      const plan={number:i+1,size,columns:4,rows:size/4,start:offset+1,end:offset+size};
+      const plan={number:i+1,size,columns:4,rows:size/4,start:offset+1,end:offset+size,...motherSize(size/4)};
       offset+=size;return plan;
     });
   }
@@ -88,7 +91,8 @@
       "",
       "【母圖結構】",
       "每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
-      "優先確保可以沿平均網格完整分割：每格左、右各至少保留該格寬度 10% 的空白，上、下各至少保留該格高度 10% 的空白。完整角色、台詞、道具、描邊、陰影與裝飾都須放在格子中央 80% 寬 × 80% 高的安全區內（generous negative space）；相鄰格的可見內容之間，形成至少約一格寬／高 20% 的乾淨分隔帶。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
+      "母圖尺寸：每格目標 "+CELL.width+"×"+CELL.height+" px（長寬比 37:32，與 LINE 貼圖 370×320 同比例，另外多留邊）。各母圖整張尺寸依列數決定：4×4 為 "+motherSize(4).width+"×"+motherSize(4).height+" px、4×2 為 "+motherSize(2).width+"×"+motherSize(2).height+" px（每張母圖標題也有標示）。不要改用 1:1、3:2、16:9 等其他比例，也不要為了套用平台預設尺寸而壓縮或拉伸格子；若平台無法指定精確像素，請維持 4 欄的排列與每格 37:32 的長寬比，並如實告知實際輸出尺寸。",
+      "安全區：每格中央 "+SAFE.width+"×"+SAFE.height+" px 是角色、台詞、道具、描邊、陰影與裝飾必須完整放入的範圍（generous negative space）；每格左右各留約 "+Math.floor((CELL.width-SAFE.width)/2)+" px、上下各留約 "+Math.floor((CELL.height-SAFE.height)/2)+" px 的空白，相鄰格的可見內容之間因此至少有約 "+(CELL.width-SAFE.width)+" px（左右）／"+(CELL.height-SAFE.height)+" px（上下）的乾淨分隔帶，方便沿平均網格切割。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
       "網格限制的是容納區與順序，不固定每格藝術構圖。角色與文字不得跨格、重疊、貼邊或被裁切；空間不足時縮小整組角色與文字。",
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
@@ -101,7 +105,7 @@
       ""
     ];
     for(const p of plans(state)){
-      lines.push("【母圖 "+p.number+"｜4×"+p.rows+"｜貼圖 "+p.start+"～"+p.end+"】");
+      lines.push("【母圖 "+p.number+"｜4×"+p.rows+"｜整張 "+p.width+"×"+p.height+" px｜貼圖 "+p.start+"～"+p.end+"】");
       for(let i=p.start-1;i<p.end;i++){
         const entry=state.items[i],text=finalText(state,entry);
         lines.push("第 "+(i-p.start+2)+" 格（第 "+(i+1)+" 張貼圖，定位標籤不印）："+(hasText(state,entry)?(entry.text.trim()?"要印的文字 "+printed(text):"台詞未填：由 AI 依情境設計簡短繁體中文台詞"+(s.nameMode!=="none"&&entry.includeName&&s.name.trim()?"，在台詞前加上共用名稱 "+quote(s.name.trim()):"，不自行加入人名或店名")):"無文字"+(entry.text.trim()?"；原台詞只作情境參考 "+quote(entry.text):""))+"；表情 "+(entry.emotion.trim()?quote(entry.emotion.trim()):"依情境創作")+"；動作 "+(entry.action.trim()?quote(entry.action.trim()):"依情境創作不同姿勢")+"。");
@@ -145,6 +149,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
+  const api={SAFE,CELL,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

@@ -114,3 +114,9 @@
 .line-sticker-tool #ai-status { min-height:24px; }
 
 .line-sticker-tool .topbar { justify-content:flex-end; }
+
+.line-sticker-tool .tab-off { display:none !important; }
+.line-sticker-tool .mode-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 20px; }
+.line-sticker-tool .mode-tabs button { min-height:52px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; color:var(--ink-soft); background:var(--panel); font:inherit; font-size:.95rem; font-weight:600; cursor:pointer; }
+.line-sticker-tool .mode-tabs button[aria-selected="true"] { background:var(--teal-dark); color:white; border-color:var(--teal-dark); }
+@media(max-width:600px) { .line-sticker-tool .mode-tabs button { font-size:.82rem; padding:8px 6px; } }

@@ -1,6 +1,10 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.StickerCropCore=api;})(typeof window==='object'?window:globalThis,function(){
   'use strict';
   const counts=[8,16,24,32,40];
+  // 與 sticker-core.js 的 CELL 相同：每格 481×416（37:32），中央 370×320 為 LINE 貼圖尺寸。
+  const cell={width:481,height:416};
+  const expectedSize=rows=>({width:4*cell.width,height:rows*cell.height});
+  const ratioGap=(w,h,rows)=>{const e=expectedSize(rows),want=e.width/e.height;return Math.abs(w/h-want)/want;};
   function cuts(size,n){if(!Number.isInteger(size)||size<n)throw Error('圖片尺寸不足。');return Array.from({length:n+1},(_,i)=>Math.round(size*i/n));}
   function rectangles(w,h,x,y){
     for(const [a,size,name] of [[x,w,'直線'],[y,h,'橫線']]){
@@ -33,5 +37,5 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  return {counts,cell,expectedSize,ratioGap,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

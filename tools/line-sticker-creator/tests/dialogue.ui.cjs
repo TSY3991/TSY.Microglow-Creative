@@ -79,6 +79,8 @@ let browser,ws,server;
   check('不印字的情境描述切成有字需確認，取消則維持原模式與內容',await E("document.getElementById('textMode').value==='none'&&document.getElementById('item-0-text').value==='揮手打招呼'"));
   await E('window.confirm=()=>true');await set('textMode','all');
   check('確認後才切成有字',await E("document.getElementById('textMode').value==='all'"));
+  await set('source','original');await set('kind','animal');await set('style','cute');await click('next');await click('next');await click('next');
+  check('摘要頁提醒仍有台詞未填，並指向第二步的網站 AI',await E("document.querySelector('#summary .notice').textContent.includes('還有 15 張台詞沒填')"));
   await set('textMode','per');await E("document.getElementById('item-0-hasText').click()");
   check('逐張不印字的格子可編輯，標籤改為情境描述',await E("!document.getElementById('item-0-text').disabled&&document.getElementById('item-0-text').closest('label').textContent.includes('情境描述')"));
   await E('window.confirm=()=>false');await E("document.getElementById('item-0-hasText').click()");

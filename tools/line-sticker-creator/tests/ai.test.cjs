@@ -87,3 +87,11 @@ test("Worker 上游額度、權限、截斷與壞結果失敗，不改用其他�
 test("Cloudflare fetch 簽名不把 ExecutionContext 當 upstream fetch", async () => {
   const { default: entry } = await worker; const response = await entry.fetch(request(AI.payload(state())), { ...environment(), AI_ENABLED: "false" }, {}); assert.equal(response.status, 503);
 });
+test("AI 補入可一鍵復原，只復原仍等於補入值的欄位", () => {
+  const s = state(); s.items[0].text = "自己的";
+  const { filled, changes } = AI.applyDetailed(s, rows(AI.payload(s)));
+  assert.ok(filled > 0); assert.equal(filled, changes.length); assert.equal(s.items[0].text, "自己的");
+  s.items[1].action = "我後來改過";
+  const restored = AI.undo(s, changes);
+  assert.equal(restored, changes.length - 1); assert.equal(s.items[0].text, "自己的"); assert.equal(s.items[1].action, "我後來改過"); assert.equal(s.items[1].text, ""); assert.equal(s.items[2].emotion, "");
+});
