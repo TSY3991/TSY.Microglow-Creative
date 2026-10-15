@@ -63,13 +63,43 @@ async function readInput(request) {
   try { return validateInput(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(result))); }
   catch { throw new InputError("內容格式不符。"); }
 }
+// 搜尋字詞整理：去控制字元與多餘空白、轉小寫、最多 30 字；像電子郵件、網址、電話的字串直接丟棄，不記錄。
+export function cleanQuery(value) {
+  if (typeof value !== "string") return "";
+  const q = value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  if (q.length < 1 || q.length > 30 || /@|https?:|www\.|\.com|\d{6,}/.test(q)) return "";
+  return q;
+}
+async function handleMiss(request, env, respond, headers) {
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...headers, "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "600" } });
+  if (request.method !== "POST") return respond(405, "只接受 POST。", { Allow: "POST, OPTIONS" });
+  if ((request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase() !== "application/json") return respond(400, "只接受 JSON。");
+  if (!env.CLIENT_LIMITER) return respond(503, "服務尚未就緒。");
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (!ip) return respond(503, "服務來源辨識未就緒。");
+  if (Number(request.headers.get("content-length")) > 512) return respond(413, "內容過大。");
+  let body;
+  try { body = JSON.parse(await request.text()); } catch { return respond(400, "內容格式不符。"); }
+  if (!object(body) || Object.keys(body).some(key => key !== "q")) return respond(400, "內容格式不符。");
+  const q = cleanQuery(body.q);
+  if (!q) return respond(400, "字詞不符。");
+  if (!(await env.CLIENT_LIMITER.limit({ key: "miss:" + ip })).success) return respond(429, "請稍後再試。", { "Retry-After": "60" });
+  // 只記錄字詞與次數，不記 IP、不記其他設定。KV 綁定 SEARCH_MISS 存在時累計次數；另外輸出一行結構化 log（需開 observability 才會保留）。
+  console.log(JSON.stringify({ event: "search-miss", q }));
+  if (env.SEARCH_MISS) {
+    try { const key = "q:" + q, n = Number(await env.SEARCH_MISS.get(key)) || 0; await env.SEARCH_MISS.put(key, String(n + 1), { expirationTtl: 60 * 60 * 24 * 180 }); } catch {}
+  }
+  return new Response(null, { status: 204, headers });
+}
 export async function handle(request, env, upstream = fetch) {
   const origin = request.headers.get("Origin"), allowed = env.ALLOWED_ORIGIN;
   const headers = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Vary": "Origin" };
   if (origin && origin === allowed) headers["Access-Control-Allow-Origin"] = origin;
   const respond = (code, error, extra = {}) => new Response(JSON.stringify({ error }), { status: code, headers: { ...headers, ...extra } });
   if (!allowed || origin !== allowed || !/^https:\/\//.test(allowed)) return respond(403, "網站來源不允許。");
-  if (new URL(request.url).pathname !== "/arrange") return respond(404, "找不到此功能。");
+  const path = new URL(request.url).pathname;
+  if (path === "/search-miss") return handleMiss(request, env, respond, headers);
+  if (path !== "/arrange") return respond(404, "找不到此功能。");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...headers, "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "600" } });
   if (request.method !== "POST") return respond(405, "只接受 POST。", { Allow: "POST, OPTIONS" });
   if (env.AI_ENABLED !== "true" || !env.GEMINI_API_KEY || !env.CLIENT_LIMITER || !env.SERVICE_LIMITER || !/^gemini-[a-z0-9.-]+$/.test(env.GEMINI_MODEL || "")) return respond(503, "網站 AI 尚未啟用。");

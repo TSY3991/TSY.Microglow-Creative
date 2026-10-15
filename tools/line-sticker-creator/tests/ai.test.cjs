@@ -95,3 +95,25 @@ test("AI 補入可一鍵復原，只復原仍等於補入值的欄位", () => {
   const restored = AI.undo(s, changes);
   assert.equal(restored, changes.length - 1); assert.equal(s.items[0].text, "自己的"); assert.equal(s.items[1].action, "我後來改過"); assert.equal(s.items[1].text, ""); assert.equal(s.items[2].emotion, "");
 });
+test("搜尋字詞回報：只收乾淨字詞、不呼叫 Gemini、不記 IP，限流與來源檢查生效", async () => {
+  const { handle, cleanQuery } = await worker; let gemini = 0; const upstream = () => { gemini++; };
+  assert.equal(cleanQuery("  工程師\n  Debug "), "工程師 debug"); assert.equal(cleanQuery("a@b.com"), ""); assert.equal(cleanQuery("https://x.y"), ""); assert.equal(cleanQuery("0912345678"), ""); assert.equal(cleanQuery("字".repeat(31)), ""); assert.equal(cleanQuery(""), ""); assert.equal(cleanQuery(5), "");
+  const miss = (body, headers = {}, method = "POST") => new Request("https://worker.example/search-miss", { method, headers: { Origin: origin, "CF-Connecting-IP": "192.0.2.9", "Content-Type": "application/json", ...headers }, ...(method === "POST" ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}) });
+  const store = new Map(), env = { ...environment(), AI_ENABLED: "false", GEMINI_API_KEY: "", SEARCH_MISS: { get: async k => store.get(k) ?? null, put: async (k, v) => { store.set(k, v); } } };
+  const logged = []; const original = console.log; console.log = line => logged.push(line);
+  try {
+    assert.equal((await handle(miss({ q: "水電工" }), env, upstream)).status, 204);
+    assert.equal((await handle(miss({ q: "水電工" }), env, upstream)).status, 204);
+  } finally { console.log = original; }
+  assert.equal(store.get("q:水電工"), "2"); assert.equal(logged.length, 2); assert.ok(!logged[0].includes("192.0.2.9")); assert.deepEqual(JSON.parse(logged[0]), { event: "search-miss", q: "水電工" });
+  assert.equal((await handle(miss({ q: "a@b.com" }), env, upstream)).status, 400);
+  assert.equal((await handle(miss({ q: "x", extra: 1 }), env, upstream)).status, 400);
+  assert.equal((await handle(miss("not-json"), env, upstream)).status, 400);
+  assert.equal((await handle(miss({ q: "x" }, { Origin: "https://evil.example" }), env, upstream)).status, 403);
+  assert.equal((await handle(miss(null, {}, "GET"), env, upstream)).status, 405);
+  assert.equal((await handle(miss(null, {}, "OPTIONS"), env, upstream)).status, 204);
+  assert.equal((await handle(miss({ q: "x" }), { ...env, CLIENT_LIMITER: { limit: async () => ({ success: false }) } }, upstream)).status, 429);
+  assert.equal((await handle(miss({ q: "x" }), { ...env, CLIENT_LIMITER: null }, upstream)).status, 503);
+  assert.equal(AI.missEndpoint("https://w.example/arrange"), "https://w.example/search-miss"); assert.equal(AI.missEndpoint(""), "");
+  assert.equal(gemini, 0);
+});

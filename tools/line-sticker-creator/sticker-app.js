@@ -89,7 +89,17 @@
     $("scene-search-status").textContent=q?(hit?"找到 "+hit+" 個符合的項目，請從下拉選單選擇。":"找不到符合的職業或情境，可改用「AI 自由發想」。"):"";
     const first=select.options[0];if(first)first.disabled=state.settings.mode==="preset";
   }
-  $("scene-search").addEventListener("input",()=>fillScenes($("scene-search").value));
+  // 找不到結果時，經勾選同意，才把搜尋字詞匿名回報（停止輸入 1.5 秒後、同一字詞每次開啟頁面只送一次）。
+  let missTimer=0;const reported=new Set();
+  function scheduleMiss(query){
+    clearTimeout(missTimer);const q=query.trim().toLowerCase();
+    const none=q&&$("scene-search-status").textContent.startsWith("找不到");
+    $("scene-miss").hidden=!(none&&aiEndpoint);
+    if(!none||!aiEndpoint||!$("scene-miss-consent").checked||reported.has(q))return;
+    missTimer=setTimeout(()=>{if(reported.has(q))return;reported.add(q);AI.reportMiss(aiEndpoint,q);},1500);
+  }
+  $("scene-search").addEventListener("input",()=>{fillScenes($("scene-search").value);scheduleMiss($("scene-search").value);});
+  $("scene-miss-consent").addEventListener("change",()=>scheduleMiss($("scene-search").value));
   function controls() {
     document.querySelectorAll("[data-setting]").forEach(el=>{
       const key=el.dataset.setting;

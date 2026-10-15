@@ -66,6 +66,14 @@
     }
     return suggestions(await response.json(), input);
   }
-  const api = { payload, suggestions, apply, applyDetailed, undo, endpoint, request };
+  // 搜尋不到的職業／情境字詞回報（使用者勾選同意才會呼叫；只送字詞）。位址由 /arrange 換成 /search-miss。
+  function missEndpoint(value) { const target = endpoint(value); if (!target) return ""; const url = new URL(target); url.pathname = "/search-miss"; return url.href; }
+  async function reportMiss(url, query) {
+    const target = missEndpoint(url), q = String(query).trim().slice(0, 30);
+    if (!target || !q) return false;
+    try { const response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) }); return response.ok; }
+    catch { return false; }
+  }
+  const api = { missEndpoint, reportMiss, payload, suggestions, apply, applyDetailed, undo, endpoint, request };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.StickerAI = api;
 })(typeof window !== "undefined" ? window : globalThis);

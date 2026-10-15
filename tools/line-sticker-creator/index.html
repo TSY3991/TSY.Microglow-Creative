@@ -19,8 +19,8 @@
   <script defer src="./sticker-data.js?v=20261015h"></script>
   <script defer src="./sticker-core.js?v=20261015j"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
-  <script defer src="./sticker-ai.js?v=20261015b"></script>
-  <script defer src="./sticker-app.js?v=20261015h"></script>
+  <script defer src="./sticker-ai.js?v=20261015c"></script>
+  <script defer src="./sticker-app.js?v=20261015i"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
   <script defer src="./sticker-crop-core.js?v=20261015f"></script>
   <script defer src="./sticker-crop-app.js?v=20261015i"></script>
@@ -79,7 +79,7 @@
               <div class="field-grid">
                 <label class="field" for="count"><span>整組貼圖張數</span><select id="count" data-setting="count"></select><span id="error-count" class="field-error"></span><span class="field-hint">先決定張數，再逐張填寫；調低張數時，空白的多餘項目會自動移除。</span></label>
                 <label class="field" for="mode"><span>台詞來源</span><select id="mode" data-setting="mode"></select><span id="error-mode" class="field-error"></span></label>
-                <div class="field"><label for="scene-search"><span>情境分類・職業</span></label><input id="scene-search" type="search" autocomplete="off" placeholder="輸入職業或關鍵字搜尋，例如：工程師、老師、客服、寵物" aria-describedby="scene-search-status"><select id="scene" data-setting="scene" aria-label="情境分類與職業，可用上方輸入框搜尋"></select><span id="scene-search-status" class="field-hint" role="status"></span><span id="error-scene" class="field-error"></span></div>
+                <div class="field"><label for="scene-search"><span>情境分類・職業</span></label><input id="scene-search" type="search" autocomplete="off" placeholder="輸入職業或關鍵字搜尋，例如：工程師、老師、客服、寵物" aria-describedby="scene-search-status"><select id="scene" data-setting="scene" aria-label="情境分類與職業，可用上方輸入框搜尋"></select><span id="scene-search-status" class="field-hint" role="status"></span><label class="check-field" id="scene-miss" hidden><input id="scene-miss-consent" type="checkbox"><span>找不到時，同意匿名回報這個搜尋字詞（只送字詞，不含其他資料），幫助我們補上這個職業。</span></label><span id="error-scene" class="field-error"></span></div>
                 <label class="field" for="tone"><span>台詞語氣</span><select id="tone" data-setting="tone"></select><span id="error-tone" class="field-error"></span></label>
                 <label class="field" for="textMode"><span>文字模式</span><select id="textMode" data-setting="textMode"></select><span id="error-textMode" class="field-error"></span></label>
                 <label class="field" for="nameMode"><span>整組共用名稱</span><select id="nameMode" data-setting="nameMode"></select><span id="error-nameMode" class="field-error"></span></label>
