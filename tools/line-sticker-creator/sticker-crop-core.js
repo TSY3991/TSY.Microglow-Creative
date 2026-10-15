@@ -46,23 +46,44 @@
       }
       stats.push({counts,size});total+=size;
     }
-    const cellArea=n/cellCount,target=new Int16Array(stats.length),merged=new Set();
+    const cellArea=n/cellCount,target=new Int16Array(stats.length),merged=new Set(),spill=new Set();
     for(let id=1;id<stats.length;id++){
       const {counts,size}=stats[id];let best=0;for(let c=1;c<cellCount;c++)if(counts[c]>counts[best])best=c;
       if(size<Math.max(12,cellArea*0.0005))target[id]=-2;
-      else if(counts[best]>=size*0.8||size<cellArea*0.01)target[id]=best;
+      else if(counts[best]>=size*0.8||size<cellArea*0.01){target[id]=best;if(size-counts[best]>Math.max(10,cellArea*0.002))spill.add(best);}
       else{target[id]=-1;for(let c=0;c<cellCount;c++)if(counts[c]>=size*0.05)merged.add(c);}
     }
     const box=Array.from({length:cellCount},()=>({l:w,t:h,r:-1,b:-1}));
     const owner=p=>{const t=target[label[p]];if(t>=0)return t;const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
     for(let p=0;p<n;p++){if(!label[p]||target[label[p]]===-2)continue;const x=p%w,y=(p-x)/w,b=box[owner(p)];if(x<b.l)b.l=x;if(x>b.r)b.r=x;if(y<b.t)b.t=y;if(y>b.b)b.b=y;}
+    // 圖案貼著所屬格子的邊緣、且邊緣外面就是背景（或圖片外）：母圖在這裡可能已被生成工具切平。
+    const edge=Array.from({length:cellCount},()=>[0,0,0,0]);
+    for(let p=0;p<n;p++){
+      if(!label[p]||target[label[p]]===-2)continue;
+      const x=p%w,y=(p-x)/w,a=owner(p),cx=a%cols,cy=(a-cx)/cols,gone=q=>!label[q]||target[label[q]]===-2;
+      if(x===xs[cx]&&(x===0||gone(p-1)))edge[a][0]++;
+      if(x===xs[cx+1]-1&&(x===w-1||gone(p+1)))edge[a][1]++;
+      if(y===ys[cy]&&(y===0||gone(p-w)))edge[a][2]++;
+      if(y===ys[cy+1]-1&&(y===h-1||gone(p+w)))edge[a][3]++;
+    }
+    const clipped=[];
+    for(let a=0;a<cellCount;a++){const cx=a%cols,cy=(a-cx)/cols,limit=Math.max(6,0.04*Math.min(xs[cx+1]-xs[cx],ys[cy+1]-ys[cy]));if(Math.max(...edge[a])>=limit)clipped.push(a);}
     const cells=box.map(b=>b.r<0?null:{x:b.l,y:b.t,width:b.r-b.l+1,height:b.b-b.t+1,data:null});
     cells.forEach(c=>{if(c)c.data=new Uint8ClampedArray(c.width*c.height*4);});
     for(let p=0;p<n;p++){
       if(!label[p]||target[label[p]]===-2)continue;const a=owner(p),c=cells[a],x=p%w,y=(p-x)/w,o=((y-c.y)*c.width+(x-c.x))*4,i=p*4;
       c.data[o]=data[i];c.data[o+1]=data[i+1];c.data[o+2]=data[i+2];c.data[o+3]=data[i+3];
     }
-    return {cells,merged:Array.from(merged).sort((a,b)=>a-b),components:stats.length-1,transparent:bg.transparent};
+    const sorted=set=>Array.from(set).sort((a,b)=>a-b);
+    return {cells,merged:sorted(merged),spill:sorted(spill),clipped,components:stats.length-1,transparent:bg.transparent};
+  }
+  // 依 splitByContent 的結果（無法判斷背景時傳 null）建議用哪一種裁切方式，並附上白話原因。
+  function advise(split){
+    if(!split)return {mode:'hard',reasons:['背景不是單一顏色（可能有漸層、陰影或花紋），智慧分割無法可靠辨識，只能依分割線硬切。']};
+    const cross=Array.from(new Set([...split.spill,...split.merged])).sort((a,b)=>a-b);
+    if(cross.length)return {mode:'smart',cross,reasons:['第 '+cross.map(n=>n+1).join('、')+' 格的圖案超出或壓在分割線上，硬切會切到；智慧分割會讓圖案保持完整。'+(split.merged.length?'（其中第 '+split.merged.map(n=>n+1).join('、')+' 格的圖案和相鄰格相連，仍只能依分割線切開。）':'')]};
+    if(split.transparent)return {mode:'hard',cross:[],reasons:['每格圖案都在分割線內，母圖本身已是透明背景，兩種方式結果幾乎相同；硬切最單純，不會誤去掉白色描邊。']};
+    return {mode:'smart',cross:[],reasons:['每格圖案都在分割線內，不會被切到；但母圖是單色背景，智慧分割能順便把背景去成透明（LINE 貼圖需要透明背景）。']};
   }
   // Only remove near-white pixels reachable from the frame. Never mutate the source.
   function eraseWhite(data,w,h,threshold=248){
@@ -88,5 +109,5 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

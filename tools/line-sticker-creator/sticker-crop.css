@@ -25,6 +25,9 @@
 .line-sticker-tool .crop-sticker input[type=range]{width:100%;display:block;accent-color:#197c70}
 .line-sticker-tool .crop-special{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
 .line-sticker-tool .crop-special>div{max-width:100%}
+.line-sticker-tool .crop-advice h3{margin:0 0 .4rem;font-size:1rem}
+.line-sticker-tool .crop-advice ul{margin:.3rem 0;padding-left:1.2rem}
+.line-sticker-tool .crop-advice p{margin:.4rem 0}
 .line-sticker-tool #crop-status{overflow-wrap:anywhere}
 @media(max-width:1000px){.line-sticker-tool .crop-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.line-sticker-tool .crop-results{grid-template-columns:1fr}}

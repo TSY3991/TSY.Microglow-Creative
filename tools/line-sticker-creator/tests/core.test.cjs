@@ -107,3 +107,15 @@ test("重複台詞偵測：忽略空白與標點",()=>{
   const d=C.duplicates(s);assert.equal(d.length,1);assert.deepEqual(d[0].indexes,[0,1,2]);
   s.items[1].text="午安";s.items[2].text="夜安";assert.deepEqual(C.duplicates(s),[]);
 });
+test("格子留白：標準／加寬／最寬的格子與母圖尺寸，長寬比不變",()=>{
+  assert.deepEqual(C.cellFor("standard"),{width:481,height:416});assert.deepEqual(C.cellFor("wide"),{width:592,height:512});assert.deepEqual(C.cellFor("widest"),{width:703,height:608});
+  assert.deepEqual(C.cellFor("unknown"),{width:481,height:416});assert.deepEqual(C.motherSize(4,"wide"),{width:2368,height:2048});
+  const s=ready(16);assert.equal(C.plans(s)[0].width,1924);s.settings.spacing="wide";assert.equal(C.plans(s)[0].width,2368);
+  const p=C.prompt(s);assert.match(p,/每格 592×512 px/);assert.match(p,/整張 2368×2048 px/);assert.match(p,/完整性檢查/);assert.doesNotMatch(p,/481×416/);
+  s.settings.spacing="standard";assert.match(C.prompt(s),/每格 481×416 px/);assert.match(C.prompt(s),/約 11% 的空白/);
+});
+test("格子留白：舊設定檔沒有此欄位仍可匯入，未知值被拒絕",()=>{
+  const s=ready(16),raw=C.serialize(s);delete raw.state.settings.spacing;assert.equal(C.deserialize(raw).settings.spacing,"standard");
+  s.settings.spacing="widest";assert.equal(C.deserialize(JSON.stringify(C.serialize(s))).settings.spacing,"widest");
+  s.settings.spacing="huge";assert.throws(()=>C.deserialize(JSON.stringify(C.serialize(s))));
+});

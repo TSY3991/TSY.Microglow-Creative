@@ -11,7 +11,10 @@
     gemini: { 4: "5:4 或 1:1", 2: "21:9 或 16:9" },
     generic: { 4: "約 1.16:1（接近 5:4 或 1:1）", 2: "約 2.3:1（接近 21:9）" }
   };
-  const motherSize = rows => ({ width: 4 * CELL.width, height: rows * CELL.height });
+  // 格子留白：每格 = 370×320 乘上倍率（長寬比不變，仍為 37:32）；標準 1.3＝481×416。
+  const SPACING = { standard: 1.3, wide: 1.6, widest: 1.9 };
+  const cellFor = spacing => { const k = SPACING[spacing] || SPACING.standard; return { width: Math.round(SAFE.width * k), height: Math.round(SAFE.height * k) }; };
+  const motherSize = (rows, spacing) => { const cell = cellFor(spacing); return { width: 4 * cell.width, height: rows * cell.height }; };
   const flat = value => String(value).replace(/\s*\r?\n\s*/g," ").trim();
   const quote = value => JSON.stringify(flat(value));
   // 多行台詞改用逐行描述，避免生圖 AI 把 JSON 的反斜線 n 當成字面文字印出來。
@@ -76,14 +79,14 @@
   function plans(state) {
     let offset=0;
     return state.grids.map((size,i)=>{
-      const plan={number:i+1,size,columns:4,rows:size/4,start:offset+1,end:offset+size,...motherSize(size/4)};
+      const plan={number:i+1,size,columns:4,rows:size/4,start:offset+1,end:offset+size,...motherSize(size/4,state.settings.spacing)};
       offset+=size;return plan;
     });
   }
   function color(s,key,custom) { return s[key]==="custom"?s[custom]:label(key,s[key]); }
-  function sizeAdvice(state, platform) {
+  function sizeAdvice(state, platform, spacing) {
     const kinds = [...new Set(state.grids.map(g => g / 4))].sort((x, y) => y - x), hints = RATIO_HINT[platform] || RATIO_HINT.generic;
-    return kinds.map(rows => (rows === 4 ? "4×4" : "4×2") + " 母圖理想整張 " + motherSize(rows).width + "×" + motherSize(rows).height + " px，若平台只提供固定比例，請選「" + hints[rows] + "」").join("；") + "。";
+    return kinds.map(rows => (rows === 4 ? "4×4" : "4×2") + " 母圖理想整張 " + motherSize(rows, spacing).width + "×" + motherSize(rows, spacing).height + " px，若平台只提供固定比例，請選「" + hints[rows] + "」").join("；") + "。";
   }
   // 重複台詞：把標點與空白去掉後比較，回傳 [{text, indexes:[0-based 貼圖序號]}]。
   function duplicates(state) {
@@ -100,7 +103,7 @@
   // only：只產生某一張母圖（1 起算）的提示詞；省略則是整組一份。
   function prompt(state, only) {
     if(validate(state).length) throw new Error("請先完成設定檢查。");
-    const s=state.settings,all=plans(state),single=only!==undefined,target=single?all.find(p=>p.number===only):null,total=all.length;
+    const s=state.settings,cell=cellFor(s.spacing),pct=Math.round((cell.width/SAFE.width-1)*100),all=plans(state),single=only!==undefined,target=single?all.find(p=>p.number===only):null,total=all.length;
     if(single&&!target) throw new Error("沒有這張母圖。");
     const here=target?state.items.slice(target.start-1,target.end):[],blankHere=here.some(x=>hasText(state,x)&&!x.text.trim());
     const elsewhere=single?[...new Set(state.items.slice(0,s.count).filter((x,i)=>(i<target.start-1||i>=target.end)&&hasText(state,x)&&x.text.trim()).map(x=>x.text.trim()))].slice(0,60):[];
@@ -118,9 +121,10 @@
       "",
       "【母圖結構】",
       single?"每格是一張獨立貼圖；從左到右、由上到下排列；這一張母圖對應整組的第 "+target.start+"～"+target.end+" 張貼圖。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。":"每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
-      "母圖尺寸：理想是每格 "+CELL.width+"×"+CELL.height+" px（長寬比 37:32，與 LINE 貼圖 370×320 同比例，另外多留邊）。"+sizeAdvice(single?{grids:[target.size]}:state,s.platform)+"平台無法指定精確像素時，請選最接近的比例，仍排成 4 欄的等分格，不要拉伸或壓縮角色，並如實告知實際輸出尺寸；比例不同只會讓每格寬高不同，圖文仍須落在各格中央的安全區內。",
-      "安全區：每格中央 "+SAFE.width+"×"+SAFE.height+" px 是角色、台詞、道具、描邊、陰影與裝飾必須完整放入的範圍（generous negative space）；每格左右各留約 "+Math.floor((CELL.width-SAFE.width)/2)+" px、上下各留約 "+Math.floor((CELL.height-SAFE.height)/2)+" px 的空白，相鄰格的可見內容之間因此至少有約 "+(CELL.width-SAFE.width)+" px（左右）／"+(CELL.height-SAFE.height)+" px（上下）的乾淨分隔帶（以理想尺寸計；實際尺寸不同時，請依相同比例，在各格四周保留約 11% 的空白），方便沿平均網格切割。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
+      "母圖尺寸：理想是每格 "+cell.width+"×"+cell.height+" px（長寬比 37:32，與 LINE 貼圖 370×320 同比例，另外多留邊）。"+sizeAdvice(single?{grids:[target.size]}:state,s.platform,s.spacing)+"平台無法指定精確像素時，請選最接近的比例，仍排成 4 欄的等分格，不要拉伸或壓縮角色，並如實告知實際輸出尺寸；比例不同只會讓每格寬高不同，圖文仍須落在各格中央的安全區內。",
+      "安全區：每格中央 "+SAFE.width+"×"+SAFE.height+" px 是角色、台詞、道具、描邊、陰影與裝飾必須完整放入的範圍（generous negative space）；每格左右各留約 "+Math.floor((cell.width-SAFE.width)/2)+" px、上下各留約 "+Math.floor((cell.height-SAFE.height)/2)+" px（約 "+Math.round(pct/2)+"%）的空白，相鄰格的可見內容之間因此至少有約 "+(cell.width-SAFE.width)+" px（左右）／"+(cell.height-SAFE.height)+" px（上下）的乾淨分隔帶（以理想尺寸計；實際尺寸不同時，請依相同比例，在各格四周保留約 "+Math.floor(pct/2/(100+pct)*100)+"% 的空白），方便沿平均網格切割。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
       "網格限制的是容納區與順序，不固定每格藝術構圖。角色與文字不得跨格、重疊、貼邊或被裁切；空間不足時縮小整組角色與文字。",
+      "完整性檢查（重要）：頭髮、耳朵、手腳、尾巴、道具、台詞文字與陰影，每一個部分的最外緣都要距離所屬格子的邊緣至少 "+Math.floor((cell.width-SAFE.width)/2)+" px（左右）／"+Math.floor((cell.height-SAFE.height)/2)+" px（上下）；任何部分碰到或超出安全區，就把整個角色縮小一點，寧可畫小，也不要讓任何一格的圖被切掉或貼著格線。生成後逐格自查，有被切到的格子請重畫。",
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
@@ -154,7 +158,7 @@
     const input=raw.state;if(!object(input.settings)||!Array.isArray(input.items)||!Array.isArray(input.grids))throw new Error("設定檔結構不完整。");
     const settings={};
     for(const [key,def] of Object.entries(D.defaults)){
-      const value=input.settings[key];
+      const value=key==="spacing"&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
       if(typeof value!==typeof def)throw new Error("設定欄位格式不正確："+key);
       if(typeof value==="string"&&value.length>1000)throw new Error("設定文字過長："+key);
       if(D.options[key]&&!D.options[key].some(x=>x[0]===value))throw new Error("未知設定選項："+key);
@@ -178,6 +182,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={SAFE,CELL,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

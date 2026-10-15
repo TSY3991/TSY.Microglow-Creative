@@ -44,6 +44,52 @@
   $('crop-copy-url').onclick=async()=>{const url='https://tsy3991.github.io/TSY.Microglow-Creative/tools/line-sticker-creator/#sticker-crop';try{await navigator.clipboard.writeText(url);message('已複製網址。貼到 Chrome／Safari 開啟後請從頭開始；目前頁面的母圖與進度不會帶過去，設定可先用「匯出設定檔」帶過去。');}catch{const input=$('crop-page-url');input.hidden=false;input.value=url;input.focus();input.select();message('無法自動複製，請手動複製已選取的網址。');}};
   function updatePlan(){plan=window.StickerCropPlan;$('crop-plan').textContent='目前 '+plan.count+' 張；母圖依序 '+plan.grids.map(n=>'4×'+n/4).join(' ＋ ');}
   window.addEventListener('sticker-crop-plan',()=>{const next=window.StickerCropPlan;if(JSON.stringify(plan)!==JSON.stringify(next)){updatePlan();invalidate();controls();message('張數或母圖分配已變更，原圖保留，請確認網格後重新裁切。');}});
+  // 自動建議：母圖放入或分割線變動後，在背景快速分析（縮小到 900 px 內，不上傳），建議智慧分割或硬切。
+  let adviceTimer=0,adviceToken=0,advicePending=null,modeChosen=false;
+  const tolerance=()=>({248:12,240:24,230:40}[Number($('crop-strength').value)]||12);
+  async function analyze(m){
+    const tol=tolerance(),key=JSON.stringify([m.x,m.y,tol]);
+    if(m.analysis&&m.analysis.key===key)return m.analysis.value;
+    let value=null;
+    try{
+      const w=m.image.width,h=m.image.height,k=Math.min(1,900/Math.max(w,h)),sw=Math.max(4,Math.round(w*k)),sh=Math.max(4,Math.round(h*k));
+      const c=canvas(sw,sh),ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(m.image,0,0,sw,sh);
+      const image=ctx.getImageData(0,0,sw,sh);c.width=c.height=1;
+      const scale=(a,from,to)=>a.map((v,i)=>i===0?0:i===a.length-1?to:Math.round(v*to/from)),ok=a=>a.every((v,i)=>!i||v>a[i-1]);
+      let xs=scale(m.x,w,sw),ys=scale(m.y,h,sh);if(!ok(xs))xs=C.cuts(sw,4);if(!ok(ys))ys=C.cuts(sh,m.rows);
+      const split=C.splitByContent(image.data,sw,sh,xs,ys,tol);
+      value={advice:C.advise(split),clipped:split?split.clipped:[]};
+    }catch{return null;}
+    m.analysis={key,value};return value;
+  }
+  const offsetOf=i=>mothers.slice(0,i).reduce((n,m)=>n+m.rows*4,0);
+  const modeName=mode=>mode==='smart'?'智慧分割':'硬切';
+  function adviceButtons(){
+    const advice=$('crop-advice').dataset.mode;
+    for(const mode of ['smart','hard']){const b=$('crop-advice-'+mode),on=$('crop-mode').value===mode;b.textContent=modeName(mode)+(advice===mode?'（建議）':'')+(on?'・目前選用':'');b.setAttribute('aria-pressed',String(on));b.classList.toggle('primary',on);}
+  }
+  function showAdvice(list){
+    const known=list.filter(Boolean);if(!known.length){$('crop-advice').hidden=true;return;}
+    const mode=known.some(a=>a.advice.mode==='smart')?'smart':'hard',box=$('crop-advice');box.dataset.mode=mode;
+    $('crop-advice-title').textContent='我檢查了母圖，建議用「'+modeName(mode)+'」';
+    $('crop-advice-list').replaceChildren(...list.map((a,i)=>a?el('li',(list.length>1?'母圖 '+(i+1)+'：':'')+a.advice.reasons[0]):null).filter(Boolean));
+    const clipped=list.flatMap((a,i)=>a?a.clipped.map(k=>offsetOf(i)+k+1):[]);
+    $('crop-advice-clip').hidden=!clipped.length;
+    if(clipped.length)$('crop-advice-clip').textContent='注意：第 '+names(clipped)+' 張的圖案貼著格子邊緣，母圖在這裡可能已被生成工具切平，兩種裁切方式都救不回來。建議回到提示詞頁，把「格子留白」改成加寬後重新生成那張母圖。';
+    if(!modeChosen&&$('crop-mode').value!==mode){$('crop-mode').value=mode;controls();}
+    box.hidden=false;adviceButtons();
+  }
+  function scheduleAdvice(){
+    clearTimeout(adviceTimer);const token=++adviceToken;
+    if(!mothers.length){$('crop-advice').hidden=true;advicePending=null;return;}
+    let done;advicePending=new Promise(resolve=>{done=resolve;});
+    adviceTimer=setTimeout(async()=>{
+      try{const list=[];for(const m of mothers.slice()){list.push(await analyze(m));if(token!==adviceToken)return;await new Promise(r=>setTimeout(r));}showAdvice(list);}
+      catch{}finally{if(token===adviceToken)advicePending=null;done();}
+    },300);
+  }
+  const chooseMode=mode=>{$('crop-mode').value=mode;$('crop-mode').dispatchEvent(new Event('change'));};
+  $('crop-advice-smart').onclick=()=>chooseMode('smart');$('crop-advice-hard').onclick=()=>chooseMode('hard');
   function resetCuts(m){m.x=C.cuts(m.image.width,4);m.y=C.cuts(m.image.height,m.rows);}
   function drawMother(m,c,active){
     const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(m.image,0,0,c.width,c.height);
@@ -57,7 +103,7 @@
       const box=el('article'),info=el('div'),view=el('div');box.className='crop-mother';info.className='crop-mother-info';view.className='crop-mother-view';
       const want=C.expectedSize(m.rows),gap=C.ratioGap(m.image.width,m.image.height,m.rows),cw=m.image.width/4,ch=m.image.height/m.rows;
       info.append(el('h3','母圖 '+(i+1)+'｜'+m.file.name),el('p',m.image.width+' × '+m.image.height+' px；每格約 '+Math.round(cw)+' × '+Math.round(ch)+' px'));
-      const note=el('p','建議尺寸 '+want.width+' × '+want.height+' px（每格 '+C.cell.width+' × '+C.cell.height+'）。'+(gap>0.05?'此圖長寬比與建議相差約 '+Math.round(gap*100)+'%，每格形狀會和 370×320 不同；仍可裁切，輸出會等比縮放進 370×320。':'長寬比符合建議。')+(cw<370||ch<320?' 每格小於 370×320，輸出時會放大而略顯模糊。':''));
+      const note=el('p','建議尺寸 '+want.width+' × '+want.height+' px（每格 '+C.cell.width+' × '+C.cell.height+'；若提示詞選了較寬的格子留白，尺寸會更大但長寬比相同）。'+(gap>0.05?'此圖長寬比與建議相差約 '+Math.round(gap*100)+'%，每格形狀會和 370×320 不同；仍可裁切，輸出會等比縮放進 370×320。':'長寬比符合建議。')+(cw<370||ch<320?' 每格小於 370×320，輸出時會放大而略顯模糊。':''));
       note.className='field-hint';info.append(note);
       const gridLabel=el('label'),grid=el('select');gridLabel.className='field';gridLabel.append(el('span','這張母圖的格數'));grid.setAttribute('aria-label','母圖 '+(i+1)+' 裁切網格');grid.add(new Option('4×2（8 格）',2));grid.add(new Option('4×4（16 格）',4));grid.value=m.rows;
       grid.onchange=()=>{m.rows=Number(grid.value);resetCuts(m);invalidate();renderMothers();controls();};gridLabel.append(grid);info.append(gridLabel);
@@ -69,7 +115,7 @@
         const row=el('div'),range=el('input'),num=el('input');row.className='cut-row';
         range.type='range';range.min=1;range.max=size-1;range.step=1;range.value=value;range.setAttribute('aria-label',name+'（拖曳即時預覽）');
         num.type='number';num.min=1;num.max=size-1;num.step=1;num.value=value;num.setAttribute('aria-label',name+' 像素位置');
-        const apply=v=>{const next=Math.min(m[axis][idx+1]-1,Math.max(m[axis][idx-1]+1,Math.round(v)));m[axis][idx]=next;range.value=next;num.value=next;invalidate();drawMother(m,c,{axis,index:idx});controls();};
+        const apply=v=>{const next=Math.min(m[axis][idx+1]-1,Math.max(m[axis][idx-1]+1,Math.round(v)));m[axis][idx]=next;range.value=next;num.value=next;invalidate();drawMother(m,c,{axis,index:idx});controls();scheduleAdvice();};
         const done=()=>{num.value=m[axis][idx];range.value=m[axis][idx];drawMother(m,c);message(name+' 已調整為 '+m[axis][idx]+' px，請重新裁切。');};
         range.oninput=()=>apply(Number(range.value));num.oninput=()=>{if(num.value!==''&&Number.isFinite(Number(num.value)))apply(Number(num.value));};
         range.onchange=done;num.onchange=done;
@@ -82,7 +128,7 @@
       const actions=el('div');actions.className='inline-actions';actions.append(button('平均分割',()=>{resetCuts(m);invalidate();renderMothers();controls();}),button('前移',()=>{if(i){[mothers[i-1],mothers[i]]=[m,mothers[i-1]];invalidate();renderMothers();controls();}}),button('後移',()=>{if(i<mothers.length-1){[mothers[i+1],mothers[i]]=[m,mothers[i+1]];invalidate();renderMothers();controls();}}),button('移除',()=>{uploadRevision++;m.image.close();mothers.splice(i,1);invalidate();renderMothers();controls();}));info.append(actions);
       box.append(info,view);$('crop-mothers').append(box);
     });
-    window.dispatchEvent(new Event('sticker-mothers-changed'));
+    window.dispatchEvent(new Event('sticker-mothers-changed'));scheduleAdvice();
   }
   $('crop-files').onchange=async()=>{
     const files=Array.from($('crop-files').files);$('crop-files').value='';if(!files.length)return;const token=++uploadRevision,incoming=[];
@@ -98,7 +144,7 @@
   function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);}}
   function special(){ $('crop-special').replaceChildren();if(!stickers[selected]?.source)return;for(const [name,w,h,pad] of [['main.png',240,240,10],['tab.png',96,74,4]]){const box=el('div'),c=canvas(w,h);box.append(el('strong',name+'｜'+w+'×'+h),c);renderSticker(stickers[selected],c,w,h,pad);$('crop-special').append(box);}}
   function renderResults(){
-    $('crop-results').replaceChildren();stickers.forEach((s,i)=>{const box=el('article');box.className='crop-sticker';box.append(el('h3',String(i+1).padStart(2,'0')+'.png'));const c=canvas(370,320);c.setAttribute('aria-label','貼圖 '+(i+1)+' 預覽');renderSticker(s,c);box.append(c);if(!s.source)box.append(el('p','此格全透明，請調整母圖分割線後重新裁切。'));else if(s.joined)box.append(el('p','圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；請檢查，必要時重新生成這一格。'));else if(s.opaque)box.append(el('p','四個角落都不透明，背景可能還在。請用深色底確認；LINE 要求透明背景。'));
+    $('crop-results').replaceChildren();stickers.forEach((s,i)=>{const box=el('article');box.className='crop-sticker';box.append(el('h3',String(i+1).padStart(2,'0')+'.png'));const c=canvas(370,320);c.setAttribute('aria-label','貼圖 '+(i+1)+' 預覽');renderSticker(s,c);box.append(c);if(!s.source)box.append(el('p','此格全透明，請調整母圖分割線後重新裁切。'));else if(s.joined)box.append(el('p','圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；請檢查，必要時重新生成這一格。'));else if(s.opaque)box.append(el('p','四個角落都不透明，背景可能還在。請用深色底確認；LINE 要求透明背景。'));if(s.clipped&&s.source)box.append(el('p','圖案貼著格子邊緣，母圖在這裡可能已被切掉。請檢查；必要時回提示詞頁把「格子留白」改成加寬，重新生成這一格。'));
       const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
       for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);touched();};l.append(input);box.append(l);}
       box.append(button('還原大小與位置',()=>{s.zoom=100;s.dx=s.dy=0;renderResults();touched();}));$('crop-results').append(box);
@@ -114,12 +160,14 @@
   $('crop-run').onclick=async()=>{
     if(busy)return;invalidate(true);const token=revision;busy=true;controls();const results=[],notes=[];
     try{
+      let waiting;while((waiting=advicePending))await waiting;
+      if(token!==revision)throw Error('設定已變更，請重新裁切。');
       const geometry=mothers.map((m,j)=>{try{return C.rectangles(m.image.width,m.image.height,m.x,m.y);}catch(error){throw Error('母圖 '+(j+1)+'：'+error.message);}});
       if(!C.counts.includes(plan.count)||geometry.reduce((n,a)=>n+a.length,0)!==plan.count)throw Error('總格數必須符合目前 '+plan.count+' 張設定；請調整母圖網格或第二步的張數。');
-      const smart=$('crop-mode').value==='smart',remove=!smart&&$('crop-white').checked,threshold=Number($('crop-strength').value),tol={248:12,240:24,230:40}[threshold]||12;
+      const smart=$('crop-mode').value==='smart',remove=!smart&&$('crop-white').checked,threshold=Number($('crop-strength').value),tol=tolerance();
       message('裁切中 0／'+plan.count);
       for(let j=0;j<mothers.length;j++){
-        const m=mothers[j];let split=null;
+        const m=mothers[j];let split=null;const clipSet=new Set(((await analyze(m))||{clipped:[]}).clipped);
         if(smart){
           message('分析母圖 '+(j+1)+'／'+mothers.length+'…');await new Promise(requestAnimationFrame);
           const full=canvas(m.image.width,m.image.height),fctx=full.getContext('2d',{willReadFrequently:true});fctx.drawImage(m.image,0,0);
@@ -135,20 +183,20 @@
             if(cell){source=canvas(cell.width,cell.height);source.getContext('2d').putImageData(new ImageData(cell.data,cell.width,cell.height),0,0);}
             joined=split.merged.includes(k);
           }else({source,opaque}=hardCut(m,geometry[j][k],remove,threshold));
-          const a=adjust[results.length]||{zoom:100,dx:0,dy:0};results.push({source,opaque,joined,zoom:a.zoom,dx:a.dx,dy:a.dy});
+          const a=adjust[results.length]||{zoom:100,dx:0,dy:0};results.push({source,opaque,joined,clipped:clipSet.has(k),zoom:a.zoom,dx:a.dx,dy:a.dy});
           if(results.length%8===0||results.length===plan.count)message('裁切中 '+results.length+'／'+plan.count);
           await new Promise(requestAnimationFrame);
         }
       }
       if(token!==revision)throw Error('設定已變更，請重新裁切。');
       stickers=results;if(selected>=results.length)selected=0;$('crop-review').checked=false;renderResults();
-      const kept=adjust.some(a=>a.zoom!==100||a.dx||a.dy),opaque=opaqueList(),joined=results.map((x,n)=>x.joined?n+1:0).filter(Boolean);
-      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(notes.length?notes.join('；')+'；':'')+'請用深淺預覽逐張檢查，確認後下載。');
+      const kept=adjust.some(a=>a.zoom!==100||a.dx||a.dy),opaque=opaqueList(),joined=results.map((x,n)=>x.joined?n+1:0).filter(Boolean),clippedList=results.map((x,n)=>x.clipped&&x.source?n+1:0).filter(Boolean);
+      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(clippedList.length?'第 '+names(clippedList)+' 張的圖案貼著格子邊緣，母圖可能已被切掉；':'')+(notes.length?notes.join('；')+'；':'')+'請用深淺預覽逐張檢查，確認後下載。');
     }catch(error){message(error.message);}finally{busy=false;controls();}
   };
-  $('crop-mode').onchange=()=>{controls();if(stickers.length){invalidate(true);controls();message('裁切方式已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};
+  $('crop-mode').onchange=()=>{modeChosen=true;adviceButtons();controls();if(stickers.length){invalidate(true);controls();message('裁切方式已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};
   $('crop-white').onchange=()=>{controls();if(stickers.length){invalidate(true);controls();message('去白底設定已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};
-  $('crop-strength').onchange=()=>{if(($('crop-mode').value==='smart'||$('crop-white').checked)&&stickers.length){invalidate(true);controls();message('去白底強度已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};
+  $('crop-strength').onchange=()=>{scheduleAdvice();if(($('crop-mode').value==='smart'||$('crop-white').checked)&&stickers.length){invalidate(true);controls();message('去白底強度已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};
   $('crop-backdrop').onchange=()=>{$('crop-results').dataset.backdrop=$('crop-backdrop').value;$('crop-special').dataset.backdrop=$('crop-backdrop').value;};
   $('crop-review').onchange=controls;
   $('crop-clear').onclick=()=>{if(!mothers.length)return;if(!confirm('移除此頁全部母圖與裁切預覽？原始檔案不受影響。'))return;uploadRevision++;mothers.forEach(m=>m.image.close());mothers=[];invalidate();renderMothers();controls();message('已移除母圖；電腦上的原始檔案保留。');};

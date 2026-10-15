@@ -229,9 +229,10 @@
       if(moved&&!confirm("有 "+moved+" 張的內容原本是「不印字的情境描述」，切換後會變成要印在貼圖上的文字；是否繼續？")){el.value=previous;return;}
     }
     state.settings[key]=key==="count"?Number(el.value):el.value;
-    if(key==="platform"){
+    if(key==="platform"||key==="spacing"){
+      if(key==="spacing")renderGrids();
       if(generated){
-        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
+        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"格子留白已改，提示詞已更新，請重新複製；已生成的母圖不會跟著改變。");}
         catch{invalidate();return;}
       }
       save();if(step===4)renderMulti();return;

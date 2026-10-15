@@ -103,6 +103,7 @@ let browser,ws,server;
   const copied=await E("navigator.clipboard.readText()");
   check("實際剪貼簿複製整組內容",copied.includes("貼圖 17～24"));
   await set("platform","gemini");check("換平台就地更新已產生的提示詞，不要求重新確認",await E("!document.getElementById('prompt-area').hidden&&document.getElementById('prompt-output').value.includes('請使用圖片生成模式')&&!document.getElementById('generate').disabled"));
+  await set("spacing","wide");check("改格子留白就地更新已產生的提示詞與母圖尺寸",await E("document.getElementById('prompt-output').value.includes('592×512')&&!document.getElementById('prompt-output').value.includes('481×416')&&!document.getElementById('prompt-area').hidden"));await set("spacing","standard");check("格子留白選項預設標準並可還原",await E("document.getElementById('spacing').value==='standard'&&document.getElementById('prompt-output').value.includes('481×416')"));
   await click("generate");
   await E("Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('denied');}}})");await click("copy");
   check("剪貼簿拒絕提供手動複製與文字選取",await E("document.getElementById('copy-feedback').textContent.includes('手動複製')&&document.getElementById('prompt-output').selectionEnd>0"));

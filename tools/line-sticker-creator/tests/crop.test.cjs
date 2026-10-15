@@ -40,4 +40,18 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.equal(C.splitByContent(o,W,H,xs,ys,12).cells[0].width,54);
   assert.equal(C.splitByContent(o,W,H,xs,ys,40).cells[0].width,50);
   console.log('PASS smart split keeps graphics whole, flags joined stickers, keeps enclosed whites');
+  // 自動建議與可能被切平的格子
+  assert.ok(r.spill.includes(1));                                              // 格 1 的圖案超出平均線，硬切會切到
+  assert.deepEqual(C.advise(r).mode,'smart');assert.ok(C.advise(r).cross.includes(1));
+  assert.equal(C.advise(null).mode,'hard');assert.match(C.advise(null).reasons[0],/不是單一顏色/);
+  const clean=make(W,H);rect(clean,W,130,30,40,50,red);rect(clean,W,10,20,50,60,blue);
+  const rc=C.splitByContent(clean,W,H,xs,ys,24);assert.deepEqual(rc.spill,[]);assert.deepEqual(rc.merged,[]);assert.deepEqual(rc.clipped,[]);
+  assert.deepEqual([C.advise(rc).mode,C.advise(rc).cross],['smart',[]]);          // 單色背景：智慧分割可順便去背
+  const clean2=new Uint8ClampedArray(W*H*4);rect(clean2,W,130,30,40,50,red);
+  const ra=C.advise(C.splitByContent(clean2,W,H,xs,ys,24));assert.equal(ra.mode,'hard');assert.match(ra.reasons[0],/透明背景/); // 已透明且乾淨：硬切即可
+  // 圖案緊貼格子左邊緣、外面是背景：母圖可能已被切平
+  const flat=make(W,H);rect(flat,W,100,20,50,60,red);rect(flat,W,230,30,40,40,blue);
+  assert.deepEqual(C.splitByContent(flat,W,H,xs,ys,24).clipped,[1]);
+  const edge=make(W,H);rect(edge,W,0,20,40,60,red);assert.deepEqual(C.splitByContent(edge,W,H,xs,ys,24).clipped,[0]); // 貼著圖片邊緣
+  console.log('PASS advice: spill/clipped detection and smart-vs-hard recommendation');
 }
