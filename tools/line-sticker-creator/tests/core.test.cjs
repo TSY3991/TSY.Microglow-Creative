@@ -124,7 +124,7 @@ test("呈現方式：預設 2D，3D 寫入提示詞，舊設定檔相容、未�
   const s=ready(16);assert.equal(s.settings.dimension,"2d");assert.match(C.prompt(s),/2D 平面插畫，不要 3D 渲染/);
   s.settings.dimension="3d";const p=C.prompt(s);assert.match(p,/呈現方式：3D 立體/);assert.doesNotMatch(p,/不要 3D 渲染/);
   assert.equal(C.deserialize(JSON.stringify(C.serialize(s))).settings.dimension,"3d");
-  s.settings.dimension="semi";const q=C.prompt(s);assert.match(q,/半 3D（Semi-3D）/);assert.match(q,/glossy semi-3D cel-shaded/);assert.match(q,/粗黑外框/);assert.doesNotMatch(q,/不要 3D 渲染|呈現方式：3D 立體/);s.settings.dimension="3d";
+  s.settings.dimension="semi";const q=C.prompt(s);assert.match(q,/半 3D（Semi-3D）/);assert.match(q,/glossy semi-3D cel-shaded/);assert.doesNotMatch(q,/Q 版（chibi）|粗黑外框|storybook|Reel/);assert.doesNotMatch(q,/不要 3D 渲染|呈現方式：3D 立體/);s.settings.dimension="3d";
   const raw=C.serialize(ready(16));delete raw.state.settings.dimension;assert.equal(C.deserialize(raw).settings.dimension,"2d");
   s.settings.dimension="4d";assert.throws(()=>C.deserialize(JSON.stringify(C.serialize(s))));
 });
