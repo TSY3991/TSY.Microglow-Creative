@@ -1,0 +1,88 @@
+/* Creative lobby and image toolbox visual overrides only. No geometry, typography, content or behavior changes. */
+:root {
+  --page: #f5f6ed;
+  --panel: #fffdf5;
+  --panel-soft: #f1f6ed;
+  --ink: #173e37;
+  --ink-soft: #426358;
+  --muted: #65776d;
+  --line: #c5d9cb;
+  --teal: #0a887e;
+  --teal-dark: #09665d;
+  --teal-soft: #e6f2e9;
+  --gold: #b58c42;
+  --gold-soft: #faf0d9;
+  --shadow: 0 4px 0 #d9e5d8, 0 12px 28px #173e370a;
+  --soft-shadow: 0 3px 0 #d6e2d4, 0 8px 18px #173e3709;
+  --deep-shadow: 0 5px 0 #d8e4d6, 0 16px 34px #173e3712;
+}
+body {
+  background: radial-gradient(ellipse at 12% 0%, #e8f1e3 0, transparent 48%), linear-gradient(150deg, #fffaf0, #f3f6ed 65%, #edf4ec);
+}
+body::before {
+  background: radial-gradient(ellipse at 100% 6%, #f6e9ca66, transparent 44%);
+}
+.lobby-hero, .detail-hero {
+  border-color: #bed4c3;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #fffef7, #f4f7ed);
+  box-shadow: var(--deep-shadow);
+}
+.lobby-hero::before, .detail-hero::before {
+  background: radial-gradient(ellipse at 90% 10%, #e1eedc77, transparent 60%);
+}
+.lobby-hero::after, .detail-hero::after {
+  background: radial-gradient(circle, #e5e8c9aa, #e8f0df44 60%, transparent 70%);
+}
+.tool-card, .image-tool-card, .detail-section, .creative-dialog {
+  border-color: #bed5c5;
+  border-radius: 22px;
+  background-color: #fffdf6;
+  box-shadow: var(--shadow);
+}
+.back-link, .tool-button {
+  border-color: #b9d3c3;
+  border-radius: 14px;
+  background-color: #f7faf1;
+  color: #1b5b50;
+  box-shadow: 0 3px 0 #d6e4d6, inset 0 1px 0 #ffffff;
+}
+.primary-link, .copy-button, .tool-filters [aria-pressed="true"] {
+  border-color: #087368;
+  border-radius: 14px;
+  background: linear-gradient(#118d80, #087c70);
+  color: #ffffff;
+  box-shadow: 0 4px 0 #b9d8c6, inset 0 1px 0 #ffffff38;
+}
+.tool-button:disabled {
+  border-color: #d0d7c8;
+  background: #f1f2e8;
+  color: #6d786d;
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+.eyebrow {
+  border-color: #ddc897;
+  background: #fcf4df;
+  color: #7b612d;
+}
+.tool-tags span {
+  border-radius: 999px;
+  background: #f0f4e9;
+  color: #466354;
+}
+.platform-badges .tool-tags span {
+  background: #e5f1e7;
+  color: #176c5d;
+}
+.detail-button, .tool-title-button, .tool-category { color: #0a685c; }
+.tool-card-copy p { color: #0a7566; }
+.prompt-details pre {
+  border-radius: 14px;
+  background: #f0f5ea;
+  color: #254c40;
+}
+.creative-dialog::backdrop { background: #163e3466; }
+:is(a, button, summary, input, select, textarea):focus-visible {
+  outline: 3px solid #087f72;
+  outline-offset: 4px;
+}
