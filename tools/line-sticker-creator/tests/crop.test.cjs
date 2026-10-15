@@ -35,5 +35,9 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   const m=make(W,H);for(let x=0;x<W;x++){m.set([x%256,(x*7)%256,(x*13)%256,255],x*4);m.set([(x*3)%256,x%256,(x*5)%256,255],((H-1)*W+x)*4);}
   for(let y=0;y<H;y++){m.set([(y*11)%256,y%256,(y*3)%256,255],y*W*4);m.set([(y*5)%256,(y*9)%256,y%256,255],(y*W+W-1)*4);}
   assert.equal(C.splitByContent(m,W,H,xs,ys,24),null);
+  // 淺灰白描邊：保守強度（12）保留，較強（40）會吃掉
+  const o=make(W,H);rect(o,W,10,10,54,84,[232,232,232,255]);rect(o,W,12,12,50,80,blue);
+  assert.equal(C.splitByContent(o,W,H,xs,ys,12).cells[0].width,54);
+  assert.equal(C.splitByContent(o,W,H,xs,ys,40).cells[0].width,50);
   console.log('PASS smart split keeps graphics whole, flags joined stickers, keeps enclosed whites');
 }

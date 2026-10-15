@@ -26,7 +26,7 @@
   // 依圖案歸格：先去除與圖片邊緣相連的背景，再把相連的圖案（角色＋文字＋效果）整塊分到所屬格子。
   // 圖案超出平均網格線時不會被切開；只有「兩張貼圖的圖案彼此相連」才依分割線切，並回報 merged。
   function splitByContent(data,w,h,xs,ys,tol=24){
-    const bg=estimateBackground(data,w,h,tol);if(!bg)return null;
+    const bg=estimateBackground(data,w,h,Math.max(tol,16));if(!bg)return null; // 判斷「背景是不是單一顏色」放寬到 16，避免 JPEG 雜訊誤判
     const n=w*h,cols=xs.length-1,rows=ys.length-1,cellCount=cols*rows,c0=bg.color;
     const isBg=p=>{const i=p*4;if(data[i+3]<=8)return true;if(bg.transparent)return false;return Math.abs(data[i]-c0[0])<=tol&&Math.abs(data[i+1]-c0[1])<=tol&&Math.abs(data[i+2]-c0[2])<=tol;};
     const colOf=new Uint8Array(w),rowOf=new Uint8Array(h);

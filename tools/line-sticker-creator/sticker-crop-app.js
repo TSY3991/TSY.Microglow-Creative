@@ -112,7 +112,7 @@
     try{
       const geometry=mothers.map((m,j)=>{try{return C.rectangles(m.image.width,m.image.height,m.x,m.y);}catch(error){throw Error('母圖 '+(j+1)+'：'+error.message);}});
       if(!C.counts.includes(plan.count)||geometry.reduce((n,a)=>n+a.length,0)!==plan.count)throw Error('總格數必須符合目前 '+plan.count+' 張設定；請調整母圖網格或第二步的張數。');
-      const smart=$('crop-mode').value==='smart',remove=!smart&&$('crop-white').checked,threshold=Number($('crop-strength').value),tol=Math.round((255-threshold)*2+6);
+      const smart=$('crop-mode').value==='smart',remove=!smart&&$('crop-white').checked,threshold=Number($('crop-strength').value),tol={248:12,240:24,230:40}[threshold]||12;
       message('裁切中 0／'+plan.count);
       for(let j=0;j<mothers.length;j++){
         const m=mothers[j];let split=null;
