@@ -120,3 +120,4 @@
 .line-sticker-tool .mode-tabs button { min-height:52px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; color:var(--ink-soft); background:var(--panel); font:inherit; font-size:.95rem; font-weight:600; cursor:pointer; }
 .line-sticker-tool .mode-tabs button[aria-selected="true"] { background:var(--teal-dark); color:white; border-color:var(--teal-dark); }
 @media(max-width:600px) { .line-sticker-tool .mode-tabs button { font-size:.82rem; padding:8px 6px; } }
+.line-sticker-tool .why-split ul { margin:8px 0 0; padding-left:1.2em; line-height:1.8; font-size:.85rem; }

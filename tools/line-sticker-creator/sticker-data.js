@@ -24,7 +24,7 @@
     stroke: [["auto","AI 調整"],["none","關閉描邊"],["thin","細"],["medium","中"],["thick","粗"]],
     shadow: [["auto","AI 調整"],["none","關閉陰影"],["weak","弱"],["medium","中"],["strong","強"]],
     textColor: [["auto","AI 配合整體風格"],["multi","多色搭配"],["black","黑"],["white","白"],["red","紅"],["orange","橘"],["yellow","黃"],["green","綠"],["blue","藍"],["purple","紫"],["pink","粉紅"],["custom","自訂顏色"]],
-    layoutMode: [["auto","自動分配・優先 4×4"],["manual","自行調整母圖"]],
+    layoutMode: [["auto","自動分配（建議）：16 格優先，剩餘用 8 格"],["manual","自行調整：自己決定每張母圖放 8 或 16 格"]],
     background: [["transparent","要求 AI 生成透明背景"],["white","純白背景"],["color","自選單一底色"]],
     platform: [["chatgpt","ChatGPT"],["gemini","Gemini"],["generic","通用版本"]]
   };

@@ -96,6 +96,7 @@ let browser,ws,server;
   check('母圖設定即時顯示格數合計',await E("document.getElementById('grid-total').textContent.includes('16／16')"));
   await set('layoutMode','manual');await click('add-grid');
   check('手動分配格數不符時立即提示',await E("document.getElementById('grid-total').textContent.includes('24／16')&&document.getElementById('grid-total').textContent.includes('不符')"));
+  check('母圖設定說明為什麼這樣分，且分配選項名稱說明清楚',await E("document.querySelector('.why-split summary').textContent.includes('為什麼這樣分母圖')&&document.querySelector('.why-split').textContent.includes('不是 LINE 規定')&&document.getElementById('layoutMode').options[0].text.includes('16 格優先')&&document.getElementById('layoutMode').options[1].text.includes('8 或 16 格')"));
   for(const width of [320,390,768,1280]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 台詞模式無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
   check("頁面無未處理例外",errors.length===0);
   check("本工具所有本機資源成功載入",responses.filter(x=>x.url.startsWith(origin)).every(x=>x.status<400));

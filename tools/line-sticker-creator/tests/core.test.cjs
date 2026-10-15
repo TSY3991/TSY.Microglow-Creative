@@ -67,7 +67,7 @@ test("照片參考可為動物或物件，三平台均提醒另附圖片",()=>{
 });
 
 test("文字全留白不阻擋，照片／原創與有字／無字意圖正確",()=>{for(const source of ["photo","original"]){for(const mode of ["all","none","per"]){const s=ready();Object.assign(s.settings,{source,character:"",style:"custom",customStyle:"",font:"custom",customFont:"",nameMode:"person",name:"",textMode:mode,mode:"manual"});s.items=Array.from({length:16},()=>C.item());if(mode==="per")s.items[0].hasText=false;assert.deepEqual(C.validate(s),[]);const p=C.prompt(s);assert.match(p,source==="photo"?/直接觀察已附參考圖/:/自行設計一個原創角色/);assert.ok(!p.includes('要印的文字 ""'));if(mode==="none")assert.match(p,/整組不放任何文字/);else assert.match(p,/台詞未填/);}}});
-test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/每格目標 481×416 px（長寬比 37:32/);assert.match(p,/4×4 為 1924×1664 px、4×2 為 1924×832 px/);assert.match(p,/【母圖 1｜4×4｜整張 1924×1664 px/);assert.match(p,/【母圖 2｜4×2｜整張 1924×832 px/);assert.match(p,/中央 370×320 px/);assert.match(p,/左右各留約 55 px、上下各留約 48 px/);assert.match(p,/不要改用 1:1、3:2、16:9/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
+test("三平台加寬母圖分隔帶但保留網格與動作變化",()=>{for(const platform of ['chatgpt','gemini','generic']){const s=ready(24);s.settings.platform=platform;const p=C.prompt(s);assert.match(p,/理想是每格 481×416 px（長寬比 37:32/);assert.match(p,/【母圖 1｜4×4｜整張 1924×1664 px/);assert.match(p,/【母圖 2｜4×2｜整張 1924×832 px/);assert.match(p,/中央 370×320 px/);assert.match(p,/左右各留約 55 px、上下各留約 48 px/);assert.match(p,/平台無法指定精確像素時，請選最接近的比例/);assert.match(p,/4×4 母圖理想整張 1924×1664 px/);assert.match(p,/4×2 母圖理想整張 1924×832 px/);if(platform==='chatgpt'){assert.match(p,/1:1（正方形）或 3:2（橫式）/);assert.match(p,/3:2（橫式，每格會偏直）/);}if(platform==='gemini'){assert.match(p,/5:4 或 1:1/);assert.match(p,/21:9 或 16:9/);}assert.match(p,/約 11% 的空白/);assert.match(p,/台詞、道具、描邊、陰影與裝飾/);assert.match(p,/不固定每格藝術構圖/);assert.match(p,/不同情緒與動作/);assert.match(p,/貼圖 17～24/);assert.doesNotMatch(p,/不自行套用任意百分比/);}});
 
 test("縮減張數只移除尾端空白項，有內容的完整保留",()=>{
   const s=C.initial();Object.assign(s.settings,{source:"original",kind:"human",style:"cute"});
@@ -89,4 +89,8 @@ test("母圖尺寸由 LINE 貼圖尺寸加外距反推，比例與貼圖一致",
   const s=ready(40);assert.deepEqual(C.plans(s).map(x=>[x.width,x.height]),[[1924,1664],[1924,1664],[1924,832]]);
   const K=require("../sticker-crop-core.js");assert.deepEqual(K.cell,C.CELL);assert.deepEqual(K.expectedSize(4),C.motherSize(4));
   assert.ok(K.ratioGap(1536,1024,4)>0.05);assert.ok(K.ratioGap(1924,1664,4)<0.001);
+});
+test("只有一種母圖時，尺寸建議只寫該種",()=>{
+  const s=ready(8);s.settings.platform="gemini";const p=C.prompt(s);
+  assert.match(p,/4×2 母圖理想整張 1924×832 px/);assert.doesNotMatch(p,/4×4 母圖理想整張/);
 });

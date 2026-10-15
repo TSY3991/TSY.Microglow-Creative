@@ -15,9 +15,9 @@
   <title>LINE 貼圖創作工具｜微光創作工具</title>
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
-  <link rel="stylesheet" href="./sticker-creator.css?v=20261015a">
-  <script defer src="./sticker-data.js?v=20261014c"></script>
-  <script defer src="./sticker-core.js?v=20261015a"></script>
+  <link rel="stylesheet" href="./sticker-creator.css?v=20261015b">
+  <script defer src="./sticker-data.js?v=20261015a"></script>
+  <script defer src="./sticker-core.js?v=20261015b"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015a"></script>
   <script defer src="./sticker-app.js?v=20261015a"></script>
@@ -119,7 +119,15 @@
               <p class="notice" id="count-note">張數已在第二步設定；這裡只決定母圖怎麼分配。</p>
               <div id="grids" class="grids"></div><p id="grid-total" class="field-hint" role="status"></p><p id="error-grids" class="field-error"></p>
               <div class="inline-actions" data-visible="layoutMode:manual"><button type="button" id="add-grid" class="button">新增一張母圖</button></div>
-              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。提示詞要求每格四周至少留出各邊長 10% 空白，角色、文字與道具完整置於中央 80% 範圍，方便平均切割。AI 是否遵守仍需生成後檢查；已產生的母圖不會因此改變。</p>
+              <p class="section-note">4×2＝4 欄 2 列；4×4＝4 欄 4 列。由左到右、由上到下，跨母圖接續台詞清單。提示詞依 LINE 貼圖尺寸反推母圖大小：每格 481×416 px（370×320 再多留約 15% 邊），圖文須放在每格中央安全區內。AI 是否遵守仍需生成後檢查；已產生的母圖不會因此改變。</p>
+              <details class="why-split"><summary>為什麼這樣分母圖？</summary><ul>
+                <li>LINE 規定的是整組張數（8／16／24／32／40）；一張母圖放幾格是本工具的規則，不是 LINE 規定。</li>
+                <li>每張母圖只用 16 格或 8 格，就能組出所有張數（例如 24＝16＋8、40＝16＋16＋8）。</li>
+                <li>16 格：生圖次數最少（40 張只要 3 張圖）。8 格：每格比較大，文字與細節通常較清楚，但要多生幾次（40 張需要 5 張圖）。</li>
+                <li>「自動分配」16 格優先、剩下用 8 格；想讓每格更大，就選「自行調整」把每張改成 8 格。</li>
+                <li>欄數固定 4 欄是本工具的設計取捨，讓母圖維持橫式或接近方形，通常較容易被各平台輸出。</li>
+                <li>平台不一定能畫出剛好的比例（例如 4×2 約 2.3:1）。產生提示詞時會依你選的平台，建議最接近的比例；比例不同仍可裁切，智慧分割不要求每格同形。</li>
+              </ul></details>
               <p class="notice">透明背景是給 AI 的要求，請核對下載圖片是否真的透明。取得母圖後，可到上方「② 母圖裁切與下載」分頁分割、選擇去白底並打包 PNG。</p>
               <p class="field-hint">一般靜態貼圖張數依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>與 <a href="https://help2.line.me/creators/web/pc?contentId=20005145&amp;lang=zh-Hant" target="_blank" rel="noopener noreferrer">官方說明</a>；查證 2026-10-13。</p>
             </section>
