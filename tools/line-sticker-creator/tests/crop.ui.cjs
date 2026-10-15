@@ -56,6 +56,7 @@ let browser,ws,server;
   await send("Page.navigate",{url});await loaded();await E("window.confirm=()=>true");
   await click('tab-crop');
   await set('crop-mode','hard');
+  check('一般瀏覽器不顯示 App 內建瀏覽器提醒與複製網址按鈕',await E("document.getElementById('crop-browser-help').hidden&&!document.getElementById('crop-url-box')"));
 
   await send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:profile});
   await set('count','8');
@@ -120,7 +121,7 @@ let browser,ws,server;
   for(const width of [320,390,768,1280]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 裁切預覽無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
   check('母圖處理未呼叫 AI',responses.every(r=>!r.url.includes('workers.dev')));
   await send('Emulation.setUserAgentOverride',{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Line/14.0.0'});await send('Page.reload',{ignoreCache:true});await loaded();await E('window.confirm=()=>true');await set('count','8');
-  check('LINE 內建瀏覽器加入圖片前即提示限制',await E("!document.getElementById('crop-browser-help').hidden&&document.getElementById('crop-browser-help').textContent.includes('重新加入母圖')"));
+  check('LINE 內建瀏覽器加入圖片前即提示限制',await E("!document.getElementById('crop-browser-help').hidden&&document.getElementById('crop-browser-help').textContent.includes('一開始')&&!!document.getElementById('crop-copy-url')&&!document.getElementById('crop-url-box')"));
   await upload();await run(8);await click('crop-review');
   await E("Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files.length===1&&files[0].type==='application/zip'});Object.defineProperty(navigator,'share',{configurable:true,value:async({files})=>{window.sharedFiles=files.map(f=>({name:f.name,size:f.size}));window.sharedFromClick=navigator.userActivation.isActive;}})");
   const beforeApp=fs.readdirSync(profile).filter(f=>f.endsWith('.zip')).length;

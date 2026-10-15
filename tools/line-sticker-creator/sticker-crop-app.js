@@ -38,10 +38,10 @@
   // 調整貼圖或代表圖片後，已打包的 ZIP 內容已過期；保留勾選的檢查狀態，只要求重新打包。
   function touched(){const had=!!prepared;revision++;controls();if(had)message('已調整圖片，先前打包的 ZIP 已失效，請重新按「打包 PNG 並下載 ZIP」。');}
   function canShare(files){try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files});}catch{return false;}}
-  function downloadPrepared(){if(!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const url=URL.createObjectURL(prepared.file),a=el('a');a.href=url;a.download=prepared.file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);message('已送出下載請求，請確認瀏覽器下載清單。若未收到檔案，可用下方系統分享，或在 Chrome／Safari 開啟本頁重新加入母圖。');}
+  function downloadPrepared(){if(!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const url=URL.createObjectURL(prepared.file),a=el('a');a.href=url;a.download=prepared.file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);message('已送出下載請求，請確認瀏覽器下載清單。若未收到檔案，可再按一次下載或用系統分享；仍不行就只能改用 Chrome／Safari 從頭做一次（目前進度不會帶過去）。');}
   $('crop-save-zip').onclick=downloadPrepared;
-  $('crop-share').onclick=async()=>{if(busy||!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const snapshot=prepared;busy=true;controls();try{await navigator.share({files:snapshot.shareFiles});if(prepared===snapshot)message('已交由系統分享處理，請在選擇的目的地確認檔案是否保存。');}catch(error){if(prepared===snapshot)message(error.name==='AbortError'?'分享已取消或沒有可用的目的地；檔案仍保留，可再次下載或分享。':'系統未能分享檔案；檔案仍保留。請改用 Chrome／Safari 開啟本頁，重新加入母圖並下載。');}finally{busy=false;controls();}};
-  $('crop-copy-url').onclick=async()=>{const url='https://tsy3991.github.io/TSY.Microglow-Creative/tools/line-sticker-creator/#sticker-crop';try{await navigator.clipboard.writeText(url);message('已複製網址。請貼到 Chrome／Safari，重新加入母圖裁切；目前圖片不會自動帶到另一個瀏覽器。');}catch{const input=$('crop-page-url');input.hidden=false;input.value=url;input.focus();input.select();message('無法自動複製，請手動複製已選取的網址。');}};
+  $('crop-share').onclick=async()=>{if(busy||!prepared||prepared.revision!==revision||!$('crop-review').checked)return;const snapshot=prepared;busy=true;controls();try{await navigator.share({files:snapshot.shareFiles});if(prepared===snapshot)message('已交由系統分享處理，請在選擇的目的地確認檔案是否保存。');}catch(error){if(prepared===snapshot)message(error.name==='AbortError'?'分享已取消或沒有可用的目的地；檔案仍保留，可再次下載或分享。':'系統未能分享檔案；檔案仍保留。只能改用 Chrome／Safari 開啟本頁，從頭加入母圖並下載（目前進度不會帶過去）。');}finally{busy=false;controls();}};
+  $('crop-copy-url').onclick=async()=>{const url='https://tsy3991.github.io/TSY.Microglow-Creative/tools/line-sticker-creator/#sticker-crop';try{await navigator.clipboard.writeText(url);message('已複製網址。貼到 Chrome／Safari 開啟後請從頭開始；目前頁面的母圖與進度不會帶過去，設定可先用「匯出設定檔」帶過去。');}catch{const input=$('crop-page-url');input.hidden=false;input.value=url;input.focus();input.select();message('無法自動複製，請手動複製已選取的網址。');}};
   function updatePlan(){plan=window.StickerCropPlan;$('crop-plan').textContent='目前 '+plan.count+' 張；母圖依序 '+plan.grids.map(n=>'4×'+n/4).join(' ＋ ');}
   window.addEventListener('sticker-crop-plan',()=>{const next=window.StickerCropPlan;if(JSON.stringify(plan)!==JSON.stringify(next)){updatePlan();invalidate();controls();message('張數或母圖分配已變更，原圖保留，請確認網格後重新裁切。');}});
   function resetCuts(m){m.x=C.cuts(m.image.width,4);m.y=C.cuts(m.image.height,m.rows);}
@@ -160,10 +160,10 @@
       const file=new File([data],'line-stickers-'+plan.count+'.zip',{type:'application/zip'}),pngFiles=entries.map(e=>new File([e.data],e.name,{type:'image/png'}));
       const shareFiles=canShare([file])?[file]:canShare(pngFiles)?pngFiles:null;
       const opaque=opaqueList();
-      prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-url-box').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。'+(opaque.length?'提醒：第 '+names(opaque)+' 張四個角落都不透明，LINE 要求透明背景。':'');$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
-      if(inApp)message('偵測到 App 內建瀏覽器，未自動下載。可嘗試下方系統分享；若沒有分享功能或無法保存，請在 Chrome／Safari 開啟本頁重新加入母圖。');else downloadPrepared();
+      prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。'+(opaque.length?'提醒：第 '+names(opaque)+' 張四個角落都不透明，LINE 要求透明背景。':'');$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
+      if(inApp)message('偵測到 App 內建瀏覽器，未自動下載。可嘗試下方系統分享；若沒有分享功能或無法保存，只能改用 Chrome／Safari 從頭做一次（目前進度不會帶過去）。');else downloadPrepared();
     }catch(error){message('下載未完成：'+error.message);}finally{busy=false;controls();}
   };
-  if(inApp){$('crop-browser-help').hidden=false;$('crop-url-box').hidden=false;}
+  if(inApp)$('crop-browser-help').hidden=false;
   updatePlan();controls();
 })();

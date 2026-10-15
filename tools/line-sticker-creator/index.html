@@ -23,7 +23,7 @@
   <script defer src="./sticker-app.js?v=20261015a"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015c">
   <script defer src="./sticker-crop-core.js?v=20261015c"></script>
-  <script defer src="./sticker-crop-app.js?v=20261015e"></script>
+  <script defer src="./sticker-crop-app.js?v=20261015f"></script>
   <script defer src="./sticker-tabs.js?v=20261015a"></script>
 </head>
 <body class="line-sticker-tool">
@@ -36,6 +36,7 @@
       <div class="hero-copy"><p class="eyebrow">Microglow Creative</p><h1>LINE 貼圖創作工具</h1><p class="hero-description">讓日常的小表情，<br>成為聊天裡的一點微光。</p><p class="hero-caption">設定角色、寫下台詞，把你的想法整理成生圖提示詞。</p><span class="draft-badge"><span class="status-dot" aria-hidden="true"></span>提示詞產生工具・一般靜態貼圖</span></div>
       <div class="hero-art"><img class="hero-preview" src="../../assets/creative-previews/line-sticker-entry-v2.jpg?v=20261014a" alt="貼圖創作示意插畫：揮手、抱愛心與睡覺的可愛角色" width="640" height="640" decoding="async"></div>
     </header>
+    <div id="crop-browser-help" class="notice" hidden><strong>你正在 App 內建瀏覽器（例如 LINE）。</strong><p>這裡可能無法下載 ZIP；而且換到 Chrome／Safari 時，母圖與裁切進度都不會帶過去。所以請「一開始」就換瀏覽器，不要做完才換。設定可先按「匯出設定檔」帶過去，母圖到新瀏覽器再重新加入。</p><div class="inline-actions"><button id="crop-copy-url" class="button" type="button">複製網址，貼到 Chrome／Safari 開啟</button></div><input id="crop-page-url" class="full-width" type="text" readonly aria-label="本頁網址，供手動複製" hidden></div>
     <nav class="mode-tabs" role="tablist" aria-label="工具功能"><button type="button" role="tab" id="tab-prompt" aria-controls="creator" aria-selected="true">① 設定並產生提示詞</button><button type="button" role="tab" id="tab-crop" aria-controls="sticker-crop" aria-selected="false" tabindex="-1">② 母圖裁切與下載</button></nav>
     <section class="notice" id="usage-guide" aria-labelledby="usage-title">
       <h2 id="usage-title">使用方式｜這是提示詞產生工具</h2>
@@ -152,7 +153,6 @@
       <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="crop-title">母圖裁切與下載</h2><p>把生成的母圖帶回來，整理成一般靜態貼圖素材。</p></div></div>
       <p>圖片只在目前瀏覽器處理，不上傳網站或 Gemini，也不存入瀏覽器草稿。重新整理頁面後需重新選圖。原始檔案保留，可重新裁切。<button type="button" class="button small" id="crop-to-prompt">← 回到提示詞設定</button></p>
       <p id="crop-plan" class="notice"></p>
-      <div id="crop-browser-help" class="notice" hidden><strong>App 內建瀏覽器可能不支援 ZIP 下載。</strong><p>建議先用 App 選單在外部瀏覽器開啟，或複製本頁網址貼到 Chrome／Safari。跨瀏覽器不會帶入圖片，請重新加入母圖。也可先打包，再嘗試系統分享；是否支援依裝置與檔案類型而定。</p></div>
       <label class="field" for="crop-files"><span>加入母圖（可多選）</span><input id="crop-files" type="file" multiple accept="image/png,image/jpeg,image/webp"><span class="field-hint">最多 5 張，每張 20 MB／1,600 萬像素，合計 3,200 萬像素。依序由左到右、由上到下裁切；可前移、後移調整母圖順序。</span></label>
       <div id="crop-mothers" class="crop-mothers"></div>
       <div class="field-grid">
@@ -169,8 +169,7 @@
       <label class="check-field"><input id="crop-review" type="checkbox"><span>我已逐張檢查角色、文字、透明背景與留白，並確認主要圖片與標籤圖片。</span></label>
       <button id="crop-download" class="button primary" type="button" disabled>打包 PNG 並下載 ZIP</button>
       <p id="crop-download-hint" class="field-hint" role="status"></p>
-      <div id="crop-ready" class="notice" hidden><p id="crop-ready-info"></p><div class="inline-actions"><button id="crop-save-zip" class="button primary" type="button">下載已打包 ZIP</button><button id="crop-share" class="button" type="button" hidden>系統分享檔案</button></div><p>若下載被攔下，請使用下方外部瀏覽器方式。此頁無法確認 App 是否真的保存了檔案。</p></div>
-      <div id="crop-url-box" class="inline-actions" hidden><button id="crop-copy-url" class="button" type="button">複製網址至 Chrome／Safari 開啟</button></div><input id="crop-page-url" class="full-width" type="text" readonly aria-label="本頁網址，供手動複製" hidden>
+      <div id="crop-ready" class="notice" hidden><p id="crop-ready-info"></p><div class="inline-actions"><button id="crop-save-zip" class="button primary" type="button">下載已打包 ZIP</button><button id="crop-share" class="button" type="button" hidden>系統分享檔案</button></div><p>若下載被攔下，可再按一次「下載已打包 ZIP」，或用「系統分享」。此頁無法確認瀏覽器或 App 是否真的保存了檔案。</p></div>
       <p class="field-hint">輸出 01.png 起的 370×320 貼圖、main.png（240×240）與 tab.png（96×74），PNG 72 dpi；每張檔案檢查 1 MB 上限，ZIP 小於 60 MB。貼圖保留約 10 px 透明邊距，位移限制在邊距內避免裁掉內容。大小與位置調整只用於貼圖，主要圖片與標籤圖片會完整置中縮放。</p>
       <p class="notice">下載後請解壓檢查，再至 LINE Creators Market 上傳。此工具不會代為發布，也不保證通過審核。一般靜態貼圖可用 8／16／24／32／40 張；透明背景與圖片內容仍需人工確認。</p>
       <p class="field-hint">規格依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>，查證日期：2026-10-14。</p>
