@@ -117,3 +117,9 @@ test("搜尋字詞回報：只收乾淨字詞、不呼叫 Gemini、不記 IP，�
   assert.equal(AI.missEndpoint("https://w.example/arrange"), "https://w.example/search-miss"); assert.equal(AI.missEndpoint(""), "");
   assert.equal(gemini, 0);
 });
+test("查看搜尋字詞腳本：依次數由多到少整理，容忍 wrangler 輸出的前置文字", async () => {
+  const { summarize, readAll } = await import("../worker/read-search-miss.mjs");
+  assert.deepEqual(summarize([{ key: "q:水電工", count: "2" }, { key: "q:木工", count: "5" }, { key: "q:怪", count: "x" }]), [{ q: "木工", count: 5 }, { q: "水電工", count: 2 }, { q: "怪", count: 0 }]);
+  const fake = args => args[2] === "list" ? "⛅ wrangler\n[{\"name\":\"q:木工\"},{\"name\":\"q:水電工\"}]" : (args[3] === "q:木工" ? "banner\n5\n" : "2");
+  assert.deepEqual(readAll(fake), [{ q: "木工", count: 5 }, { q: "水電工", count: 2 }]);
+});
