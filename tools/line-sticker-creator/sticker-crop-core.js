@@ -21,20 +21,39 @@
     if(samples.filter(v=>v[3]<=8).length>=samples.length*0.8)return {transparent:true};
     const solid=samples.filter(v=>v[3]>8),mid=c=>solid.map(v=>v[c]).sort((a,b)=>a-b)[solid.length>>1],color=[mid(0),mid(1),mid(2)];
     const near=solid.filter(v=>Math.abs(v[0]-color[0])<=tol&&Math.abs(v[1]-color[1])<=tol&&Math.abs(v[2]-color[2])<=tol).length;
-    return near>=samples.length*0.9?{transparent:false,color}:null;
+    if(near>=samples.length*0.9)return {transparent:false,color,colors:[color]};
+    // AI 常把「透明」畫成灰白棋盤格：邊緣只有兩種接近灰白的顏色交錯時，兩種都視為背景。
+    const grey=v=>Math.max(v[0],v[1],v[2])-Math.min(v[0],v[1],v[2])<=14,lum=v=>v[0]+v[1]+v[2],sorted=solid.slice().sort((a,b)=>lum(a)-lum(b)),half=sorted.length>>1;
+    if(solid.length>=samples.length*0.9&&solid.every(grey)&&half>=4){
+      const med=(list,c)=>list.map(v=>v[c]).sort((a,b)=>a-b)[list.length>>1],lo=sorted.slice(0,half),hi=sorted.slice(half),a=[med(lo,0),med(lo,1),med(lo,2)],b=[med(hi,0),med(hi,1),med(hi,2)];
+      const close=(v,c)=>Math.abs(v[0]-c[0])<=tol&&Math.abs(v[1]-c[1])<=tol&&Math.abs(v[2]-c[2])<=tol;
+      const na=solid.filter(v=>close(v,a)).length,nb=solid.filter(v=>close(v,b)).length;
+      if(lum(b)-lum(a)>=24&&na>=samples.length*0.25&&nb>=samples.length*0.25&&na+nb>=samples.length*0.9)return {transparent:false,color:b,colors:[a,b],checker:true};
+    }
+    return null;
   }
   // 依圖案歸格：先去除與圖片邊緣相連的背景，再把相連的圖案（角色＋文字＋效果）整塊分到所屬格子。
   // 圖案超出平均網格線時不會被切開；只有「兩張貼圖的圖案彼此相連」才依分割線切，並回報 merged。
   function splitByContent(data,w,h,xs,ys,tol=24){
     const bg=estimateBackground(data,w,h,Math.max(tol,16));if(!bg)return null; // 判斷「背景是不是單一顏色」放寬到 16，避免 JPEG 雜訊誤判
-    const n=w*h,cols=xs.length-1,rows=ys.length-1,cellCount=cols*rows,c0=bg.color;
-    const isBg=p=>{const i=p*4;if(data[i+3]<=8)return true;if(bg.transparent)return false;return Math.abs(data[i]-c0[0])<=tol&&Math.abs(data[i+1]-c0[1])<=tol&&Math.abs(data[i+2]-c0[2])<=tol;};
+    const n=w*h,cols=xs.length-1,rows=ys.length-1,cellCount=cols*rows,bgColors=bg.colors||[bg.color];
+    const isBg=p=>{const i=p*4;if(data[i+3]<=8)return true;if(bg.transparent)return false;for(const c0 of bgColors)if(Math.abs(data[i]-c0[0])<=tol&&Math.abs(data[i+1]-c0[1])<=tol&&Math.abs(data[i+2]-c0[2])<=tol)return true;return false;};
     const colOf=new Uint8Array(w),rowOf=new Uint8Array(h);
     for(let c=0;c<cols;c++)for(let x=xs[c];x<xs[c+1];x++)colOf[x]=c;
     for(let r=0;r<rows;r++)for(let y=ys[r];y<ys[r+1];y++)rowOf[y]=r;
     const queue=new Int32Array(n),outside=new Uint8Array(n);let head=0,tail=0;
     const seed=p=>{if(!outside[p]&&isBg(p)){outside[p]=1;queue[tail++]=p;}};
     for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
+    // 生成工具常在每格外畫框線或格線，使格內背景與圖片邊緣不相連：另外從每格內縮一點的四邊也當起點。
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const x0=xs[c],x1=xs[c+1]-1,y0=ys[r],y1=ys[r+1]-1;
+      for(const f of [0.03,0.06,0.09]){ // 框線粗細不明，內縮 3%／6%／9% 各取一圈（只有背景色的點會成為起點）
+        const d=Math.max(2,Math.round(f*Math.min(x1-x0,y1-y0)));
+        if(x1-x0<=2*d||y1-y0<=2*d)continue;
+        for(let x=x0+d;x<=x1-d;x++){seed((y0+d)*w+x);seed((y1-d)*w+x);}
+        for(let y=y0+d;y<=y1-d;y++){seed(y*w+x0+d);seed(y*w+x1-d);}
+      }
+    }
     while(head<tail){const p=queue[head++],x=p%w;if(x)seed(p-1);if(x<w-1)seed(p+1);if(p>=w)seed(p-w);if(p<n-w)seed(p+w);}
     const label=new Int32Array(n),stats=[null];let total=0;
     for(let start=0;start<n;start++){

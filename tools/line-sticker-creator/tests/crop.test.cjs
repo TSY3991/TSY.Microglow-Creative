@@ -55,3 +55,23 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   const edge=make(W,H);rect(edge,W,0,20,40,60,red);assert.deepEqual(C.splitByContent(edge,W,H,xs,ys,24).clipped,[0]); // 貼著圖片邊緣
   console.log('PASS advice: spill/clipped detection and smart-vs-hard recommendation');
 }
+{
+  const rect=(d,w,x,y,rw,rh,c)=>{for(let j=y;j<y+rh;j++)for(let i=x;i<x+rw;i++)d.set(c,(j*w+i)*4);};
+  const W=400,H=200,xs=C.cuts(W,4),ys=C.cuts(H,2),red=[200,30,30,255],white=[255,255,255,255];
+  // 每格外畫了黑色框線：格內白底與圖片邊緣不相連，仍要去成透明
+  const g=new Uint8ClampedArray(W*H*4);for(let i=0;i<W*H;i++)g.set(white,i*4);
+  for(let r=0;r<2;r++)for(let c=0;c<4;c++){const x0=xs[c]+4,y0=ys[r]+4,w=xs[c+1]-xs[c]-8,h=ys[r+1]-ys[r]-8;rect(g,W,x0,y0,w,3,[0,0,0,255]);rect(g,W,x0,y0+h-3,w,3,[0,0,0,255]);rect(g,W,x0,y0,3,h,[0,0,0,255]);rect(g,W,x0+w-3,y0,3,h,[0,0,0,255]);rect(g,W,xs[c]+30,ys[r]+25,40,50,red);}
+  const rg=C.splitByContent(g,W,H,xs,ys,24),cell=rg.cells[0];
+  const at=(cx,x,y)=>cx.data[((y-cx.y)*cx.width+(x-cx.x))*4+3];
+  assert.equal(at(cell,10,10),0);assert.equal(at(cell,50,50),255);                 // 框線內的白底透明、圖案保留
+  assert.ok(cell.width<=W/4);
+  // 灰白棋盤格當「透明」：兩種顏色都視為背景
+  const k=new Uint8ClampedArray(W*H*4);for(let y=0;y<H;y++)for(let x=0;x<W;x++)k.set(((x>>3)+(y>>3))&1?[204,204,204,255]:white,(y*W+x)*4);
+  rect(k,W,30,25,40,50,red);rect(k,W,230,25,40,50,red);
+  const bk=C.estimateBackground(k,W,H,24);assert.ok(bk&&bk.checker&&bk.colors.length===2);
+  const rk=C.splitByContent(k,W,H,xs,ys,24);assert.ok(rk);assert.deepEqual([rk.cells[0].width,rk.cells[0].height],[40,50]);assert.deepEqual([rk.cells[2].width,rk.cells[2].height],[40,50]);
+  // 漸層背景仍不猜
+  const gr=new Uint8ClampedArray(W*H*4);for(let y=0;y<H;y++)for(let x=0;x<W;x++)gr.set([x%256,(y*3)%256,(x+y)%256,255],(y*W+x)*4);
+  assert.equal(C.estimateBackground(gr,W,H,24),null);
+  console.log('PASS background removal: frames around cells, grey checkerboard, gradient not guessed');
+}
