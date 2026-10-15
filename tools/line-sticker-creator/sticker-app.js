@@ -230,6 +230,7 @@
     }
     state.settings[key]=key==="count"?Number(el.value):el.value;
     if(key==="platform"){
+      copyLabel();
       if(generated){
         try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
@@ -278,12 +279,16 @@
   $("add-grid").addEventListener("click",()=>{if(state.grids.length>=5)return status("最多 5 張母圖。");state.grids.push(8);renderGrids();invalidate();});
   $("generate").addEventListener("click",()=>{
     if(!errors(C.validate(state)))return;
-    $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;
+    $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;copyLabel();
     status("已產生整組提示詞；請核對內容後複製。");
   });
+  // 一張母圖（8／16 張）也比照多張母圖：按一下就複製並打開所選平台的網頁。
+  function copyLabel(){const info=platformInfo();$("copy").textContent=info.name?"複製提示詞，並打開 "+info.name:"複製整組提示詞";}
   $("copy").addEventListener("click",async()=>{
     if(!generated)return;
-    try{await navigator.clipboard.writeText($("prompt-output").value);$("copy-feedback").textContent="已複製整組提示詞，可貼到選用的 AI 平台。";}
+    const info=platformInfo();
+    if(info.url)window.open(info.url,"_blank","noopener");
+    try{await navigator.clipboard.writeText($("prompt-output").value);$("copy-feedback").textContent=info.url?"✔ 已複製提示詞，並幫你打開 "+info.name+"。請到那個網頁，點一下訊息輸入框，按 Ctrl+V 貼上（Mac 按 Command+V；手機長按輸入框再選「貼上」）。":"已複製整組提示詞，可貼到選用的 AI 平台。";}
     catch{$("prompt-output").focus();$("prompt-output").select();$("copy-feedback").textContent="瀏覽器無法使用剪貼簿；已選取提示詞，請手動複製。";}
   });
   $("save-local").addEventListener("change",()=>{

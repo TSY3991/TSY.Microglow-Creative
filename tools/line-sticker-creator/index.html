@@ -20,7 +20,7 @@
   <script defer src="./sticker-core.js?v=20261015e"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015a"></script>
-  <script defer src="./sticker-app.js?v=20261015d"></script>
+  <script defer src="./sticker-app.js?v=20261015e"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
   <script defer src="./sticker-crop-core.js?v=20261015e"></script>
   <script defer src="./sticker-crop-app.js?v=20261015i"></script>
@@ -148,7 +148,7 @@
               <div id="single-flow">
               <p><a class="button" href="#sticker-crop">已取得母圖？前往「② 母圖裁切與下載」</a></p>
               <button type="button" id="generate" class="button primary">確認摘要並產生提示詞</button>
-              <div id="prompt-area" hidden><p id="reference-handoff" class="notice" hidden>請將角色參考圖與下方提示詞一起送到 AI 對話。本頁選圖不會自動傳送給 AI；重新載入頁面後需重新選圖。</p><label class="field" for="prompt-output"><span>完整提示詞・整組一次複製</span><textarea id="prompt-output" readonly rows="14"></textarea></label><button type="button" id="copy" class="button primary">複製整組提示詞</button><p id="copy-feedback" role="status" class="field-hint"></p><p class="notice">多張母圖已分段寫在同一份指令中。若 AI 一次只生成一張，請在同一對話說「繼續」。生成結果仍須逐張核對。</p></div>
+              <div id="prompt-area" hidden><p id="reference-handoff" class="notice" hidden>請將角色參考圖與下方提示詞一起送到 AI 對話。本頁選圖不會自動傳送給 AI；重新載入頁面後需重新選圖。</p><label class="field" for="prompt-output"><span>完整提示詞・整組一次複製</span><textarea id="prompt-output" readonly rows="14"></textarea></label><button type="button" id="copy" class="button primary">複製提示詞，並打開 ChatGPT</button><p id="copy-feedback" role="status" class="field-hint"></p><p class="notice">多張母圖已分段寫在同一份指令中。若 AI 一次只生成一張，請在同一對話說「繼續」。生成結果仍須逐張核對。</p></div>
               </div>
             </section>
           </form>
