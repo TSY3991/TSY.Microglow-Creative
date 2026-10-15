@@ -23,6 +23,11 @@
     return rows.length > 1 ? "分 "+rows.length+" 行，由上到下依序為 "+rows.map(quote).join("、") : quote(rows[0] || "");
   }
   function autoGrids(count) { const out=[]; while(count>=16){out.push(16);count-=16;} if(count)out.push(8); return out; }
+  // 發想情境的說明文字（職業情境會註明是職業日常，並帶入語氣）。
+  function sceneName(settings) {
+    const scene = D.scenes[settings.scene], base = scene.job ? scene.label + "職業日常" : scene.label;
+    return settings.tone && settings.tone !== "auto" ? base + "；語氣：" + label("tone", settings.tone) : base;
+  }
   function pool(scene) { return [...new Set([...D.scenes[scene].lines,...D.common])]; }
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
   function initial() { return {settings:clone(D.defaults),grids:[16],items:Array.from({length:16},()=>item())}; }
@@ -117,6 +122,7 @@
       "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":label("style",s.style))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
       s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。保留 2D 插畫的造型與清楚輪廓，上色用有光澤的半立體賽璐珞（glossy semi-3D cel-shaded）：柔和的立體光影、皮膚與毛髮／衣料有柔和亮面反光，帶出體積感；不要扁平色塊，也不要寫實攝影或寫實 3D 渲染、複雜材質與強烈投影；整組使用同一套光澤與光源方向，造型比例與輪廓粗細依上方「角色風格」，背景依下方背景要求，不另外加場景。":s.dimension==="3d"?"呈現方式：3D 立體。角色要有體積感、柔和光影與公仔／黏土／3D 動畫角色的質感（上方風格決定造型與氣質，不要畫成平面插畫）；仍須背景乾淨、輪廓清楚、不要複雜場景與強烈投影，且整組使用同一套 3D 材質與光線。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
       "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
+      "角色鎖定（整組每一張都必須相同）：臉型與五官比例、髮型與髮色、膚色／毛色與花紋、身材比例、服裝與配件（眼鏡、手錶、飾品）、角色主色與可辨識特徵。可以變動的只有表情、姿勢、動作、情緒、道具與情境；動作可以變，角色不能變。不要把不同特徵混合，不要新增人物、Logo 或水印。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
       single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的母圖 1 當參考圖：請沿用同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫母圖 1。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
       "",
@@ -129,7 +135,8 @@
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
-      s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想":D.scenes[s.scene].label)+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
+      s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想"+(s.tone!=="auto"?"；語氣："+label("tone",s.tone):""):sceneName(s))+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
+      s.textMode!=="none"&&s.mode!=="manual"?"台詞要平均涵蓋：招呼、回覆、忙碌、感謝、道歉、情緒、鼓勵、搞笑、休息與收尾"+(s.scene==="auto"?"":"，以及所選情境的專業用語（情境相關約占 5～7 成、一般聊天約 3～5 成）")+"；避免大量意思重複的句子（例如一堆早安、哈囉、你好），每句都要有不同用途。"+(s.tone!=="auto"?"語氣統一為「"+label("tone",s.tone)+"」。":""):null,
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
       single&&total>1&&blankHere&&elsewhere.length?"本組其他母圖已使用這些台詞，本張請不要重複："+elsewhere.map(quote).join("、")+"。":null,
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
@@ -159,7 +166,7 @@
     const input=raw.state;if(!object(input.settings)||!Array.isArray(input.items)||!Array.isArray(input.grids))throw new Error("設定檔結構不完整。");
     const settings={};
     for(const [key,def] of Object.entries(D.defaults)){
-      const value=(key==="spacing"||key==="dimension")&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
+      const value=(key==="spacing"||key==="dimension"||key==="tone")&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
       if(typeof value!==typeof def)throw new Error("設定欄位格式不正確："+key);
       if(typeof value==="string"&&value.length>1000)throw new Error("設定文字過長："+key);
       if(D.options[key]&&!D.options[key].some(x=>x[0]===value))throw new Error("未知設定選項："+key);
@@ -183,6 +190,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

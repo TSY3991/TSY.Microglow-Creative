@@ -128,3 +128,18 @@ test("呈現方式：預設 2D，3D 寫入提示詞，舊設定檔相容、未�
   const raw=C.serialize(ready(16));delete raw.state.settings.dimension;assert.equal(C.deserialize(raw).settings.dimension,"2d");
   s.settings.dimension="4d";assert.throws(()=>C.deserialize(JSON.stringify(C.serialize(s))));
 });
+test("職業情境：全部可補滿 40 張、句子不重複、不超過 14 字，並可搜尋",()=>{
+  const jobs=Object.entries(D.scenes).filter(([,x])=>x.job);assert.ok(jobs.length>=40);
+  for(const [id,x] of jobs){const p=C.pool(id);assert.ok(p.length>=40,id+" 句庫不足："+p.length);assert.equal(new Set(x.lines).size,x.lines.length,id);assert.ok(x.lines.every(t=>t.length<=14&&!D.common.includes(t)),id);assert.ok(x.group&&x.kw);}
+  for(const need of ["工程師","軟體工程師","AI 工程師","老師","客服","寵物","宮廟","YouTuber","美髮","司機"])assert.ok(jobs.some(([,x])=>x.label===need),need);
+  const s=ready(40);s.settings.scene="job_engineer";C.fillMissing(s);assert.equal(new Set(s.items.map(x=>x.text)).size,40);
+});
+test("語氣、內容平衡、角色鎖定與職業情境寫入提示詞；舊設定檔相容",()=>{
+  const s=ready(16);s.settings.mode="ai";s.settings.scene="job_teacher";s.settings.tone="funny";
+  const p=C.prompt(s);assert.match(p,/老師職業日常；語氣：搞笑/);assert.match(p,/語氣統一為「搞笑」/);assert.match(p,/避免大量意思重複/);assert.match(p,/角色鎖定（整組每一張都必須相同）/);assert.match(p,/動作可以變，角色不能變/);
+  assert.equal(C.sceneName(s.settings),"老師職業日常；語氣：搞笑");s.settings.tone="auto";assert.equal(C.sceneName(s.settings),"老師職業日常");
+  s.settings.mode="manual";assert.doesNotMatch(C.prompt(s),/避免大量意思重複/);
+  const raw=C.serialize(ready(16));delete raw.state.settings.tone;assert.equal(C.deserialize(raw).settings.tone,"auto");
+  raw.state.settings.tone="rude";assert.throws(()=>C.deserialize(raw));
+  for(const st of ["clean","jpsoft","handdrawn","meme","festival"]){const t=ready(16);t.settings.style=st;assert.match(C.prompt(t),new RegExp("風格："+C.label("style",st).slice(0,4)));assert.equal(C.deserialize(JSON.stringify(C.serialize(t))).settings.style,st);}
+});

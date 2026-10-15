@@ -69,13 +69,38 @@
     const noText=state.settings.textMode==="none";
     document.querySelector(".text-settings").hidden=noText;
   }
+  // 情境／職業下拉：依分組顯示，輸入關鍵字即時篩選（名稱、分組、同義詞）；目前選中的項目永遠保留。
+  function fillScenes(query) {
+    const select=$("scene"),q=query.trim().toLowerCase(),groups=new Map();let hit=0;
+    select.replaceChildren();
+    for(const [id,x] of Object.entries(D.scenes)){
+      const text=(x.label+" "+(x.group||"")+" "+(x.kw||"")).toLowerCase();
+      if(id!=="auto"&&id!==state.settings.scene&&q&&!text.includes(q))continue;
+      if(id!=="auto"&&q&&text.includes(q))hit++;
+      const key=id==="auto"?"":x.group;
+      if(!groups.has(key))groups.set(key,[]);groups.get(key).push([id,x.label]);
+    }
+    for(const [group,list] of groups){
+      let parent=select;
+      if(group){parent=document.createElement("optgroup");parent.label=group;select.append(parent);}
+      list.forEach(([id,label])=>parent.append(new Option(label,id)));
+    }
+    select.value=state.settings.scene;
+    $("scene-search-status").textContent=q?(hit?"找到 "+hit+" 個符合的項目，請從下拉選單選擇。":"找不到符合的職業或情境，可改用「AI 自由發想」。"):"";
+    const first=select.options[0];if(first)first.disabled=state.settings.mode==="preset";
+  }
+  $("scene-search").addEventListener("input",()=>fillScenes($("scene-search").value));
   function controls() {
     document.querySelectorAll("[data-setting]").forEach(el=>{
       const key=el.dataset.setting;
       if(el.tagName==="SELECT"&&!el.options.length){
-        const options=key==="scene"?Object.entries(D.scenes).map(([id,x])=>[id,x.label]):key==="count"?D.counts.map(x=>[x,x+" 張"]):D.options[key];
-        options.forEach(([value,text])=>el.add(new Option(text,value)));
+        if(key==="scene")fillScenes("");
+        else{
+          const options=key==="count"?D.counts.map(x=>[x,x+" 張"]):D.options[key];
+          options.forEach(([value,text])=>el.add(new Option(text,value)));
+        }
       }
+      if(key==="scene"&&el.options.length&&![...el.options].some(o=>o.value===state.settings.scene))fillScenes($("scene-search").value);
       el.value=state.settings[key];
       if(el.tagName==="TEXTAREA") el.placeholder=el.id==="character"?"例如：戴圓框眼鏡、短捲髮，笑起來很親切的角色":el.id==="customStyle"?"描述你希望的線條、材質與配色":"";
       el.setAttribute("aria-describedby","error-"+key);
@@ -162,7 +187,7 @@
     const entries=[
       ["角色",C.label("source",s.source)+(s.source==="original"?"・"+C.label("kind",s.kind):"")],
       ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
-      ["台詞模式",C.label("mode",s.mode)+"・"+C.label("textMode",s.textMode)],
+      ["台詞模式",C.label("mode",s.mode)+"・"+C.label("textMode",s.textMode)],["情境與語氣",(s.scene==="auto"?"AI 自由發想":D.scenes[s.scene].label)+"／"+C.label("tone",s.tone).split("：")[0]],
       ["共用名稱",s.nameMode==="none"||!s.name.trim()?"不加入":C.label("nameMode",s.nameMode)+"："+s.name],
       ["字體與大小",(s.font==="custom"?(s.customFont.trim()||"由 AI 搭配"):C.label("font",s.font))+"／"+C.label("size",s.size)],
       ["文字顏色",s.textColor==="custom"?s.textCustom:C.label("textColor",s.textColor)],
@@ -174,7 +199,7 @@
     ];
     if(s.source==="photo")entries.push(["參考圖",referenceUrl?"本機已預覽；請將同一張圖附到 AI 對話。":"尚未在本頁選圖；請在 AI 對話附上參考圖。"]);
     entries.forEach(([key,value])=>info.append(node("dt",key),node("dd",value)));box.append(info);
-    const details=node("details",undefined,"summary-details");details.open=true;details.append(node("summary","逐張內容與排列順序"));
+    const details=node("details",undefined,"summary-details");details.open=true;details.append(node("summary","貼圖企劃表：逐張內容與排列順序"));
     const list=node("ol",undefined,"summary-items");
     C.plans(state).forEach(p=>{
       const group=node("li");
@@ -243,7 +268,7 @@
     }
     if(key==="mode"){
       if(el.value==="ai"){const n=C.releasePreset(state);status(n?"已釋放 "+n+" 句系統預設台詞，改由 AI 發揮；自行修改的台詞保留。":"已改為 AI 發揮。已有內容保留；想重新創作可按「將台詞交給 AI 重新創作」。");}
-      if(el.value==="preset"&&state.settings.scene==="auto"){state.settings.scene="greeting";$("scene").value="greeting";}
+      if(el.value==="preset"&&state.settings.scene==="auto"){state.settings.scene="greeting";fillScenes($("scene-search").value);}
       renderItems();
     }
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
