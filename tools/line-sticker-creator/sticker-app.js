@@ -50,6 +50,7 @@
     document.querySelectorAll(".field-error").forEach(e=>e.textContent="");
     document.querySelectorAll('[aria-invalid="true"]').forEach(e=>e.removeAttribute("aria-invalid"));
     live();save();
+    if(step===4)renderMulti();
   }
   function conditions() {
     document.querySelectorAll("[data-visible]").forEach(el=>{
@@ -213,7 +214,7 @@
     });
     $("previous").disabled=step===1;$("next").hidden=step===4;
     $("step-counter").textContent=step+"／4";$("live-step").textContent="步驟 "+step+"／4";
-    if(step===4)summary();
+    if(step===4){summary();renderMulti();}
     $("title-"+step).focus();save();
   }
   function replaceItems(items,message) {
@@ -233,7 +234,7 @@
         try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
       }
-      save();return;
+      save();if(step===4)renderMulti();return;
     }
     if(key==="count"){
       const before=state.items.length;C.resize(state,Number(el.value));renderItems();renderGrids();controls();
@@ -348,7 +349,7 @@
     const restored=AI.undo(state,aiApplied.changes);hideApplied();renderItems();invalidate();
     $("ai-status").textContent="已復原 "+restored+" 個 AI 補入的欄位；你之後自己改過的欄位不受影響。";
   });
-  $("ai-arrange").addEventListener("click",async()=>{
+  async function runArrange() {
     if(!aiEndpoint||!$("ai-consent").checked||aiController)return;
     let input;
     try{input=AI.payload(state);}catch(error){$("ai-status").textContent=error.message;return;}
@@ -368,7 +369,93 @@
     }catch(error){
       if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
     }finally{clearTimeout(timer);if(revision===aiRevision){aiController=null;aiAvailability();}}
-  });
+  }
+  $("ai-arrange").addEventListener("click",runArrange);
+
+  // ---- 多張母圖：逐張引導（一組貼圖要用到兩張以上母圖時才出現）----
+  let showSingle=false;
+  const crop=()=>window.StickerCrop;
+  function platformInfo() {const p=state.settings.platform;return p==="chatgpt"?{name:"ChatGPT",url:"https://chatgpt.com/"}:p==="gemini"?{name:"Gemini",url:"https://gemini.google.com/app"}:{name:"",url:""};}
+  const pasteHint="點一下訊息輸入框，按 Ctrl+V 貼上（Mac 按 Command+V；手機長按輸入框再選「貼上」）。";
+  async function copyAndOpen(n,box) {
+    const info=platformInfo(),note=box.querySelector(".copy-note");let text;
+    try{text=C.prompt(state,n);}catch(error){note.textContent=error.message;return;}
+    const copying=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):Promise.reject(new Error("no clipboard"));
+    if(info.url)window.open(info.url,"_blank","noopener");
+    try{await copying;note.textContent="✔ 已複製母圖 "+n+" 的提示詞。"+(info.url?"已幫你打開 "+info.name+"。請到那個網頁，":"請到你的生圖網站，")+pasteHint;}
+    catch{const area=box.querySelector(".manual-prompt");area.value=text;area.hidden=false;area.focus();area.select();note.textContent="這個瀏覽器不讓我自動複製。下面的框已選好全部文字，請按 Ctrl+C 複製，再到生圖網站貼上。";}
+  }
+  async function copyReference(box) {
+    const note=box.querySelector(".copy-note");
+    try{await crop().copyImage(0);note.textContent="✔ 已複製「母圖 1」的圖片。回到生圖網站同一個輸入框，再貼上一次（Ctrl+V，Mac 按 Command+V），圖片就會出現。照片角色的原始照片也要一起附上。";}
+    catch{note.textContent="這個瀏覽器不能一鍵複製圖片。請在生圖網站按「＋」或迴紋針，選你剛存下來的母圖 1 檔案。";}
+  }
+  async function aiFromStep4(fixDuplicates) {
+    if(!aiEndpoint)return;
+    if(!$("ai-consent").checked){
+      if(!confirm("要把角色描述、風格與台詞（不含照片）傳到 Google Gemini，讓 AI 幫你補齊空白嗎？"))return;
+      $("ai-consent").checked=true;aiAvailability();
+    }
+    if(fixDuplicates){C.duplicates(state).forEach(g=>g.indexes.slice(1).forEach(i=>{state.items[i].text="";delete state.items[i].presetText;}));renderItems();invalidate();}
+    $("multi-status").textContent="AI 正在安排台詞，請稍等，約需 10～60 秒…";
+    await runArrange();
+    $("multi-status").textContent=$("ai-status").textContent;
+  }
+  function renderAlerts() {
+    const box=$("multi-alerts");box.replaceChildren();
+    const blanks=state.items.slice(0,state.settings.count).filter(x=>C.hasText(state,x)&&!x.text.trim()).length,dups=C.duplicates(state);
+    if(blanks){
+      const p=node("div",undefined,"notice mini-alert");
+      p.append(node("strong","還有 "+blanks+" 句台詞沒填。"),node("span",aiEndpoint?"建議先讓 AI 一次補齊，這樣每張母圖的字才不會各自亂想、也不會重複。":"沒填的字會交給生圖平台各自發想，不同母圖之間可能重複。"));
+      if(aiEndpoint){const b=node("button","讓 AI 幫我補齊台詞","button primary");b.type="button";b.addEventListener("click",()=>aiFromStep4(false));p.append(b);}
+      box.append(p);
+    }
+    if(dups.length){
+      const p=node("div",undefined,"notice mini-alert");
+      p.append(node("strong","有 "+dups.length+" 句台詞重複："+dups.slice(0,3).map(g=>"「"+g.text+"」").join("、")+(dups.length>3?"…":"")),node("span",aiEndpoint?"可以讓 AI 把重複的換成新的。":"請回第二步改掉重複的句子。"));
+      if(aiEndpoint){const b=node("button","請 AI 換掉重複的","button primary");b.type="button";b.addEventListener("click",()=>aiFromStep4(true));p.append(b);}
+      box.append(p);
+    }
+  }
+  function renderMulti() {
+    const plans=C.plans(state),multi=plans.length>1;
+    $("multi-flow").hidden=!multi;$("single-flow").hidden=multi&&!showSingle;
+    $("show-single").textContent=showSingle?"收起「整組一次複製」":"改用「整組一次複製」（進階）";
+    if(!multi||!crop())return;
+    $("multi-count").textContent=String(plans.length);renderAlerts();
+    const list=$("mother-steps"),info=platformInfo(),loaded=crop().count();list.replaceChildren();
+    plans.forEach((p,i)=>{
+      const got=crop().info(i),li=node("li",undefined,"mother-step"+(got?" done":""));
+      li.append(node("h4","母圖 "+p.number+"／"+plans.length+"（貼圖 "+p.start+"～"+p.end+"，共 "+p.size+" 格）"));
+      let n=1;
+      const step=(title,text,button)=>{const d=node("div",undefined,"step");d.append(node("b","第 "+(n++)+" 步："+title));if(text)d.append(node("span",text));if(button)d.append(button);li.append(d);};
+      const copy=node("button","複製提示詞"+(info.name?"，並打開 "+info.name:""),"button primary");copy.type="button";copy.addEventListener("click",()=>copyAndOpen(p.number,li));
+      step("複製這張的提示詞",(info.name?"按下去會自動複製，並打開 "+info.name+" 的網頁。":"按下去會自動複製，請到你的生圖網站貼上。")+(i===0&&state.settings.source==="photo"?" 你的角色照片也要在那個網頁一起附上。":""),copy);
+      if(i>0){
+        const ref=node("button","複製「母圖 1」的圖片","button");ref.type="button";ref.disabled=loaded<1;ref.addEventListener("click",()=>copyReference(li));
+        step("貼上母圖 1 當參考",loaded<1?"請先完成母圖 1，這樣 AI 才能照著畫同一個角色。":"在同一個輸入框，把母圖 1 的圖片也貼上，AI 才會畫出同一個角色。",ref);
+      }
+      step("送出，等圖做好","做好後把圖存到電腦（點圖片再按下載，或右鍵另存）。");
+      const zone=node("label",undefined,"drop-zone"+(got?" done":"")+(i>loaded?" locked":"")),input=node("input");
+      input.type="file";input.accept="image/png,image/jpeg,image/webp";input.disabled=i>loaded;input.setAttribute("aria-label","放入母圖 "+p.number+" 的圖片");
+      if(got)zone.append(crop().thumb(i,160));
+      zone.append(node("span",got?"✔ 已收到："+got.name+"（"+got.width+"×"+got.height+"）。要換圖，把新圖拖進來。":i>loaded?"請先完成母圖 "+i:"把做好的圖拖到這裡，或按這裡選檔案"),input);
+      const msg=node("p",undefined,"field-hint");msg.setAttribute("role","alert");
+      const take=async file=>{if(!file)return;msg.textContent="";try{await crop().set(i,file);}catch(error){msg.textContent=error.message;}};
+      input.addEventListener("change",()=>take(input.files[0]));
+      zone.addEventListener("dragover",e=>{if(input.disabled)return;e.preventDefault();zone.classList.add("over");});
+      zone.addEventListener("dragleave",()=>zone.classList.remove("over"));
+      zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("over");if(!input.disabled)take(e.dataTransfer.files[0]);});
+      step("把圖放進來","");li.lastChild.append(zone,msg);
+      li.append(node("p",undefined,"copy-note field-hint"));const area=node("textarea",undefined,"manual-prompt");area.readOnly=true;area.rows=6;area.hidden=true;area.setAttribute("aria-label","提示詞，供手動複製");li.append(area);
+      list.append(li);
+    });
+    const ready=crop().ready();$("to-crop").disabled=!ready;
+    $("multi-status").textContent=loaded===plans.length?(ready?"全部母圖都到了！按下面的按鈕，會自動幫你裁好。":"母圖張數都到了，但格數和設定對不上，請到「② 母圖裁切與下載」檢查。"):"已收到 "+loaded+"／"+plans.length+" 張母圖。";
+  }
+  $("show-single").addEventListener("click",()=>{showSingle=!showSingle;renderMulti();});
+  $("to-crop").addEventListener("click",()=>{$("tab-crop").click();$("tab-crop").closest("nav").scrollIntoView({block:"start"});setTimeout(()=>crop().run(),80);});
+  window.addEventListener("sticker-mothers-changed",()=>{if(step===4)renderMulti();});
   try{
     aiEndpoint=AI.endpoint(window.StickerAIConfig?.endpoint);
     if(aiEndpoint){$("ai-service-summary").textContent="網站 AI 已設定服務位址，可在第二步嘗試安排內容。";$("ai-status").textContent="勾選同意後可取得 AI 建議；免費額度由網站共用，服務可用性以實際請求為準。";}

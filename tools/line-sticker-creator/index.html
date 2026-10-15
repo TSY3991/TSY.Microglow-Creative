@@ -15,15 +15,15 @@
   <title>LINE 貼圖創作工具｜微光創作工具</title>
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
-  <link rel="stylesheet" href="./sticker-creator.css?v=20261015d">
+  <link rel="stylesheet" href="./sticker-creator.css?v=20261015e">
   <script defer src="./sticker-data.js?v=20261015a"></script>
-  <script defer src="./sticker-core.js?v=20261015b"></script>
+  <script defer src="./sticker-core.js?v=20261015c"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015a"></script>
-  <script defer src="./sticker-app.js?v=20261015a"></script>
+  <script defer src="./sticker-app.js?v=20261015b"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015c">
   <script defer src="./sticker-crop-core.js?v=20261015c"></script>
-  <script defer src="./sticker-crop-app.js?v=20261015f"></script>
+  <script defer src="./sticker-crop-app.js?v=20261015g"></script>
   <script defer src="./sticker-tabs.js?v=20261015b"></script>
 </head>
 <body class="line-sticker-tool">
@@ -134,10 +134,22 @@
             </section>
             <section class="panel step-panel" data-panel="4" aria-labelledby="title-4" hidden>
               <div class="panel-heading"><span class="section-symbol" aria-hidden="true">✓</span><div><h2 id="title-4" tabindex="-1">摘要與提示詞</h2><p>確認整組內容，再複製到 AI 平台。</p></div></div>
-              <div id="summary"></div><p><a class="button" href="#sticker-crop">已取得母圖？前往「② 母圖裁切與下載」</a></p>
+              <div id="summary"></div>
               <label class="field" for="platform"><span>提示詞版本</span><select id="platform" data-setting="platform"></select><span id="error-platform" class="field-error"></span></label>
+              <section id="multi-flow" class="multi-flow" hidden>
+                <h3>這一組要做 <span id="multi-count"></span> 張母圖，請照順序一張一張做</h3>
+                <p class="field-hint">每一張都一樣：按按鈕複製 → 到新打開的網頁貼上 → 做好後把圖拖進下面的框。全部做完，按最下面的按鈕，會自動幫你裁好。</p>
+                <div id="multi-alerts"></div>
+                <ol id="mother-steps" class="mother-steps"></ol>
+                <div class="inline-actions"><button type="button" id="to-crop" class="button primary" disabled>全部母圖都到了，前往裁切</button></div>
+                <p id="multi-status" role="status" aria-live="polite" class="field-hint"></p>
+                <p><button type="button" id="show-single" class="button small">改用「整組一次複製」（進階）</button></p>
+              </section>
+              <div id="single-flow">
+              <p><a class="button" href="#sticker-crop">已取得母圖？前往「② 母圖裁切與下載」</a></p>
               <button type="button" id="generate" class="button primary">確認摘要並產生提示詞</button>
               <div id="prompt-area" hidden><p id="reference-handoff" class="notice" hidden>請將角色參考圖與下方提示詞一起送到 AI 對話。本頁選圖不會自動傳送給 AI；重新載入頁面後需重新選圖。</p><label class="field" for="prompt-output"><span>完整提示詞・整組一次複製</span><textarea id="prompt-output" readonly rows="14"></textarea></label><button type="button" id="copy" class="button primary">複製整組提示詞</button><p id="copy-feedback" role="status" class="field-hint"></p><p class="notice">多張母圖已分段寫在同一份指令中。若 AI 一次只生成一張，請在同一對話說「繼續」。生成結果仍須逐張核對。</p></div>
+              </div>
             </section>
           </form>
           <p id="status" class="status-message" role="status" aria-live="polite"></p>

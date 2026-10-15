@@ -82,6 +82,7 @@
       const actions=el('div');actions.className='inline-actions';actions.append(button('平均分割',()=>{resetCuts(m);invalidate();renderMothers();controls();}),button('前移',()=>{if(i){[mothers[i-1],mothers[i]]=[m,mothers[i-1]];invalidate();renderMothers();controls();}}),button('後移',()=>{if(i<mothers.length-1){[mothers[i+1],mothers[i]]=[m,mothers[i+1]];invalidate();renderMothers();controls();}}),button('移除',()=>{uploadRevision++;m.image.close();mothers.splice(i,1);invalidate();renderMothers();controls();}));info.append(actions);
       box.append(info,view);$('crop-mothers').append(box);
     });
+    window.dispatchEvent(new Event('sticker-mothers-changed'));
   }
   $('crop-files').onchange=async()=>{
     const files=Array.from($('crop-files').files);$('crop-files').value='';if(!files.length)return;const token=++uploadRevision,incoming=[];
@@ -163,6 +164,36 @@
       prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。'+(opaque.length?'提醒：第 '+names(opaque)+' 張四個角落都不透明，LINE 要求透明背景。':'');$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
       if(inApp)message('偵測到 App 內建瀏覽器，未自動下載。可嘗試下方系統分享；若沒有分享功能或無法保存，只能改用 Chrome／Safari 從頭做一次（目前進度不會帶過去）。');else downloadPrepared();
     }catch(error){message('下載未完成：'+error.message);}finally{busy=false;controls();}
+  };
+  // 給「步驟四」逐張母圖卡片使用：直接收圖、複製圖片、自動裁切。
+  const thumb=(i,max)=>{const m=mothers[i],c=canvas(1,1);if(!m)return c;const k=Math.min(max/m.image.width,max/m.image.height,1);c.width=Math.max(1,Math.round(m.image.width*k));c.height=Math.max(1,Math.round(m.image.height*k));c.getContext('2d').drawImage(m.image,0,0,c.width,c.height);c.className='mother-thumb';c.setAttribute('aria-hidden','true');return c;};
+  async function setMother(i,file){
+    if(busy)throw Error('正在處理中，請稍等一下再放圖。');
+    if(i>mothers.length)throw Error('請先完成前一張母圖。');
+    if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('這個檔案不能用。請選 PNG、JPG 或 WebP 圖片，單張最多 20 MB。');
+    const token=++uploadRevision;let image;
+    try{image=await createImageBitmap(file);}catch{throw Error('讀不到這張圖片，請換一張。');}
+    const others=mothers.reduce((n,m,k)=>k===i?n:n+m.image.width*m.image.height,0);
+    if(image.width<4||image.height<4||image.width*image.height>16000000){image.close();throw Error('圖片尺寸不合：至少 4×4，且不超過 1,600 萬像素。');}
+    if(others+image.width*image.height>32000000){image.close();throw Error('母圖合計太大，請縮小圖片。');}
+    if(token!==uploadRevision){image.close();throw Error('已被新的操作取代，請再放一次。');}
+    const loaded={file,image,rows:(plan.grids[i]||8)/4};resetCuts(loaded);
+    if(i<mothers.length){mothers[i].image.close();mothers[i]=loaded;}else mothers.push(loaded);
+    invalidate();renderMothers();controls();message('母圖 '+(i+1)+' 已加入。');
+  }
+  async function copyImage(i){
+    const m=mothers[i];if(!m)throw Error('沒有這張母圖。');
+    if(!navigator.clipboard||typeof navigator.clipboard.write!=='function'||typeof ClipboardItem!=='function')throw Error('不支援');
+    const c=canvas(m.image.width,m.image.height);c.getContext('2d').drawImage(m.image,0,0);
+    const blob=new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('編碼失敗')),'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+  }
+  window.StickerCrop={
+    count:()=>mothers.length,
+    info:i=>mothers[i]?{name:mothers[i].file.name,width:mothers[i].image.width,height:mothers[i].image.height}:null,
+    thumb,set:setMother,copyImage,
+    ready:()=>mothers.length>0&&mothers.reduce((n,m)=>n+m.rows*4,0)===plan.count,
+    run:()=>{if(!busy&&window.StickerCrop.ready())$('crop-run').click();}
   };
   if(inApp)$('crop-browser-help').hidden=false;
   updatePlan();controls();

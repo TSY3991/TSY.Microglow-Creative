@@ -85,12 +85,28 @@
     const kinds = [...new Set(state.grids.map(g => g / 4))].sort((x, y) => y - x), hints = RATIO_HINT[platform] || RATIO_HINT.generic;
     return kinds.map(rows => (rows === 4 ? "4×4" : "4×2") + " 母圖理想整張 " + motherSize(rows).width + "×" + motherSize(rows).height + " px，若平台只提供固定比例，請選「" + hints[rows] + "」").join("；") + "。";
   }
-  function prompt(state) {
+  // 重複台詞：把標點與空白去掉後比較，回傳 [{text, indexes:[0-based 貼圖序號]}]。
+  function duplicates(state) {
+    const seen=new Map();
+    state.items.slice(0,state.settings.count).forEach((entry,i)=>{
+      if(!hasText(state,entry)||!entry.text.trim())return;
+      const key=entry.text.replace(/[\s，。！？、,.!?~～…\-－]/g,"").toLowerCase();
+      if(!key)return;
+      if(!seen.has(key))seen.set(key,{text:entry.text.trim(),indexes:[]});
+      seen.get(key).indexes.push(i);
+    });
+    return [...seen.values()].filter(x=>x.indexes.length>1);
+  }
+  // only：只產生某一張母圖（1 起算）的提示詞；省略則是整組一份。
+  function prompt(state, only) {
     if(validate(state).length) throw new Error("請先完成設定檢查。");
-    const s=state.settings;
+    const s=state.settings,all=plans(state),single=only!==undefined,target=single?all.find(p=>p.number===only):null,total=all.length;
+    if(single&&!target) throw new Error("沒有這張母圖。");
+    const here=target?state.items.slice(target.start-1,target.end):[],blankHere=here.some(x=>hasText(state,x)&&!x.text.trim());
+    const elsewhere=single?[...new Set(state.items.slice(0,s.count).filter((x,i)=>(i<target.start-1||i>=target.end)&&hasText(state,x)&&x.text.trim()).map(x=>x.text.trim()))].slice(0,60):[];
     const lines=[
-      "製作一組原創的一般靜態 LINE 貼圖，共 "+s.count+" 張，分成 "+state.grids.length+" 張獨立母圖。這是一份整組製作指令，不是要把不同母圖合成一張。",
-      s.platform==="chatgpt"?"請使用圖片生成功能依序製作下列母圖。若單次只能輸出一張，先生成母圖 1，等我說「繼續」後依同一份指令生成下一張；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式。以下共用要求適用每張母圖，各母圖內容依後面的明細。若單次只能生成一張，先生成母圖 1，後續在同一對話說「繼續」即可依序製作。":"請在支援生圖的平台依序製作每張母圖；若平台一次只能生成一張，先做母圖 1，再沿用本指令繼續。不得把所有母圖拼進同一張。",
+      single?"製作一組原創的一般靜態 LINE 貼圖中的「母圖 "+only+"」。這一組共 "+s.count+" 張貼圖、"+total+" 張母圖，本次只做這一張（貼圖 "+target.start+"～"+target.end+"）；不要把其他母圖的內容畫進來。":"製作一組原創的一般靜態 LINE 貼圖，共 "+s.count+" 張，分成 "+state.grids.length+" 張獨立母圖。這是一份整組製作指令，不是要把不同母圖合成一張。",
+      single?(s.platform==="chatgpt"?"請使用圖片生成功能，只輸出這一張母圖；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式，只輸出這一張母圖。":"請在支援生圖的平台只輸出這一張母圖。"):s.platform==="chatgpt"?"請使用圖片生成功能依序製作下列母圖。若單次只能輸出一張，先生成母圖 1，等我說「繼續」後依同一份指令生成下一張；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式。以下共用要求適用每張母圖，各母圖內容依後面的明細。若單次只能生成一張，先生成母圖 1，後續在同一對話說「繼續」即可依序製作。":"請在支援生圖的平台依序製作每張母圖；若平台一次只能生成一張，先做母圖 1，再沿用本指令繼續。不得把所有母圖拼進同一張。",
       "",
       "【角色與視覺】",
       s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
@@ -98,10 +114,11 @@
       "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":label("style",s.style))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
       "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
+      single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的母圖 1 當參考圖：請沿用同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫母圖 1。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
       "",
       "【母圖結構】",
-      "每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
-      "母圖尺寸：理想是每格 "+CELL.width+"×"+CELL.height+" px（長寬比 37:32，與 LINE 貼圖 370×320 同比例，另外多留邊）。"+sizeAdvice(state,s.platform)+"平台無法指定精確像素時，請選最接近的比例，仍排成 4 欄的等分格，不要拉伸或壓縮角色，並如實告知實際輸出尺寸；比例不同只會讓每格寬高不同，圖文仍須落在各格中央的安全區內。",
+      single?"每格是一張獨立貼圖；從左到右、由上到下排列；這一張母圖對應整組的第 "+target.start+"～"+target.end+" 張貼圖。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。":"每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
+      "母圖尺寸：理想是每格 "+CELL.width+"×"+CELL.height+" px（長寬比 37:32，與 LINE 貼圖 370×320 同比例，另外多留邊）。"+sizeAdvice(single?{grids:[target.size]}:state,s.platform)+"平台無法指定精確像素時，請選最接近的比例，仍排成 4 欄的等分格，不要拉伸或壓縮角色，並如實告知實際輸出尺寸；比例不同只會讓每格寬高不同，圖文仍須落在各格中央的安全區內。",
       "安全區：每格中央 "+SAFE.width+"×"+SAFE.height+" px 是角色、台詞、道具、描邊、陰影與裝飾必須完整放入的範圍（generous negative space）；每格左右各留約 "+Math.floor((CELL.width-SAFE.width)/2)+" px、上下各留約 "+Math.floor((CELL.height-SAFE.height)/2)+" px 的空白，相鄰格的可見內容之間因此至少有約 "+(CELL.width-SAFE.width)+" px（左右）／"+(CELL.height-SAFE.height)+" px（上下）的乾淨分隔帶（以理想尺寸計；實際尺寸不同時，請依相同比例，在各格四周保留約 11% 的空白），方便沿平均網格切割。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
       "網格限制的是容納區與順序，不固定每格藝術構圖。角色與文字不得跨格、重疊、貼邊或被裁切；空間不足時縮小整組角色與文字。",
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
@@ -109,12 +126,14 @@
       "【文字外觀】",
       s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想":D.scenes[s.scene].label)+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
+      single&&total>1&&blankHere&&elsewhere.length?"本組其他母圖已使用這些台詞，本張請不要重複："+elsewhere.map(quote).join("、")+"。":null,
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
       "文字不能遮住角色五官、手勢與關鍵道具，不缺字、不重字、不出現亂碼。本文的欄位標籤、格號、序號、照片檔名與操作說明都只是製作資料，不能印在貼圖上。",
       ""
     ];
-    for(const p of plans(state)){
+    for(const p of all){
+      if(single&&p!==target)continue;
       lines.push("【母圖 "+p.number+"｜4×"+p.rows+"｜整張 "+p.width+"×"+p.height+" px｜貼圖 "+p.start+"～"+p.end+"】");
       for(let i=p.start-1;i<p.end;i++){
         const entry=state.items[i],text=finalText(state,entry);
@@ -122,8 +141,8 @@
       }
       lines.push("");
     }
-    lines.push("只輸出各張完整母圖，不製作宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。");
-    return lines.join("\n");
+    lines.push(single?"只輸出母圖 "+only+" 這一張完整圖片，不製作其他母圖、宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。":"只輸出各張完整母圖，不製作宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。");
+    return lines.filter(x=>x!==null).join("\n");
   }
   function serialize(state) { return {tool:D.tool,version:D.version,state:clone(state)}; }
   function deserialize(raw) {
@@ -159,6 +178,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={SAFE,CELL,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,serialize,deserialize};
+  const api={SAFE,CELL,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

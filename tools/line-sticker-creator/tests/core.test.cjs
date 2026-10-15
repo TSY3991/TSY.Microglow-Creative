@@ -94,3 +94,16 @@ test("只有一種母圖時，尺寸建議只寫該種",()=>{
   const s=ready(8);s.settings.platform="gemini";const p=C.prompt(s);
   assert.match(p,/4×2 母圖理想整張 1924×832 px/);assert.doesNotMatch(p,/4×4 母圖理想整張/);
 });
+test("單張母圖提示詞：只含該張、第 2 張起沿用母圖 1、列出其他母圖已用台詞",()=>{
+  const s=ready(40);s.settings.platform="gemini";s.items[0].text="早安";s.items[20].text="";s.items[35].text="";
+  const p1=C.prompt(s,1),p2=C.prompt(s,2),p3=C.prompt(s,3);
+  assert.match(p1,/「母圖 1」/);assert.match(p1,/之後會當角色參考|我會把它當角色參考圖/);assert.doesNotMatch(p1,/【母圖 2｜/);
+  assert.match(p2,/附上已完成的母圖 1/);assert.match(p2,/貼圖 17～32/);assert.doesNotMatch(p2,/【母圖 1｜/);
+  assert.match(p3,/貼圖 33～40/);assert.match(p3,/本組其他母圖已使用這些台詞，本張請不要重複：.*"早安"/);
+  assert.throws(()=>C.prompt(s,9));assert.ok(C.prompt(s).includes("【母圖 3｜"));
+});
+test("重複台詞偵測：忽略空白與標點",()=>{
+  const s=ready(8);s.items[0].text="早安";s.items[1].text="早安！";s.items[2].text="早 安";s.items[3].text="晚安";
+  const d=C.duplicates(s);assert.equal(d.length,1);assert.deepEqual(d[0].indexes,[0,1,2]);
+  s.items[1].text="午安";s.items[2].text="夜安";assert.deepEqual(C.duplicates(s),[]);
+});

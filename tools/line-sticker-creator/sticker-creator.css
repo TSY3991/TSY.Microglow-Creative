@@ -122,3 +122,21 @@
 @media(max-width:600px) { .line-sticker-tool .mode-tabs button { font-size:.82rem; padding:8px 6px; } }
 .line-sticker-tool .why-split ul { margin:8px 0 0; padding-left:1.2em; line-height:1.8; font-size:.85rem; }
 .line-sticker-tool .preview-column.is-sticky { position:sticky; top:20px; }
+.line-sticker-tool .multi-flow { border:1px solid var(--line); border-radius:16px; padding:16px; margin:16px 0; background:var(--panel); }
+.line-sticker-tool .multi-flow h3 { margin:0 0 6px; font-size:1.05rem; }
+.line-sticker-tool .mother-steps { list-style:none; padding:0; margin:14px 0; display:grid; gap:14px; }
+.line-sticker-tool .mother-step { border:2px solid var(--line); border-radius:14px; padding:14px; background:#fff; }
+.line-sticker-tool .mother-step.done { border-color:#2a8a6a; }
+.line-sticker-tool .mother-step h4 { margin:0 0 8px; font-size:1.05rem; color:var(--teal-dark); }
+.line-sticker-tool .mother-step .step { display:grid; justify-items:start; gap:6px; margin:12px 0; font-size:.9rem; line-height:1.7; }
+.line-sticker-tool .mother-step .step b { color:var(--teal-dark); }
+.line-sticker-tool .mother-step .step .button { min-height:48px; font-size:.95rem; }
+.line-sticker-tool .drop-zone { position:relative; display:grid; justify-items:center; gap:8px; width:100%; padding:18px; border:2px dashed var(--teal); border-radius:12px; background:var(--panel-soft); text-align:center; cursor:pointer; font-weight:700; color:var(--teal-dark); }
+.line-sticker-tool .drop-zone.over { background:#d8efe9; }
+.line-sticker-tool .drop-zone.done { border-style:solid; border-color:#2a8a6a; }
+.line-sticker-tool .drop-zone.locked { opacity:.6; cursor:not-allowed; }
+.line-sticker-tool .drop-zone input { position:absolute; opacity:0; width:1px; height:1px; }
+.line-sticker-tool .drop-zone:focus-within { outline:3px solid var(--teal); outline-offset:3px; }
+.line-sticker-tool .mother-thumb { max-width:160px; height:auto; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.line-sticker-tool .mini-alert { margin:10px 0; display:grid; justify-items:start; gap:8px; }
+.line-sticker-tool .manual-prompt { width:100%; }
