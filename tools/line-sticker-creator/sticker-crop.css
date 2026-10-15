@@ -7,10 +7,16 @@
 .line-sticker-tool .crop-mother-info>*{margin:0}
 .line-sticker-tool .crop-mother-view{min-width:0;order:-1}
 .line-sticker-tool .crop-mother-preview{display:block;width:100%;max-width:600px;height:auto;border:1px solid #d5e5df;border-radius:8px;background:#fff}
-.line-sticker-tool .cut-row{display:grid;grid-template-columns:4.2rem minmax(0,1fr) 6rem auto;gap:.5rem;align-items:center;margin:.35rem 0}
+.line-sticker-tool .cut-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:.4rem 1.2rem}
+.line-sticker-tool .cut-group h4{margin:.3rem 0 .2rem;font-size:.85rem;color:var(--teal-dark)}
+.line-sticker-tool .cut-row{display:grid;gap:.3rem;margin:.55rem 0;font-size:.85rem}
+.line-sticker-tool .cut-top{display:grid;grid-template-columns:auto 2.3rem 3.8rem 2.3rem;justify-content:space-between;gap:.35rem;align-items:center}
+.line-sticker-tool .cut-top>span{white-space:nowrap}
+.line-sticker-tool .nudge{min-height:40px;padding:0;font-size:1.05rem;line-height:1}
 .line-sticker-tool .cut-row input[type=range]{width:100%;accent-color:#197c70}
-.line-sticker-tool .cut-row input[type=number]{width:100%;min-height:40px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit}
-@media(min-width:900px){.line-sticker-tool .crop-mother{grid-template-columns:minmax(300px,380px) minmax(0,1fr)}.line-sticker-tool .crop-mother-view{order:0}}
+.line-sticker-tool .cut-row input[type=number]{width:100%;min-height:40px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:center;-moz-appearance:textfield;appearance:textfield}
+.line-sticker-tool .cut-row input[type=number]::-webkit-outer-spin-button,.line-sticker-tool .cut-row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+@media(min-width:900px){.line-sticker-tool .crop-mother{grid-template-columns:minmax(0,600px) minmax(0,1fr)}.line-sticker-tool .crop-mother-view{position:sticky;top:12px}.line-sticker-tool .cut-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .line-sticker-tool .crop-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin:1.5rem 0}
 .line-sticker-tool .crop-sticker canvas,.line-sticker-tool .crop-special canvas{display:block;max-width:100%;height:auto;background-color:#f4f4f4;background-image:conic-gradient(#ddd 25%,transparent 0 50%,#ddd 0 75%,transparent 0);background-size:20px 20px;border-radius:8px}
 .line-sticker-tool [data-backdrop=dark] canvas{background:#26333a}

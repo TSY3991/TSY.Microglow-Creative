@@ -63,8 +63,8 @@
       grid.onchange=()=>{m.rows=Number(grid.value);resetCuts(m);invalidate();renderMothers();controls();};gridLabel.append(grid);info.append(gridLabel);
       const previewScale=Math.min(600/m.image.width,450/m.image.height),c=canvas(Math.max(1,Math.round(m.image.width*previewScale)),Math.max(1,Math.round(m.image.height*previewScale)));c.className='crop-mother-preview';c.setAttribute('aria-label','母圖與分割線預覽（紅線為分割線，藍線為正在調整）');drawMother(m,c);view.append(c);
       const details=el('details');details.open=true;details.append(el('summary','調整分割線（拖曳時預覽即時移動）'));
-      const tip=el('p','藍色線是正在調整的那一條。智慧分割時分割線只用來決定圖案歸哪一格；硬切時就是實際切開的位置。');tip.className='field-hint';details.append(tip);
-      for(const [axis,title] of [['x','直線'],['y','橫線']])m[axis].slice(1,-1).forEach((value,k)=>{
+      const tip=el('p','藍色線是正在調整的那一條；數字單位是像素，數字越大，直線越往右、橫線越往下。智慧分割時分割線只用來決定圖案歸哪一格；硬切時就是實際切開的位置。');tip.className='field-hint';details.append(tip);const groups=el('div');groups.className='cut-groups';details.append(groups);
+      for(const [axis,title] of [['x','直線'],['y','橫線']]){const group=el('div');group.className='cut-group';group.append(el('h4',axis==='x'?'直線（左右切，用 ← → 移動）':'橫線（上下切，用 ↑ ↓ 移動）'));groups.append(group);m[axis].slice(1,-1).forEach((value,k)=>{
         const idx=k+1,size=axis==='x'?m.image.width:m.image.height,name='母圖 '+(i+1)+' '+title+' '+idx;
         const row=el('div'),range=el('input'),num=el('input');row.className='cut-row';
         range.type='range';range.min=1;range.max=size-1;range.step=1;range.value=value;range.setAttribute('aria-label',name+'（拖曳即時預覽）');
@@ -73,8 +73,11 @@
         const done=()=>{num.value=m[axis][idx];range.value=m[axis][idx];drawMother(m,c);message(name+' 已調整為 '+m[axis][idx]+' px，請重新裁切。');};
         range.oninput=()=>apply(Number(range.value));num.oninput=()=>{if(num.value!==''&&Number.isFinite(Number(num.value)))apply(Number(num.value));};
         range.onchange=done;num.onchange=done;
-        row.append(el('span',title+' '+idx),range,num,el('span','px'));details.append(row);
-      });
+        const nudge=(sym,tip,d)=>{const b=el('button',sym);b.type='button';b.className='button small nudge';b.title=tip+'（'+name+'）';b.setAttribute('aria-label',name+tip);b.onclick=()=>{apply(m[axis][idx]+d);message(name+' 目前在 '+m[axis][idx]+' px，請重新裁切。');};return b;};
+        const top=el('div');top.className='cut-top';
+        top.append(el('span',title+' '+idx),nudge(axis==='x'?'←':'↑',axis==='x'?'向左移 1 像素':'向上移 1 像素',-1),num,nudge(axis==='x'?'→':'↓',axis==='x'?'向右移 1 像素':'向下移 1 像素',1));
+        row.append(top,range);group.append(row);
+      });}
       info.append(details);
       const actions=el('div');actions.className='inline-actions';actions.append(button('平均分割',()=>{resetCuts(m);invalidate();renderMothers();controls();}),button('前移',()=>{if(i){[mothers[i-1],mothers[i]]=[m,mothers[i-1]];invalidate();renderMothers();controls();}}),button('後移',()=>{if(i<mothers.length-1){[mothers[i+1],mothers[i]]=[m,mothers[i+1]];invalidate();renderMothers();controls();}}),button('移除',()=>{uploadRevision++;m.image.close();mothers.splice(i,1);invalidate();renderMothers();controls();}));info.append(actions);
       box.append(info,view);$('crop-mothers').append(box);
