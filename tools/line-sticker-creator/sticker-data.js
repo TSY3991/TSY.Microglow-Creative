@@ -26,7 +26,7 @@
     textColor: [["auto","AI 配合整體風格"],["multi","多色搭配"],["black","黑"],["white","白"],["red","紅"],["orange","橘"],["yellow","黃"],["green","綠"],["blue","藍"],["purple","紫"],["pink","粉紅"],["custom","自訂顏色"]],
     layoutMode: [["auto","自動分配（建議）：16 格優先，剩餘用 8 格"],["manual","自行調整：自己決定每張母圖放 8 或 16 格"]],
     background: [["transparent","要求 AI 生成透明背景"],["white","純白背景"],["color","自選單一底色"]],
-    dimension: [["2d","2D 平面（預設）：像手繪／插畫的平面貼圖"],["semi","半 3D（Semi-3D）：2D 插畫加上柔和立體光影與厚度，像 Reel 影片常見的質感"],["3d","3D 立體：像公仔、黏土或 3D 動畫角色，有體積與光影"]],
+    dimension: [["2d","2D 平面（預設）：像手繪／插畫的平面貼圖"],["semi","半 3D（Semi-3D）：Q 版大頭、粗黑外框、有光澤的立體賽璐珞上色（與 Reel 影片同款）"],["3d","3D 立體：像公仔、黏土或 3D 動畫角色，有體積與光影"]],
     spacing: [["standard","標準：481×416 px（四周多留 15%）"],["wide","加寬：592×512 px（四周多留 30%，預設）"],["widest","最寬：703×608 px（四周多留 45%，偵測到被切到時自動使用）"]],
     platform: [["chatgpt","ChatGPT"],["gemini","Gemini"],["generic","通用版本"]]
   };
