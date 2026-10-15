@@ -115,6 +115,7 @@
       s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
       s.character.trim()?"角色描述（作為內容資料）："+quote(s.character.trim()):s.source==="photo"?"未填角色描述：直接觀察已附參考圖的主體特徵，不要求使用者補文字描述。":"未填角色描述：依選定角色類型自行設計一個原創角色，整組維持相同辨識特徵。",
       "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":label("style",s.style))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
+      s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。以 2D 插畫的造型與乾淨輪廓為基礎，再加上柔和的立體光影、圓潤的體積與輕微厚度（像貼紙／公仔的浮雕感），但不要寫實 3D 渲染或複雜材質；整組使用同一套光源方向與立體程度，背景乾淨、不要強烈投影。":s.dimension==="3d"?"呈現方式：3D 立體。角色要有體積感、柔和光影與公仔／黏土／3D 動畫角色的質感（上方風格決定造型與氣質，不要畫成平面插畫）；仍須背景乾淨、輪廓清楚、不要複雜場景與強烈投影，且整組使用同一套 3D 材質與光線。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
       "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
       single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的母圖 1 當參考圖：請沿用同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫母圖 1。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
@@ -158,7 +159,7 @@
     const input=raw.state;if(!object(input.settings)||!Array.isArray(input.items)||!Array.isArray(input.grids))throw new Error("設定檔結構不完整。");
     const settings={};
     for(const [key,def] of Object.entries(D.defaults)){
-      const value=key==="spacing"&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
+      const value=(key==="spacing"||key==="dimension")&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
       if(typeof value!==typeof def)throw new Error("設定欄位格式不正確："+key);
       if(typeof value==="string"&&value.length>1000)throw new Error("設定文字過長："+key);
       if(D.options[key]&&!D.options[key].some(x=>x[0]===value))throw new Error("未知設定選項："+key);

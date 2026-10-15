@@ -149,7 +149,7 @@
     window.StickerCropPlan={count:state.settings.count,grids:state.grids.slice()};
     window.dispatchEvent(new Event("sticker-crop-plan"));
     const s=state.settings,box=$("live-summary");box.replaceChildren();
-    const rows=[["角色來源",s.source?C.label("source",s.source):"尚未選擇"],["角色風格",s.style?C.label("style",s.style):"尚未選擇"],["貼圖總張數",s.count+" 張"],["母圖分配",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")||"尚未設定"],["文字模式",C.label("textMode",s.textMode)]];
+    const rows=[["角色來源",s.source?C.label("source",s.source):"尚未選擇"],["角色風格",s.style?C.label("style",s.style):"尚未選擇"],["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["貼圖總張數",s.count+" 張"],["母圖分配",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")||"尚未設定"],["文字模式",C.label("textMode",s.textMode)]];
     if(s.source==="photo")rows.push(["參考圖",referenceUrl?"已選擇・需另外附到 AI":"請在 AI 對話附圖"]);
     for(const [title,value]of rows){const row=node("div",undefined,"live-row");row.append(node("span",title),node("strong",value));box.append(row);}
   }
@@ -161,7 +161,7 @@
     const info=node("dl",undefined,"summary-info");
     const entries=[
       ["角色",C.label("source",s.source)+(s.source==="original"?"・"+C.label("kind",s.kind):"")],
-      ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
+      ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
       ["台詞模式",C.label("mode",s.mode)+"・"+C.label("textMode",s.textMode)],
       ["共用名稱",s.nameMode==="none"||!s.name.trim()?"不加入":C.label("nameMode",s.nameMode)+"："+s.name],
       ["字體與大小",(s.font==="custom"?(s.customFont.trim()||"由 AI 搭配"):C.label("font",s.font))+"／"+C.label("size",s.size)],
@@ -229,10 +229,10 @@
       if(moved&&!confirm("有 "+moved+" 張的內容原本是「不印字的情境描述」，切換後會變成要印在貼圖上的文字；是否繼續？")){el.value=previous;return;}
     }
     state.settings[key]=key==="count"?Number(el.value):el.value;
-    if(key==="platform"){
-      copyLabel();
+    if(key==="platform"||key==="dimension"){
+      copyLabel();live();
       if(generated){
-        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status("已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。");}
+        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"已改為「"+C.label("dimension",el.value).split("：")[0]+"」，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
       }
       save();if(step===4)renderMulti();return;

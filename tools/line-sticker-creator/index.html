@@ -16,11 +16,11 @@
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261015e">
-  <script defer src="./sticker-data.js?v=20261015c"></script>
-  <script defer src="./sticker-core.js?v=20261015e"></script>
+  <script defer src="./sticker-data.js?v=20261015e"></script>
+  <script defer src="./sticker-core.js?v=20261015g"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015a"></script>
-  <script defer src="./sticker-app.js?v=20261015e"></script>
+  <script defer src="./sticker-app.js?v=20261015g"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
   <script defer src="./sticker-crop-core.js?v=20261015e"></script>
   <script defer src="./sticker-crop-app.js?v=20261015i"></script>
@@ -68,6 +68,7 @@
                   <p id="reference-status" class="field-hint" role="status">尚未選擇參考圖；也可以稍後直接在 AI 平台附圖。</p>
                   <div id="reference-preview" hidden><img id="reference-image" alt="你選擇的角色參考圖"><button id="remove-reference" class="button" type="button">移除參考圖</button></div>
                 </div>
+                <label class="field" for="dimension"><span>呈現方式</span><select id="dimension" data-setting="dimension"></select><span id="error-dimension" class="field-error"></span></label>
                 <label class="field" for="style"><span>角色風格</span><select id="style" data-setting="style"></select><span id="error-style" class="field-error"></span></label>
                 <div class="full-width"><label class="field" for="customStyle"><span>自訂風格／補充描述（選填）</span><textarea id="customStyle" data-setting="customStyle" rows="3" maxlength="1000"></textarea><span id="error-customStyle" class="field-error"></span><span class="field-hint">可補充線條、材質與配色；留白時由 AI 搭配合適風格。</span></label></div>
               </div>
