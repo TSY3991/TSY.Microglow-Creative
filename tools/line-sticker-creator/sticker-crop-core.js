@@ -13,6 +13,57 @@
     }
     return y.slice(1).flatMap((v,j)=>x.slice(1).map((u,i)=>({x:x[i],y:y[j],width:u-x[i],height:v-y[j]})));
   }
+  // 背景：邊緣像素絕大多數透明，或接近同一個顏色；否則回傳 null（無法可靠判斷，由呼叫端改用分割線硬切）。
+  function estimateBackground(data,w,h,tol){
+    const samples=[],step=Math.max(1,Math.floor(2*(w+h)/4000));
+    const take=(x,y)=>{const i=(y*w+x)*4;samples.push([data[i],data[i+1],data[i+2],data[i+3]]);};
+    for(let x=0;x<w;x+=step){take(x,0);take(x,h-1);}for(let y=0;y<h;y+=step){take(0,y);take(w-1,y);}
+    if(samples.filter(v=>v[3]<=8).length>=samples.length*0.8)return {transparent:true};
+    const solid=samples.filter(v=>v[3]>8),mid=c=>solid.map(v=>v[c]).sort((a,b)=>a-b)[solid.length>>1],color=[mid(0),mid(1),mid(2)];
+    const near=solid.filter(v=>Math.abs(v[0]-color[0])<=tol&&Math.abs(v[1]-color[1])<=tol&&Math.abs(v[2]-color[2])<=tol).length;
+    return near>=samples.length*0.9?{transparent:false,color}:null;
+  }
+  // 依圖案歸格：先去除與圖片邊緣相連的背景，再把相連的圖案（角色＋文字＋效果）整塊分到所屬格子。
+  // 圖案超出平均網格線時不會被切開；只有「兩張貼圖的圖案彼此相連」才依分割線切，並回報 merged。
+  function splitByContent(data,w,h,xs,ys,tol=24){
+    const bg=estimateBackground(data,w,h,tol);if(!bg)return null;
+    const n=w*h,cols=xs.length-1,rows=ys.length-1,cellCount=cols*rows,c0=bg.color;
+    const isBg=p=>{const i=p*4;if(data[i+3]<=8)return true;if(bg.transparent)return false;return Math.abs(data[i]-c0[0])<=tol&&Math.abs(data[i+1]-c0[1])<=tol&&Math.abs(data[i+2]-c0[2])<=tol;};
+    const colOf=new Uint8Array(w),rowOf=new Uint8Array(h);
+    for(let c=0;c<cols;c++)for(let x=xs[c];x<xs[c+1];x++)colOf[x]=c;
+    for(let r=0;r<rows;r++)for(let y=ys[r];y<ys[r+1];y++)rowOf[y]=r;
+    const queue=new Int32Array(n),outside=new Uint8Array(n);let head=0,tail=0;
+    const seed=p=>{if(!outside[p]&&isBg(p)){outside[p]=1;queue[tail++]=p;}};
+    for(let x=0;x<w;x++){seed(x);seed((h-1)*w+x);}for(let y=0;y<h;y++){seed(y*w);seed(y*w+w-1);}
+    while(head<tail){const p=queue[head++],x=p%w;if(x)seed(p-1);if(x<w-1)seed(p+1);if(p>=w)seed(p-w);if(p<n-w)seed(p+w);}
+    const label=new Int32Array(n),stats=[null];let total=0;
+    for(let start=0;start<n;start++){
+      if(outside[start]||label[start])continue;
+      const id=stats.length,counts=new Uint32Array(cellCount);let size=0;head=0;tail=0;label[start]=id;queue[tail++]=start;
+      while(head<tail){
+        const p=queue[head++],x=p%w,y=(p-x)/w;counts[rowOf[y]*cols+colOf[x]]++;size++;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const q=yy*w+xx;if(!outside[q]&&!label[q]){label[q]=id;queue[tail++]=q;}}}
+      }
+      stats.push({counts,size});total+=size;
+    }
+    const cellArea=n/cellCount,target=new Int16Array(stats.length),merged=new Set();
+    for(let id=1;id<stats.length;id++){
+      const {counts,size}=stats[id];let best=0;for(let c=1;c<cellCount;c++)if(counts[c]>counts[best])best=c;
+      if(size<Math.max(12,cellArea*0.0005))target[id]=-2;
+      else if(counts[best]>=size*0.8||size<cellArea*0.01)target[id]=best;
+      else{target[id]=-1;for(let c=0;c<cellCount;c++)if(counts[c]>=size*0.05)merged.add(c);}
+    }
+    const box=Array.from({length:cellCount},()=>({l:w,t:h,r:-1,b:-1}));
+    const owner=p=>{const t=target[label[p]];if(t>=0)return t;const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
+    for(let p=0;p<n;p++){if(!label[p]||target[label[p]]===-2)continue;const x=p%w,y=(p-x)/w,b=box[owner(p)];if(x<b.l)b.l=x;if(x>b.r)b.r=x;if(y<b.t)b.t=y;if(y>b.b)b.b=y;}
+    const cells=box.map(b=>b.r<0?null:{x:b.l,y:b.t,width:b.r-b.l+1,height:b.b-b.t+1,data:null});
+    cells.forEach(c=>{if(c)c.data=new Uint8ClampedArray(c.width*c.height*4);});
+    for(let p=0;p<n;p++){
+      if(!label[p]||target[label[p]]===-2)continue;const a=owner(p),c=cells[a],x=p%w,y=(p-x)/w,o=((y-c.y)*c.width+(x-c.x))*4,i=p*4;
+      c.data[o]=data[i];c.data[o+1]=data[i+1];c.data[o+2]=data[i+2];c.data[o+3]=data[i+3];
+    }
+    return {cells,merged:Array.from(merged).sort((a,b)=>a-b),components:stats.length-1,transparent:bg.transparent};
+  }
   // Only remove near-white pixels reachable from the frame. Never mutate the source.
   function eraseWhite(data,w,h,threshold=248){
     const out=new Uint8ClampedArray(data),seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
@@ -37,5 +88,5 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cell,expectedSize,ratioGap,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

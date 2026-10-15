@@ -6,3 +6,34 @@ for(const [w,h] of [[10,1000],[1000,10],[300,200]])for(const zoom of [50,100])fo
 assert.equal(C.crc(new TextEncoder().encode('123456789')),0xcbf43926);const z=C.zip([{name:'01.png',data:new Uint8Array([1,2,3])}]);assert.equal(new DataView(z.buffer).getUint32(0,true),0x04034b50);assert.equal(new DataView(z.buffer).getUint32(z.length-22,true),0x06054b50);assert.throws(()=>C.zip([{name:'bad.png',data:new Uint8Array(1048577)}]));
 assert.throws(()=>C.rectangles(20,20,[0,10,9,20],[0,20]),/直線 2/);assert.throws(()=>C.rectangles(20,20,[0,10,20],[0,25,20]),/橫線 1/);assert.throws(()=>C.rectangles(20,20,[1,10,20],[0,20]),/首尾/);
 console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit, ZIP and CRC');
+
+{
+  const make=(w,h,bg=[255,255,255,255])=>{const d=new Uint8ClampedArray(w*h*4);for(let i=0;i<w*h;i++)d.set(bg,i*4);return d;};
+  const rect=(d,w,x,y,rw,rh,c)=>{for(let j=y;j<y+rh;j++)for(let i=x;i<x+rw;i++)d.set(c,(j*w+i)*4);};
+  const W=400,H=200,xs=C.cuts(W,4),ys=C.cuts(H,2),red=[200,30,30,255],blue=[30,60,200,255];
+  const d=make(W,H);
+  rect(d,W,10,10,50,80,red);                       // 格 0：一般
+  rect(d,W,120,20,60,95,blue);                     // 格 1：多出平均線 15px，仍屬格 1
+  rect(d,W,210,60,80,80,red);                      // 格 2／6：上下各半，彼此相連
+  rect(d,W,310,10,80,80,[10,10,10,255]);rect(d,W,340,30,20,20,[255,255,255,255]); // 格 3：內有封閉白洞
+  d[(150*W+350)*4]=0;d[(150*W+350)*4+1]=0;d[(150*W+350)*4+2]=0; // 格 7：單點雜訊
+  const r=C.splitByContent(d,W,H,xs,ys,24);
+  assert.ok(r);assert.equal(r.cells.length,8);
+  assert.deepEqual([r.cells[0].width,r.cells[0].height],[50,80]);
+  assert.deepEqual([r.cells[1].width,r.cells[1].height],[60,95]);              // 沒被分割線切掉
+  assert.equal(r.cells[5],null);                                               // 溢出的部分沒有被當成另一張
+  assert.deepEqual(r.merged,[2,6]);
+  assert.deepEqual([r.cells[2].height,r.cells[6].height],[40,40]);             // 相連圖案只能依線切開
+  const hole=r.cells[3];                                                       // 白洞中心 (350,40)
+  assert.equal(hole.data[((40-hole.y)*hole.width+(350-hole.x))*4+3],255);      // 封閉白洞保留不透明
+  assert.equal(r.cells[7],null);                                               // 雜訊不成為貼圖
+  assert.equal(r.cells[0].data[3],255);
+  // 透明背景的母圖
+  const t=new Uint8ClampedArray(W*H*4);rect(t,W,10,10,50,80,red);
+  const rt=C.splitByContent(t,W,H,xs,ys,24);assert.ok(rt.transparent);assert.equal(rt.cells[0].width,50);
+  // 邊緣不是單一顏色就不猜
+  const m=make(W,H);for(let x=0;x<W;x++){m.set([x%256,(x*7)%256,(x*13)%256,255],x*4);m.set([(x*3)%256,x%256,(x*5)%256,255],((H-1)*W+x)*4);}
+  for(let y=0;y<H;y++){m.set([(y*11)%256,y%256,(y*3)%256,255],y*W*4);m.set([(y*5)%256,(y*9)%256,y%256,255],(y*W+W-1)*4);}
+  assert.equal(C.splitByContent(m,W,H,xs,ys,24),null);
+  console.log('PASS smart split keeps graphics whole, flags joined stickers, keeps enclosed whites');
+}
