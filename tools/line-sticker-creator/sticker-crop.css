@@ -41,3 +41,11 @@
 .line-sticker-tool .editor-bar label{display:flex;gap:.4rem;align-items:center;font-size:.85rem}
 .line-sticker-tool .editor-bar input[type=range]{width:110px;accent-color:#197c70}
 .line-sticker-tool .editor-canvas{display:block;max-width:100%;height:auto;margin:.4rem auto;border-radius:8px;touch-action:none;cursor:crosshair;background:#26333a}
+.line-sticker-tool .editor-canvas.tool-erase{cursor:url(./cursor-eraser.png) 8 24,crosshair}
+.line-sticker-tool .editor-canvas.tool-restore{cursor:url(./cursor-restore.png) 16 16,crosshair}
+.line-sticker-tool .editor-canvas.tool-frame{cursor:default}
+.line-sticker-tool .editor-canvas.tool-frame.hit-move{cursor:move}
+.line-sticker-tool .editor-canvas.tool-frame.hit-ns{cursor:ns-resize}
+.line-sticker-tool .editor-canvas.tool-frame.hit-ew{cursor:ew-resize}
+.line-sticker-tool .editor-canvas.tool-frame.hit-nwse{cursor:nwse-resize}
+.line-sticker-tool .editor-canvas.tool-frame.hit-nesw{cursor:nesw-resize}

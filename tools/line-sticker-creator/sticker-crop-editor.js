@@ -28,27 +28,39 @@
     const overlay=el('div',undefined,'editor-overlay'),box=el('div',undefined,'editor-box');
     overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','修圖：'+ctx.label);
     box.append(el('h3','修圖：'+ctx.label));
-    box.append(el('p','亮的是目前這張貼圖；半透明的是母圖裡被切掉、可以補回的部分。用「補回」把被切掉的圖塗回來，用「擦掉」去除多餘的圖（例如鄰格的碎片）。以滑鼠或手指在圖上塗抹。','field-hint'));
+    box.append(el('p','亮的是目前這張貼圖；半透明的是母圖裡被切掉、可以補回的部分。用「補回」把被切掉的圖塗回來，用「擦掉」去除多餘的圖（例如鄰格的碎片）。藍色虛線框可以用「移動框線」拖動、拉大縮小，再按「把框內補回」或「把框外擦掉」一次處理整塊。以滑鼠或手指在圖上塗抹。','field-hint'));
     const view=canvas(vw,vh);view.className='editor-canvas';view.setAttribute('aria-label','修圖畫布');
     const bar=el('div',undefined,'editor-bar');
-    let tool='erase';
+    let tool='erase',hover=null;
+    const frame={x:r.x-x0,y:r.y-y0,w:r.width,h:r.height};
     const mk=(text,fn,cls)=>{const b=el('button',text,'button small'+(cls?' '+cls:''));b.type='button';b.onclick=fn;return b;};
-    const eraseBtn=mk('擦掉',()=>setTool('erase')),restoreBtn=mk('補回被切掉的部分',()=>setTool('restore'));
-    function setTool(t){tool=t;eraseBtn.setAttribute('aria-pressed',String(t==='erase'));restoreBtn.setAttribute('aria-pressed',String(t==='restore'));eraseBtn.classList.toggle('primary',t==='erase');restoreBtn.classList.toggle('primary',t==='restore');}
+    const eraseBtn=mk('擦掉',()=>setTool('erase')),restoreBtn=mk('補回被切掉的部分',()=>setTool('restore')),frameBtn=mk('移動框線',()=>setTool('frame'));
+    function setTool(t){
+      tool=t;for(const [b,name] of [[eraseBtn,'erase'],[restoreBtn,'restore'],[frameBtn,'frame']]){b.setAttribute('aria-pressed',String(t===name));b.classList.toggle('primary',t===name);}
+      view.classList.toggle('tool-erase',t==='erase');view.classList.toggle('tool-restore',t==='restore');view.classList.toggle('tool-frame',t==='frame');
+      view.classList.remove('hit-move','hit-ns','hit-ew','hit-nwse','hit-nesw');frameBar.hidden=t!=='frame';sizeLabel.hidden=t==='frame';hover=null;draw();
+    }
     const sizeLabel=el('label','筆刷大小');const size=el('input');size.type='range';size.min=4;size.max=80;size.value=24;size.setAttribute('aria-label','筆刷大小');sizeLabel.append(size);
     const undoBtn=mk('復原上一筆',()=>{const prev=undo.pop();if(prev){const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(prev,0,0);draw();}undoBtn.disabled=!undo.length;});undoBtn.disabled=true;
     const resetBtn=mk('還原成原本裁出的樣子',()=>{undo.push(clone(work));undoBtn.disabled=false;const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(original,0,0);draw();});
-    bar.append(eraseBtn,restoreBtn,sizeLabel,undoBtn,resetBtn);
+    const frameBar=el('div',undefined,'editor-bar');
+    const inBtn=mk('把框內補回',()=>{snapshot();const g=work.getContext('2d');g.save();g.beginPath();g.rect(frame.x,frame.y,frame.w,frame.h);g.clip();g.drawImage(ext,0,0);g.restore();draw();});
+    const outBtn=mk('把框外擦掉',()=>{snapshot();const g=work.getContext('2d');g.clearRect(0,0,W,Math.max(0,frame.y));g.clearRect(0,frame.y+frame.h,W,H-frame.y-frame.h);g.clearRect(0,frame.y,Math.max(0,frame.x),frame.h);g.clearRect(frame.x+frame.w,frame.y,W-frame.x-frame.w,frame.h);draw();});
+    frameBar.append(el('span','拖動框內移動、拖邊或角調整大小：'),inBtn,outBtn);frameBar.hidden=true;
+    bar.append(eraseBtn,restoreBtn,frameBtn,sizeLabel,undoBtn,resetBtn);
     const note=el('p','','field-hint');note.setAttribute('role','status');
     const actions=el('div',undefined,'inline-actions');
     const done=mk('完成',finish,'primary'),cancel=mk('取消',close);
     actions.append(done,cancel);
-    box.append(bar,view,note,actions);overlay.append(box);document.body.append(overlay);
+    box.append(bar,frameBar,view,note,actions);overlay.append(box);document.body.append(overlay);
 
+    function snapshot(){undo.push(clone(work));if(undo.length>12)undo.shift();undoBtn.disabled=false;}
     function draw(){
       const g=view.getContext('2d');g.clearRect(0,0,vw,vh);g.fillStyle='#26333a';g.fillRect(0,0,vw,vh);
       g.globalAlpha=0.32;g.drawImage(ext,0,0,vw,vh);g.globalAlpha=1;g.drawImage(work,0,0,vw,vh);
-      g.strokeStyle='#7fd1ff';g.lineWidth=2;g.setLineDash([6,4]);g.strokeRect((r.x-x0)*scale,(r.y-y0)*scale,r.width*scale,r.height*scale);g.setLineDash([]);
+      g.strokeStyle='#7fd1ff';g.lineWidth=2;g.setLineDash([6,4]);g.strokeRect(frame.x*scale,frame.y*scale,frame.w*scale,frame.h*scale);g.setLineDash([]);
+      if(tool==='frame'){g.fillStyle='#7fd1ff';for(const [hx,hy] of handles())g.fillRect(hx*scale-4,hy*scale-4,8,8);}
+      else if(hover){g.strokeStyle='#fff';g.lineWidth=1.5;g.beginPath();g.arc(hover.x*scale,hover.y*scale,Number(size.value)/2,0,Math.PI*2);g.stroke();g.strokeStyle='#1b2a30';g.lineWidth=.8;g.beginPath();g.arc(hover.x*scale,hover.y*scale,Number(size.value)/2+1.2,0,Math.PI*2);g.stroke();}
     }
     function stamp(px,py){
       const g=work.getContext('2d'),rad=Number(size.value)/2/scale;
@@ -62,10 +74,44 @@
       for(let i=1;i<=steps;i++)stamp(from.x+dx*i/steps,from.y+dy*i/steps);
     }
     const point=ev=>{const b=view.getBoundingClientRect();return {x:(ev.clientX-b.left)/b.width*W,y:(ev.clientY-b.top)/b.height*H};};
-    let last=null;
-    view.addEventListener('pointerdown',ev=>{ev.preventDefault();try{view.setPointerCapture(ev.pointerId);}catch{}undo.push(clone(work));if(undo.length>12)undo.shift();undoBtn.disabled=false;last=point(ev);stamp(last.x,last.y);draw();});
-    view.addEventListener('pointermove',ev=>{if(!last)return;const p=point(ev);stroke(last,p);last=p;draw();});
-    const up=()=>{last=null;};view.addEventListener('pointerup',up);view.addEventListener('pointercancel',up);
+    // 框線：8 個把手 + 內部移動
+    const handles=()=>[[frame.x,frame.y],[frame.x+frame.w/2,frame.y],[frame.x+frame.w,frame.y],[frame.x,frame.y+frame.h/2],[frame.x+frame.w,frame.y+frame.h/2],[frame.x,frame.y+frame.h],[frame.x+frame.w/2,frame.y+frame.h],[frame.x+frame.w,frame.y+frame.h]];
+    const hitFrame=p=>{
+      const tol=9/scale,names=[['nwse','l','t'],['ns',null,'t'],['nesw','r','t'],['ew','l',null],['ew','r',null],['nesw','l','b'],['ns',null,'b'],['nwse','r','b']],hs=handles();
+      for(let k=0;k<8;k++)if(Math.abs(p.x-hs[k][0])<=tol&&Math.abs(p.y-hs[k][1])<=tol)return {cursor:names[k][0],x:names[k][1],y:names[k][2]};
+      if(p.x>=frame.x&&p.x<=frame.x+frame.w&&p.y>=frame.y&&p.y<=frame.y+frame.h)return {cursor:'move',move:true};
+      return null;
+    };
+    const cursorClasses=['hit-move','hit-ns','hit-ew','hit-nwse','hit-nesw'];
+    let last=null,grab=null;
+    view.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();try{view.setPointerCapture(ev.pointerId);}catch{}
+      const p=point(ev);
+      if(tool==='frame'){const hit=hitFrame(p);if(hit)grab={hit,p,start:{...frame}};return;}
+      snapshot();last=p;stamp(last.x,last.y);draw();
+    });
+    view.addEventListener('pointermove',ev=>{
+      const p=point(ev);
+      if(tool==='frame'){
+        if(grab){
+          const dx=p.x-grab.p.x,dy=p.y-grab.p.y,s=grab.start,min=20;let {x,y,w,h}=s;
+          if(grab.hit.move){x=Math.min(W-w,Math.max(0,s.x+dx));y=Math.min(H-h,Math.max(0,s.y+dy));}
+          else{
+            if(grab.hit.x==='l'){const nx=Math.min(s.x+s.w-min,Math.max(0,s.x+dx));w=s.x+s.w-nx;x=nx;}
+            if(grab.hit.x==='r'){w=Math.min(W-s.x,Math.max(min,s.w+dx));}
+            if(grab.hit.y==='t'){const ny=Math.min(s.y+s.h-min,Math.max(0,s.y+dy));h=s.y+s.h-ny;y=ny;}
+            if(grab.hit.y==='b'){h=Math.min(H-s.y,Math.max(min,s.h+dy));}
+          }
+          frame.x=x;frame.y=y;frame.w=w;frame.h=h;draw();return;
+        }
+        const hit=hitFrame(p);view.classList.remove(...cursorClasses);if(hit)view.classList.add(hit.cursor==='move'?'hit-move':'hit-'+hit.cursor);return;
+      }
+      hover=p;
+      if(last){stroke(last,p);last=p;}
+      draw();
+    });
+    const up=()=>{last=null;grab=null;};view.addEventListener('pointerup',up);view.addEventListener('pointercancel',up);
+    view.addEventListener('pointerleave',()=>{if(tool!=='frame'){hover=null;draw();}});
     function close(){if(!current)return;document.removeEventListener('keydown',onKey,true);overlay.remove();current=null;if(ctx.opener&&ctx.opener.focus)ctx.opener.focus();}
     function finish(){
       const data=work.getContext('2d',{willReadFrequently:true}).getImageData(0,0,W,H),b=C.bounds(data.data,W,H);
