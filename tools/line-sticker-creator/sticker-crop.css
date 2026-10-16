@@ -35,11 +35,14 @@
 @media(max-width:480px){.line-sticker-tool .crop-results{grid-template-columns:1fr}}
 
 .line-sticker-tool .editor-overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:12px;background:rgba(10,20,25,.62);overflow:auto}
-.line-sticker-tool .editor-box{width:min(720px,100%);max-height:100%;overflow:auto;padding:1rem;border-radius:16px;background:#fff;border:1px solid #d5e5df}
+.line-sticker-tool .editor-box{width:fit-content;max-width:100%;min-width:min(520px,100%);max-height:100%;overflow:auto;padding:.8rem 1rem;border-radius:16px;background:#fff;border:1px solid #d5e5df}
 .line-sticker-tool .editor-box h3{margin:0 0 .4rem}
-.line-sticker-tool .editor-bar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.6rem 0}
+.line-sticker-tool .editor-bar{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;margin:.4rem 0}
+.line-sticker-tool .editor-bar .button{min-height:34px;padding:4px 10px;font-size:.85rem;white-space:nowrap}
+.line-sticker-tool .editor-box .inline-actions .button{min-height:36px}
+.line-sticker-tool .editor-box p.field-hint{margin:.2rem 0;font-size:.82rem}
 .line-sticker-tool .editor-bar label{display:flex;gap:.4rem;align-items:center;font-size:.85rem}
-.line-sticker-tool .editor-bar input[type=range]{width:110px;accent-color:#197c70}
+.line-sticker-tool .editor-bar input[type=range]{width:90px;accent-color:#197c70}
 .line-sticker-tool .editor-canvas{display:block;max-width:100%;height:auto;margin:.4rem auto;border-radius:8px;touch-action:none;cursor:crosshair;background:#26333a}
 .line-sticker-tool .editor-canvas.tool-erase{cursor:url(./cursor-eraser.png) 8 24,crosshair}
 .line-sticker-tool .editor-canvas.tool-restore{cursor:url(./cursor-restore.png) 16 16,crosshair}

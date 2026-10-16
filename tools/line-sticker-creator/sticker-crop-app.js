@@ -180,7 +180,23 @@
     window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:s.source,at:s.at,auto:s.auto||null,remove:s.remove,threshold:s.threshold,opener,label:String(i+1).padStart(2,'0')+'.png',
       onDone:(canvas,at)=>{if(!s.auto)s.auto={source:s.source,at:s.at};s.source=canvas;s.at=at;s.edited=true;s.opaque=false;s.joined=false;s.clipped=false;renderResults();touched();message(String(i+1).padStart(2,'0')+'.png 已修圖；重新按「確認分割線並裁切」會回到自動結果。');}});
   }
-  function special(){ $('crop-special').replaceChildren();if(!stickers[selected]?.source)return;for(const [name,w,h,pad] of [['main.png',240,240,10],['tab.png',96,74,4]]){const box=el('div'),c=canvas(w,h);box.append(el('strong',name+'｜'+w+'×'+h),c);renderSticker(stickers[selected],c,w,h,pad);$('crop-special').append(box);}}
+  // main／tab 可以另外修圖（例如去掉文字，只留角色），不影響 01～N 的貼圖。
+  const forMain=s=>s.mainSource?{...s,source:s.mainSource,zoom:100,dx:0,dy:0}:s;
+  function mainControls(){
+    const s=stickers[selected],box=el('div');box.className='special-controls';
+    box.append(el('p','main.png 與 tab.png 目前是第 '+String(selected+1).padStart(2,'0')+' 張的完整圖案（含文字）。想只留角色、去掉文字：按「去除文字／修圖」，用「移動框線」框住角色後按「框外擦掉」，或直接擦掉文字。','field-hint'));
+    const edit=button(s.mainSource?'再修圖（已自訂）':'去除文字／修圖（只影響 main 與 tab）',()=>{
+      const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
+      const base=s.mainSource?{source:s.mainSource,at:s.mainAt}:{source:s.source,at:s.at};
+      window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:base.source,at:base.at,auto:{source:s.source,at:s.at},remove:s.remove,threshold:s.threshold,opener:edit,label:'main／tab',
+        hint:'這裡的修改只用在 main.png 與 tab.png。亮的是目前的圖，半透明的是母圖其他部分；例如文字可直接擦掉，或框住角色後按「框外擦掉」。',
+        onDone:(canvas,at)=>{s.mainSource=canvas;s.mainAt=at;special();touched();message('main／tab 已自訂（不含文字的版本）；01～'+String(stickers.length).padStart(2,'0')+' 號貼圖不受影響。');}});
+    });
+    box.append(edit);
+    if(s.mainSource){const back=button('還原成貼圖原樣',()=>{delete s.mainSource;delete s.mainAt;special();touched();});box.append(back);}
+    $('crop-special').append(box);
+  }
+  function special(){ $('crop-special').replaceChildren();if(!stickers[selected]?.source)return;for(const [name,w,h,pad] of [['main.png',240,240,10],['tab.png',96,74,4]]){const box=el('div'),c=canvas(w,h);box.append(el('strong',name+'｜'+w+'×'+h),c);renderSticker(forMain(stickers[selected]),c,w,h,pad);$('crop-special').append(box);}mainControls();}
   function renderResults(){
     $('crop-results').replaceChildren();stickers.forEach((s,i)=>{const box=el('article');box.className='crop-sticker';box.append(el('h3',String(i+1).padStart(2,'0')+'.png'));const c=canvas(370,320);c.setAttribute('aria-label','貼圖 '+(i+1)+' 預覽');renderSticker(s,c);box.append(c);if(!s.source)box.append(el('p','此格全透明，請調整母圖分割線後重新裁切。'));else if(s.joined)box.append(el('p','圖案和相鄰貼圖相連，已順著圖案形狀分開；請檢查，必要時按下面的「修圖」擦掉多餘或補回被切掉的部分。'));else if(s.opaque)box.append(el('p','四個角落都不透明，背景可能還在。請用深色底確認；LINE 要求透明背景。'));if(s.clipped&&s.source)box.append(el('p','圖案貼著格子邊緣，母圖在這裡可能已被切掉。請檢查；必要時回提示詞頁重新複製提示詞（已自動加寬留白），重新生成這張母圖。'));
       if(s.source&&s.at){
@@ -248,7 +264,7 @@
   $('crop-download').onclick=async()=>{
     if(busy||!$('crop-review').checked||stickers.length!==plan.count||stickers.some(s=>!s.source))return;busy=true;controls();const token=revision,entries=[];
     try{
-      const jobs=[['main.png',stickers[selected],240,240,10],['tab.png',stickers[selected],96,74,4],...stickers.map((s,i)=>[String(i+1).padStart(2,'0')+'.png',s,370,320,10])];
+      const jobs=[['main.png',forMain(stickers[selected]),240,240,10],['tab.png',forMain(stickers[selected]),96,74,4],...stickers.map((s,i)=>[String(i+1).padStart(2,'0')+'.png',s,370,320,10])];
       for(const [name,s,w,h,pad] of jobs){if(token!==revision)throw Error('圖片設定已變更，請重新檢查後下載。');const c=canvas(w,h);renderSticker(s,c,w,h,pad);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('圖片編碼失敗。');entries.push({name,data:C.png72(new Uint8Array(await blob.arrayBuffer()))});c.width=c.height=1;}
       const data=C.zip(entries);if(token!==revision||!$('crop-review').checked)throw Error('設定已變更，請重新確認。');
       const file=new File([data],'line-stickers-'+plan.count+'.zip',{type:'application/zip'}),pngFiles=entries.map(e=>new File([e.data],e.name,{type:'image/png'}));

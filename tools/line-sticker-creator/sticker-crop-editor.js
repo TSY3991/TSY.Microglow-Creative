@@ -23,36 +23,37 @@
     ectx.putImageData(pixels,0,0);
     const work=canvas(W,H);work.getContext('2d').drawImage(ctx.source,ctx.at.x-x0,ctx.at.y-y0);
     const original=canvas(W,H);original.getContext('2d').drawImage(auto.source,auto.at.x-x0,auto.at.y-y0);const undo=[];
-    const scale=Math.min(1,640/W,460/H),vw=Math.max(1,Math.round(W*scale)),vh=Math.max(1,Math.round(H*scale));
+    const availH=Math.max(180,window.innerHeight-230),availW=Math.min(680,window.innerWidth-56);let scale=Math.min(1,availW/W,availH/H),vw=Math.max(1,Math.round(W*scale)),vh=Math.max(1,Math.round(H*scale));
 
     const overlay=el('div',undefined,'editor-overlay'),box=el('div',undefined,'editor-box');
     overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','修圖：'+ctx.label);
     box.append(el('h3','修圖：'+ctx.label));
-    box.append(el('p','亮的是目前這張貼圖；半透明的是母圖裡被切掉、可以補回的部分。用「補回」把被切掉的圖塗回來，用「擦掉」去除多餘的圖（例如鄰格的碎片）。藍色虛線框可以用「移動框線」拖動、拉大縮小，再按「把框內補回」或「把框外擦掉」一次處理整塊。以滑鼠或手指在圖上塗抹。','field-hint'));
+    box.append(el('p',ctx.hint||'亮的是目前的貼圖，半透明的是母圖裡被切掉、可補回的部分。擦掉多餘的、補回被切掉的；「移動框線」可框住範圍一次處理。','field-hint'));
     const view=canvas(vw,vh);view.className='editor-canvas';view.setAttribute('aria-label','修圖畫布');
     const bar=el('div',undefined,'editor-bar');
     let tool='erase',hover=null;
     const frame={x:r.x-x0,y:r.y-y0,w:r.width,h:r.height};
-    const mk=(text,fn,cls)=>{const b=el('button',text,'button small'+(cls?' '+cls:''));b.type='button';b.onclick=fn;return b;};
-    const eraseBtn=mk('擦掉',()=>setTool('erase')),restoreBtn=mk('補回被切掉的部分',()=>setTool('restore')),frameBtn=mk('移動框線',()=>setTool('frame'));
+    const mk=(text,fn,cls,tip)=>{const b=el('button',text,'button small'+(cls?' '+cls:''));b.type='button';b.onclick=fn;if(tip){b.title=tip;b.setAttribute('aria-label',tip);}return b;};
+    const eraseBtn=mk('擦掉',()=>setTool('erase'),'','擦掉多餘的圖'),restoreBtn=mk('補回',()=>setTool('restore'),'','把母圖裡被切掉的部分塗回來'),frameBtn=mk('移動框線',()=>setTool('frame'),'','拖動藍色虛線框，再一次補回框內或擦掉框外');
     function setTool(t){
       tool=t;for(const [b,name] of [[eraseBtn,'erase'],[restoreBtn,'restore'],[frameBtn,'frame']]){b.setAttribute('aria-pressed',String(t===name));b.classList.toggle('primary',t===name);}
       view.classList.toggle('tool-erase',t==='erase');view.classList.toggle('tool-restore',t==='restore');view.classList.toggle('tool-frame',t==='frame');
-      view.classList.remove('hit-move','hit-ns','hit-ew','hit-nwse','hit-nesw');frameBar.hidden=t!=='frame';sizeLabel.hidden=t==='frame';hover=null;draw();
+      view.classList.remove('hit-move','hit-ns','hit-ew','hit-nwse','hit-nesw');inBtn.hidden=outBtn.hidden=t!=='frame';sizeLabel.hidden=t==='frame';hover=null;draw();
     }
-    const sizeLabel=el('label','筆刷大小');const size=el('input');size.type='range';size.min=4;size.max=80;size.value=24;size.setAttribute('aria-label','筆刷大小');sizeLabel.append(size);
-    const undoBtn=mk('復原上一筆',()=>{const prev=undo.pop();if(prev){const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(prev,0,0);draw();}undoBtn.disabled=!undo.length;});undoBtn.disabled=true;
-    const resetBtn=mk('還原成原本裁出的樣子',()=>{undo.push(clone(work));undoBtn.disabled=false;const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(original,0,0);draw();});
-    const frameBar=el('div',undefined,'editor-bar');
-    const inBtn=mk('把框內補回',()=>{snapshot();const g=work.getContext('2d');g.save();g.beginPath();g.rect(frame.x,frame.y,frame.w,frame.h);g.clip();g.drawImage(ext,0,0);g.restore();draw();});
-    const outBtn=mk('把框外擦掉',()=>{snapshot();const g=work.getContext('2d');g.clearRect(0,0,W,Math.max(0,frame.y));g.clearRect(0,frame.y+frame.h,W,H-frame.y-frame.h);g.clearRect(0,frame.y,Math.max(0,frame.x),frame.h);g.clearRect(frame.x+frame.w,frame.y,W-frame.x-frame.w,frame.h);draw();});
-    frameBar.append(el('span','拖動框內移動、拖邊或角調整大小：'),inBtn,outBtn);frameBar.hidden=true;
-    bar.append(eraseBtn,restoreBtn,frameBtn,sizeLabel,undoBtn,resetBtn);
+    const sizeLabel=el('label','筆刷');const size=el('input');size.type='range';size.min=4;size.max=80;size.value=24;size.setAttribute('aria-label','筆刷大小');sizeLabel.append(size);
+    const undoBtn=mk('復原',()=>{const prev=undo.pop();if(prev){const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(prev,0,0);draw();}undoBtn.disabled=!undo.length;},'','復原上一筆');undoBtn.disabled=true;
+    const resetBtn=mk('還原',()=>{undo.push(clone(work));undoBtn.disabled=false;const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(original,0,0);draw();},'','還原成原本裁出的樣子');
+    const inBtn=mk('框內補回',()=>{snapshot();const g=work.getContext('2d');g.save();g.beginPath();g.rect(frame.x,frame.y,frame.w,frame.h);g.clip();g.drawImage(ext,0,0);g.restore();draw();},'','把框內全部從母圖補回');
+    const outBtn=mk('框外擦掉',()=>{snapshot();const g=work.getContext('2d');g.clearRect(0,0,W,Math.max(0,frame.y));g.clearRect(0,frame.y+frame.h,W,H-frame.y-frame.h);g.clearRect(0,frame.y,Math.max(0,frame.x),frame.h);g.clearRect(frame.x+frame.w,frame.y,W-frame.x-frame.w,frame.h);draw();},'','把框外全部擦掉');
+    inBtn.hidden=outBtn.hidden=true;
+    bar.append(eraseBtn,restoreBtn,frameBtn,sizeLabel,inBtn,outBtn,undoBtn,resetBtn);
     const note=el('p','','field-hint');note.setAttribute('role','status');
     const actions=el('div',undefined,'inline-actions');
     const done=mk('完成',finish,'primary'),cancel=mk('取消',close);
     actions.append(done,cancel);
-    box.append(bar,frameBar,view,note,actions);overlay.append(box);document.body.append(overlay);
+    box.append(bar,view,note,actions);overlay.append(box);document.body.append(overlay);
+    // 實際量過版面：若還是比視窗高（小螢幕），把畫布再縮小，讓整個視窗不需要捲動。
+    for(let n=0;n<3;n++){const over=box.scrollHeight-box.clientHeight;if(over<=0)break;vh=Math.max(140,vh-over-2);scale=vh/H;vw=Math.max(1,Math.round(W*scale));view.width=vw;view.height=vh;}
 
     function snapshot(){undo.push(clone(work));if(undo.length>12)undo.shift();undoBtn.disabled=false;}
     function draw(){
@@ -115,7 +116,7 @@
     function close(){if(!current)return;document.removeEventListener('keydown',onKey,true);overlay.remove();current=null;if(ctx.opener&&ctx.opener.focus)ctx.opener.focus();}
     function finish(){
       const data=work.getContext('2d',{willReadFrequently:true}).getImageData(0,0,W,H),b=C.bounds(data.data,W,H);
-      if(!b){note.textContent='畫面上沒有任何圖案了，請用「復原上一筆」或「還原成原本裁出的樣子」。';return;}
+      if(!b){note.textContent='畫面上沒有任何圖案了，請按「復原」或「還原」。';return;}
       const out=canvas(b.width,b.height);out.getContext('2d').drawImage(work,b.x,b.y,b.width,b.height,0,0,b.width,b.height);
       const result={canvas:out,at:{x:x0+b.x,y:y0+b.y}};close();ctx.onDone(result.canvas,result.at);
     }
