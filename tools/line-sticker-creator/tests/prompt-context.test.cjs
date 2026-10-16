@@ -56,6 +56,17 @@ test('網站 AI 與既有 Worker 契約相容，真的收到風格細節與職�
     const upstream=modelRequest(input).contents[0].parts[0].text;assert.ok(upstream.includes(info.terms));
     assert.ok(!Object.hasOwn(input.context,'lines')); // 沒有把預設台詞清單送入 AI
   }
-  const free=ready(8);assert.equal(AI.payload(free).context.scene,'AI 自由發想');
+  const free=ready(8);assert.ok(AI.payload(free).context.scene.startsWith('AI 自由發想。'));assert.ok(AI.payload(free).context.scene.includes(C.dialogueRule));
   assert.ok(!C.prompt(free).includes('情境詞彙（'));
+});
+
+test('短句、台灣用語與不擠字規則進入各平台及每張母圖，手寫長句不截斷',()=>{
+  const s=ready(24);s.items[0].text='這是使用者自己寫的完整長句必須保留';
+  for(const platform of ['chatgpt','gemini','generic']){s.settings.platform=platform;for(const only of [undefined,1,2]){const p=C.prompt(s,only);assert.ok(p.includes(C.dialogueRule));assert.match(p,/描邊的外輪廓都須清楚分開/);assert.match(p,/正確台灣繁體字形/);if(only!==2)assert.ok(p.includes(s.items[0].text));}}
+  s.settings.textMode='none';assert.ok(!C.prompt(s).includes(C.dialogueRule));
+});
+test('3D 軟萌風格優先建立立體造型，不沿用平面渲染；半 3D 保留原設定',()=>{
+  const s=ready();s.settings.style='jpsoft';s.settings.dimension='3d';
+  for(const only of [undefined,1,2]){const p=C.prompt(s,only);assert.match(p,/日系軟萌/);assert.match(p,/fully modeled 3D character render/);assert.match(p,/側面厚度/);assert.match(p,/重新建立立體造型/);assert.ok(!p.includes('呈現方式：半 3D'));assert.ok(!p.includes('consistent linework'));}
+  s.settings.dimension='semi';assert.match(C.prompt(s),/呈現方式：半 3D（Semi-3D）/);assert.ok(!C.prompt(s).includes('fully modeled 3D character render'));
 });

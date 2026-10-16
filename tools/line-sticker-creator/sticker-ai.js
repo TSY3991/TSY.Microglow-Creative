@@ -8,7 +8,7 @@
     const s = state.settings;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character: s.character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s) },
+      context: { source: s.source, kind: C.label("kind", s.kind), character: s.character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.dialogueRule },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }
@@ -24,6 +24,7 @@
         row[key] = original[key].trim() ? original[key] : key === "text" && !original.hasText ? original.text : x[key].trim();
         if ((key !== "text" || original.hasText) && !row[key].trim()) throw new Error("AI 回傳內容不完整，原有內容保留。");
       }
+      if(original.hasText&&!original.text.trim()&&Array.from(row.text).length>8)throw new Error("AI 第 "+x.id+" 句超過 8 字，尚未套用；原有內容保留。請再安排一次，或自行填入短句。");
       return row;
     });
     return rows.sort((a, b) => a.id - b.id);

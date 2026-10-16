@@ -123,3 +123,11 @@ test("查看搜尋字詞腳本：依次數由多到少整理，容忍 wrangler �
   const fake = args => args[2] === "list" ? "⛅ wrangler\n[{\"name\":\"q:木工\"},{\"name\":\"q:水電工\"}]" : (args[3] === "q:木工" ? "banner\n5\n" : "2");
   assert.deepEqual(readAll(fake), [{ q: "木工", count: 5 }, { q: "水電工", count: 2 }]);
 });
+
+test('AI 台詞限 8 字，拒絕過長整批不動，手寫長句與無文字情境不誤擋',()=>{
+  const s=state(),before=C.clone(s),out=rows(AI.payload(s));out[2].text='這一句台詞已經超過八個字';assert.throws(()=>AI.apply(s,out),/第 3 句超過 8 字/);assert.deepEqual(s,before);
+  s.items[0].text='使用者自己的長句不應該截斷';s.settings.textMode='per';s.items[1].hasText=false;s.items[1].text='無文字貼圖的長情境也保留';const valid=rows(AI.payload(s));valid[2].text='一二三四五六七八';AI.apply(s,valid);assert.equal(s.items[0].text,'使用者自己的長句不應該截斷');assert.equal(s.items[1].text,'無文字貼圖的長情境也保留');assert.equal(s.items[2].text,'一二三四五六七八');
+});
+test('短句和台灣用字規則透過既有 Worker 契約送出，不需新後端欄位',async()=>{
+  const input=AI.payload(state()),{validateInput,modelRequest}=await worker;assert.deepEqual(validateInput(input),input);assert.ok(input.context.scene.includes(C.dialogueRule));assert.ok(modelRequest(input).contents[0].parts[0].text.includes(C.dialogueRule));
+});

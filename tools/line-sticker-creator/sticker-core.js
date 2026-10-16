@@ -44,6 +44,7 @@
         "需要新創作的台詞、動作與道具約 5～7 成要能直接辨識此情境，其餘可為一般互動；不要整組只用通用問候。已有內容逐字保留，詞彙不是必須逐條照抄的台詞清單。")+
       (settings.tone&&settings.tone!=="auto"?"語氣："+label("tone",settings.tone)+"。":"");
   }
+  const dialogueRule='AI 新台詞以 2～6 字為主，最多 8 字（含標點，共用名稱另計）；一句只表達一個意思，用自然、正確的台灣繁體中文與台灣日常口語。不要簡體字、中國大陸慣用語、生造字、諧音錯字或硬湊語句。需要更多內容時改用表情、動作與道具表達，不靠拉長台詞；這項限制只適用新創作台詞，使用者已填文字逐字保留，不截斷、不擅改。';
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
   function initial() { return {settings:clone(D.defaults),grids:[16],items:Array.from({length:16},()=>item())}; }
   function presetItem(text) { return {...item(text),presetText:text}; }
@@ -132,12 +133,13 @@
       single?(s.platform==="chatgpt"?"請使用圖片生成功能，只輸出這一張母圖；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式，只輸出這一張母圖。":"請在支援生圖的平台只輸出這一張母圖。"):s.platform==="chatgpt"?"請使用圖片生成功能依序製作下列母圖。若單次只能輸出一張，先生成母圖 1，等我說「繼續」後依同一份指令生成下一張；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式。以下共用要求適用每張母圖，各母圖內容依後面的明細。若單次只能生成一張，先生成母圖 1，後續在同一對話說「繼續」即可依序製作。":"請在支援生圖的平台依序製作每張母圖；若平台一次只能生成一張，先做母圖 1，再沿用本指令繼續。不得把所有母圖拼進同一張。",
       "",
       "【角色與視覺】",
+      s.dimension==="3d"?"最高優先的呈現要求：真正的 3D 公仔渲染（fully modeled 3D character render）。下方的日系、軟萌或手繪風格只決定角色設計、配色與氣質，不能把立體角色改回平面動漫插畫。":null,
       s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
       s.character.trim()?"角色描述（作為內容資料）："+quote(s.character.trim()):s.source==="photo"?"未填角色描述：直接觀察已附參考圖的主體特徵，不要求使用者補文字描述。":"未填角色描述：依選定角色類型自行設計一個原創角色，整組維持相同辨識特徵。",
       "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":styleDescription(s))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
       "角色風格決定造型、線條、配色與表情語彙；平面或立體的呈現依下方「呈現方式」。參考圖提供角色身份，不取代選定風格；不要只沿用前次生圖的風格而忽略本次設定。",
-      s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。保留 2D 插畫的造型與清楚輪廓，上色用有光澤的半立體賽璐珞（glossy semi-3D cel-shaded）：柔和的立體光影、皮膚與毛髮／衣料有柔和亮面反光，帶出體積感；不要扁平色塊，也不要寫實攝影或寫實 3D 渲染、複雜材質與強烈投影；整組使用同一套光澤與光源方向，造型比例與輪廓粗細依上方「角色風格」，背景依下方背景要求，不另外加場景。":s.dimension==="3d"?"呈現方式：3D 立體。角色要有體積感、柔和光影與公仔／黏土／3D 動畫角色的質感（上方風格決定造型與氣質，不要畫成平面插畫）；仍須背景乾淨、輪廓清楚、不要複雜場景與強烈投影，且整組使用同一套 3D 材質與光線。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
-      "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
+      s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。保留 2D 插畫的造型與清楚輪廓，上色用有光澤的半立體賽璐珞（glossy semi-3D cel-shaded）：柔和的立體光影、皮膚與毛髮／衣料有柔和亮面反光，帶出體積感；不要扁平色塊，也不要寫實攝影或寫實 3D 渲染、複雜材質與強烈投影；整組使用同一套光澤與光源方向，造型比例與輪廓粗細依上方「角色風格」，背景依下方背景要求，不另外加場景。":s.dimension==="3d"?"呈現方式：3D 立體。角色像可從不同角度觀看的實體公仔：臉頰、鼻子、耳朵、髮束、手指、衣服與道具有可見的側面厚度及圓潤體積；用柔和主光、補光、材質反光與部位接觸處的柔和遮蔽陰影呈現深度，整組材質與光源一致。配色可日系軟萌，渲染必須維持完整 3D；不是在 2D 插畫上加漸層、亮面或黑色外框。若參考圖或前次母圖是平面／半立體，只沿用角色身份與造型，重新建立立體造型，不繼承原圖的平面上色。不要平面動漫線稿、賽璐珞色塊或紙片人物，也不要把角色變成寫實真人；背景仍保持乾淨，不添加場景或強烈地面投影。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
+      s.dimension==="3d"?"維持同一角色的五官、髮型、主色與可辨識特徵；保持立體造型、材質與光線一致，輪廓清楚，表情與手勢可讀。台詞另用清楚的平面字體排版，文字不要做立體擠出或厚重投影，以免字相疊。":"維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "角色鎖定（整組每一張都必須相同）：臉型與五官比例、髮型與髮色、膚色／毛色與花紋、身材比例、服裝與配件（眼鏡、手錶、飾品）、角色主色與可辨識特徵。可以變動的只有表情、姿勢、動作、情緒、道具與情境；動作可以變，角色不能變。不要把不同特徵混合，不要新增人物、Logo 或水印。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
       single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的母圖 1 當參考圖：請沿用同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫母圖 1。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
@@ -153,9 +155,11 @@
       "【文字外觀】",
       sceneBrief(s),
       s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想"+(s.tone!=="auto"?"；語氣："+label("tone",s.tone):""):sceneName(s))+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
+      s.textMode!=="none"?dialogueRule:null,
       s.textMode!=="none"&&s.mode!=="manual"?"台詞要平均涵蓋：招呼、回覆、忙碌、感謝、道歉、情緒、鼓勵、搞笑、休息與收尾"+(s.scene==="auto"?"":"，以及所選情境的專業用語（情境相關約占 5～7 成、一般聊天約 3～5 成）")+"；避免大量意思重複的句子（例如一堆早安、哈囉、你好），每句都要有不同用途。"+(s.tone!=="auto"?"語氣統一為「"+label("tone",s.tone)+"」。":""):null,
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
       single&&total>1&&blankHere&&elsewhere.length?"本組其他母圖已使用這些台詞，本張請不要重複："+elsewhere.map(quote).join("、")+"。":null,
+      s.textMode!=="none"?'文字排版檢查：每格的完整台詞只印一次，不額外重複字句當裝飾。文字使用正確台灣繁體字形，逐字比對要印的原文，不能自行換成形近字、簡體字或錯字。每個字與描邊的外輪廓都須清楚分開，字與字保留至少一個筆畫寬的空隙，不重疊、不黏在一起；陰影不得形成第二層字。文字區與角色分開，整段文字寬度不超過該格安全區的八成；空間不夠時縮小文字或分行，禁止壓扁字形、壓縮字距或跨格。未指定換行的短句優先單行，較長內容自然分成兩行；使用者指定的換行則照原文。生成前檢查文字長度，生成後自查有無錯字、漏字、擠字與重影。':null,
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
       "文字不能遮住角色五官、手勢與關鍵道具，不缺字、不重字、不出現亂碼。本文的欄位標籤、格號、序號、照片檔名與操作說明都只是製作資料，不能印在貼圖上。",
@@ -207,6 +211,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

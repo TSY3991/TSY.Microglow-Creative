@@ -84,6 +84,8 @@ let browser,ws,server;
   const cropped=await E("(async()=>{for(let i=0;i<300&&document.querySelectorAll('.crop-sticker').length<40;i++)await new Promise(r=>setTimeout(r,100));return document.querySelectorAll('.crop-sticker').length})()");
   check('按「前往裁切」自動切到裁切分頁並裁好 40 張，不必再選檔案',cropped===40&&await E("document.getElementById('tab-crop').getAttribute('aria-selected')==='true'"));
   await E("document.getElementById('tab-prompt').click();document.querySelector('[data-step=\"4\"]').click()");
+  await set('dimension','semi');await E("document.getElementById('dimension').value='3d';document.querySelectorAll('.mother-step')[1].querySelector('.step .button').click()");await delay(120);
+  check('逐張母圖複製前重新讀取 3D，不沿用半 3D',await E("__copied.at(-1).includes('呈現方式：3D 立體')&&!__copied.at(-1).includes('呈現方式：半 3D')&&__copied.at(-1).includes('fully modeled 3D character render')"));
   for(const width of [320,390,768]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 逐張母圖卡片無橫向溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
 
   check("頁面無未處理例外",errors.length===0);

@@ -17,10 +17,10 @@
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261016a">
   <script defer src="./sticker-data.js?v=20261016b"></script>
-  <script defer src="./sticker-core.js?v=20261016b"></script>
+  <script defer src="./sticker-core.js?v=20261016c"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
-  <script defer src="./sticker-ai.js?v=20261016b"></script>
-  <script defer src="./sticker-app.js?v=20261016d"></script>
+  <script defer src="./sticker-ai.js?v=20261016c"></script>
+  <script defer src="./sticker-app.js?v=20261016e"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261016f"></script>
   <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
@@ -95,6 +95,7 @@
                 <p>依角色、風格、情境與逐張台詞補齊空白，已填內容不會被改。完成後會自動補入空白欄位並列出內容，不滿意可一鍵復原；這項功能只安排文字，不會生成圖片。張數較多時需稍候，最多等待約一分鐘。</p>
                 <p class="field-hint">使用時會將角色文字描述、風格、情境及逐張台詞／表情／動作傳送至 Gemini；不傳照片、檔名或共用名稱欄位。文字中若有私人資訊，請先移除。免費服務的內容可能用於改善 Google 產品。</p>
                 <label class="check-field"><input id="ai-consent" type="checkbox"><span>同意將上述文字內容傳送至 Gemini 以安排逐張內容</span></label>
+                <p class="field-hint">AI 新台詞以 2～6 字為主、最多 8 字，使用台灣繁體口語；你已填寫的台詞會保留。生圖後仍須檢查是否有錯字或文字相疊。</p>
                 <div class="inline-actions"><button id="ai-arrange" class="button primary" type="button" disabled>AI 安排台詞、表情與動作</button><button id="ai-cancel" class="button" type="button" hidden>取消等待</button></div>
                 <p id="ai-status" role="status" aria-live="polite">網站 AI 尚未啟用；仍可手動設定。</p>
                 <div id="ai-preview" hidden><h3>AI 已補入的內容</h3><p>只補了原本空白的欄位；角色、文字開關與母圖排列維持原設定。可直接在下方逐張修改。</p><div class="table-scroll"><table class="summary-table"><thead><tr><th>貼圖</th><th>台詞／情境</th><th>表情</th><th>動作</th></tr></thead><tbody id="ai-preview-body"></tbody></table></div><div class="inline-actions"><button id="ai-undo" class="button" type="button">復原這次補入</button><button id="ai-discard" class="button" type="button">關閉</button></div></div>

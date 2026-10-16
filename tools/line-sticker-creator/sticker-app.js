@@ -254,6 +254,7 @@
   }
   document.querySelectorAll("[data-setting]").forEach(el=>el.addEventListener(el.tagName==="SELECT"||el.type==="color"?"change":"input",()=>{
     const key=el.dataset.setting,previous=state.settings[key];
+    if((key==="dimension"||key==="platform")&&previous===el.value)return;
     if(key==="textMode"){
       const printing=(mode,x)=>mode==="all"||(mode==="per"&&x.hasText);
       const moved=state.items.filter(x=>x.text.trim()&&!printing(previous,x)&&printing(el.value,x)).length;
@@ -263,7 +264,7 @@
     if(key==="platform"||key==="dimension"){
       copyLabel();live();
       if(generated){
-        try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"已改為「"+C.label("dimension",el.value).split("：")[0]+"」，提示詞已更新，請重新複製。");}
+        try{$("prompt-output").value=currentPrompt();$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"已改為「"+C.label("dimension",el.value).split("：")[0]+"」，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
       }
       save();if(step===4){summary();renderMulti();}return;
@@ -286,6 +287,7 @@
       status("情境已改為「"+D.scenes[state.settings.scene].label+"」，已有台詞會保留。要依新情境重新創作，請按「將台詞交給 AI 重新創作」，再安排 AI 或產生提示詞；不會自動改掉原文。");
     }
   }));
+  for(const id of ['dimension','platform'])$(id).addEventListener('input',()=>$(id).dispatchEvent(new Event('change',{bubbles:true})));
   $("settings-form").addEventListener("submit",e=>e.preventDefault());
   document.querySelectorAll("[data-step]").forEach(el=>el.addEventListener("click",()=>go(Number(el.dataset.step))));
   $("previous").addEventListener("click",()=>go(step-1));$("next").addEventListener("click",()=>go(step+1));
@@ -313,13 +315,21 @@
   $("add-grid").addEventListener("click",()=>{if(state.grids.length>=5)return status("最多 5 張母圖。");state.grids.push(8);renderGrids();invalidate();});
   $("generate").addEventListener("click",()=>{
     if(!errors(C.validate(state)))return;
-    $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=C.prompt(state);$("prompt-area").hidden=false;generated=true;copyLabel();
+    $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=currentPrompt();$("prompt-area").hidden=false;generated=true;copyLabel();
     status("已產生整組提示詞；請核對內容後複製。");
   });
   // 一張母圖（8／16 張）也比照多張母圖：按一下就複製並打開所選平台的網頁。
+  function currentPrompt(only){
+    const value=$('dimension').value;
+    if(D.options.dimension.some(([id])=>id===value)&&value!==state.settings.dimension){
+      state.settings.dimension=value;save();if(step===4)summary();
+    }
+    return C.prompt(state,only);
+  }
   function copyLabel(){const info=platformInfo();$("copy").textContent=info.name?"複製提示詞，並打開 "+info.name:"複製整組提示詞";}
   $("copy").addEventListener("click",async()=>{
     if(!generated)return;
+    try{$('prompt-output').value=currentPrompt();}catch(error){status(error.message);return;}
     const info=platformInfo();
     if(info.url)window.open(info.url,"_blank","noopener");
     try{await navigator.clipboard.writeText($("prompt-output").value);$("copy-feedback").textContent=info.url?"✔ 已複製提示詞，並幫你打開 "+info.name+"。請到那個網頁，點一下訊息輸入框，按 Ctrl+V 貼上（Mac 按 Command+V；手機長按輸入框再選「貼上」）。":"已複製整組提示詞，可貼到選用的 AI 平台。";}
@@ -434,7 +444,7 @@
   const pasteHint="點一下訊息輸入框，按 Ctrl+V 貼上（Mac 按 Command+V；手機長按輸入框再選「貼上」）。";
   async function copyAndOpen(n,box) {
     const info=platformInfo(),note=box.querySelector(".copy-note");let text;
-    try{text=C.prompt(state,n);}catch(error){note.textContent=error.message;return;}
+    try{text=currentPrompt(n);}catch(error){note.textContent=error.message;return;}
     const copying=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):Promise.reject(new Error("no clipboard"));
     if(info.url)window.open(info.url,"_blank","noopener");
     try{await copying;note.textContent="✔ 已複製母圖 "+n+" 的提示詞。"+(info.url?"已幫你打開 "+info.name+"。請到那個網頁，":"請到你的生圖網站，")+pasteHint;}
@@ -521,7 +531,7 @@
   window.addEventListener("sticker-clipped",()=>{
     if(state.settings.spacing==="widest")return;
     state.settings.spacing="widest";renderGrids();
-    if(generated){try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";}catch{invalidate();}}
+    if(generated){try{$("prompt-output").value=currentPrompt();$("copy-feedback").textContent="";}catch{invalidate();}}
     if(step===4)renderMulti();
     save();status("裁切時發現母圖有圖被切到，已自動把提示詞的格子留白加到最寬（每格 703×608）。請重新複製提示詞，再生成被切到的那張母圖。");
   });
