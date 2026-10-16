@@ -124,3 +124,28 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.equal(C.cleanSpecks(e,W,H),2);assert.equal(e[(21*W+201)*4+3],0);assert.equal(e[(160*W+190)*4+3],255);assert.equal(e[(100*W+100)*4+3],255);
   console.log('PASS textBlobs removes detached text/decoration; cleanSpecks removes only isolated tiny pieces');
 }
+{
+  const W=300,H=200,d=new Uint8ClampedArray(W*H*4);
+  const rect=(x,y,w,h,c)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)d.set(c,(j*W+i)*4);};
+  rect(30,30,120,140,[200,160,40,255]);      // 角色（粗）
+  rect(150,95,20,10,[200,160,40,255]);       // 細頸（和文字相連）
+  rect(170,20,50,160,[200,30,30,255]);       // 文字欄（粗）
+  rect(240,60,6,6,[90,90,90,255]);           // 另一個分開的小東西
+  const parts=C.partitionArt(d,W,H,3);
+  assert.ok(parts.regions.length>=3);
+  const idAt=(x,y)=>parts.region[y*W+x];
+  assert.notEqual(idAt(80,100),idAt(190,100));                       // 角色和文字欄分成不同塊
+  assert.equal(idAt(80,100),parts.regions[0].id===idAt(80,100)?idAt(80,100):-1);
+  assert.ok(Math.abs(parts.regions.find(r=>r.id===idAt(190,100)).minx-170)<=12); // 切口落在頸部附近，文字欄幾乎完整
+  assert.equal(idAt(5,5),0);
+  const guess=C.guessTextRegions(parts);assert.ok(guess.includes(idAt(190,100)));assert.ok(!guess.includes(idAt(80,100)));
+  // 一整塊圖案不會被亂切
+  const solid=new Uint8ClampedArray(W*H*4);for(let y=30;y<170;y++)for(let x=40;x<200;x++)solid.set([10,10,10,255],(y*W+x)*4);
+  assert.equal(C.partitionArt(solid,W,H,6).regions.length,1);
+  // 補平缺口：紅色塊中間挖一個洞，補平後不透明且接近紅色；塊外面不動
+  const f=new Uint8ClampedArray(W*H*4);for(let y=50;y<150;y++)for(let x=50;x<150;x++)f.set([200,30,30,255],(y*W+x)*4);
+  for(let y=90;y<100;y++)for(let x=90;x<100;x++)f[(y*W+x)*4+3]=0;
+  const mask=new Uint8Array(W*H).fill(1);const filled=C.inpaint(f,W,H,mask);
+  assert.equal(filled>=100,true);assert.equal(f[(95*W+95)*4+3],255);assert.ok(Math.abs(f[(95*W+95)*4]-200)<=3&&Math.abs(f[(95*W+95)*4+1]-30)<=3);
+  console.log('PASS partitionArt separates text from character at the neck; inpaint fills small gaps');
+}

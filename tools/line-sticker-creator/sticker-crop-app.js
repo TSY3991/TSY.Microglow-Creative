@@ -188,7 +188,7 @@
     const s=stickers[selected];if(!s||!s.source||busy)return;
     const w=s.source.width,h=s.source.height,ctx=s.source.getContext('2d',{willReadFrequently:true}),img=ctx.getImageData(0,0,w,h);
     const found=C.textBlobs(img.data,w,h);
-    if(!found.count){mainNote='沒有找到可以自動分開的文字：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來，所以沒有任何變化。請按「手動修圖」，用「移動框線」框住角色後按「框外擦掉」，或用橡皮擦擦掉。';message(mainNote);special();return;}
+    if(!found.count){mainNote='沒有找到可以自動分開的文字：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來，所以沒有任何變化。請按「手動修圖」：虛線框已放在角色外框上，調整後按「框外擦掉」，或用「分塊」點選整欄文字。';message(mainNote);special();return;}
     for(let p=0;p<found.mask.length;p++)if(found.mask[p])img.data[p*4+3]=0;
     C.cleanSpecks(img.data,w,h);
     const b=C.bounds(img.data,w,h);if(!b){message('自動處理後畫面是空的，已保留原圖。');return;}
@@ -196,7 +196,7 @@
     const out=canvas(b.width,b.height);out.getContext('2d').drawImage(full,b.x,b.y,b.width,b.height,0,0,b.width,b.height);
     let before=0,after=0;{const o=ctx.getImageData(0,0,w,h).data;for(let i=3;i<o.length;i+=4){if(o[i]>8)before++;if(img.data[i]>8)after++;}}
     const pct=before?Math.round((before-after)/before*100):0;
-    mainNote=pct<3?'只擦掉了不到 3% 的內容，畫面幾乎沒變：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來。請按「手動修圖」，用「移動框線」框住角色後按「框外擦掉」，或用橡皮擦處理。':'已擦掉約 '+pct+'% 的內容（'+found.count+' 個和角色分開的區塊）。如果文字還在，表示它和角色連在一起，請按「手動修圖」處理。';
+    mainNote=pct<3?'只擦掉了不到 3% 的內容，畫面幾乎沒變：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來。請按「手動修圖」：虛線框已放在角色外框上，調整後按「框外擦掉」，或用「分塊」點選整欄文字。':'已擦掉約 '+pct+'% 的內容（'+found.count+' 個和角色分開的區塊）。如果文字還在，表示它和角色連在一起，請按「手動修圖」處理。';
     s.mainSource=out;s.mainAt={x:s.at.x+b.x,y:s.at.y+b.y};special();touched();
     message(mainNote);
   }
@@ -209,7 +209,7 @@
       const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
       const base=s.mainSource?{source:s.mainSource,at:s.mainAt}:{source:s.source,at:s.at};
       window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:base.source,at:base.at,auto:{source:s.source,at:s.at},remove:s.remove,threshold:s.threshold,opener:edit,label:'main／tab',
-        hint:'這裡的修改只用在 main.png 與 tab.png。亮的是目前的圖，半透明的是母圖其他部分；例如文字可直接擦掉，或框住角色後按「框外擦掉」。',
+        hint:'這裡的修改只用在 main.png 與 tab.png。建議：調整虛線框後按「框外擦掉」去掉旁邊文字，單獨的字塊用「分塊」點選，缺口用「補平」。',
         cleanup:true,onDone:(canvas,at)=>{s.mainSource=canvas;s.mainAt=at;special();touched();message('main／tab 已自訂（不含文字的版本）；01～'+String(stickers.length).padStart(2,'0')+' 號貼圖不受影響。');}});
     });
     box.append(edit);

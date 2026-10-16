@@ -52,3 +52,5 @@
 .line-sticker-tool .editor-canvas.tool-frame.hit-ew{cursor:ew-resize}
 .line-sticker-tool .editor-canvas.tool-frame.hit-nwse{cursor:nwse-resize}
 .line-sticker-tool .editor-canvas.tool-frame.hit-nesw{cursor:nesw-resize}
+.line-sticker-tool .editor-canvas.tool-region{cursor:pointer}
+.line-sticker-tool .editor-canvas.tool-fill{cursor:crosshair}

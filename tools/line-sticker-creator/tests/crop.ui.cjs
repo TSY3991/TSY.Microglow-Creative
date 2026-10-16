@@ -175,23 +175,46 @@ let browser,ws,server;
   check('修圖視窗不出現捲動，工具列在同一列',await E("(()=>{const b=document.querySelector('.editor-box');const bar=document.querySelector('.editor-bar');return b.scrollHeight<=b.clientHeight+1&&bar.offsetHeight<=52;})()"));
   check('擦掉工具的游標是橡皮擦圖示（同網域圖檔），補回則是畫筆圈',await E("(()=>{const v=document.querySelector('.editor-canvas');const a=getComputedStyle(v).cursor;if(!a.includes('cursor-eraser.png'))return false;[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='補回').click();const b=getComputedStyle(v).cursor;[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='擦掉').click();return b.includes('cursor-restore.png');})()"));
   check('游標圖檔可載入',await E("Promise.all(['cursor-eraser.png','cursor-restore.png'].map(f=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.width===32);i.onerror=()=>r(false);i.src=f;}))).then(a=>a.every(Boolean))"));
-  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='移動框線').click()");
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='框線').click()");
   const px=async(e)=>E(e);
   // 拖動虛線框：從框內拖到右下，再用「把框外擦掉」只留框內
   const crop0=await E("[...document.querySelectorAll('.editor-overlay button')].filter(b=>['框內補回','框外擦掉'].includes(b.textContent)).every(b=>!b.hidden)");
-  check('選「移動框線」後出現框線工具列',crop0);
+  check('選「框線」後出現框內補回／框外擦掉',crop0);
   const overlay=await E("(()=>{const o=document.querySelector('.editor-overlay');const c=o.querySelector('.editor-canvas');const before=c.getContext('2d').getImageData(0,0,c.width,c.height).data.slice();window.__before=before;for(const [t,fx,fy] of [['pointermove',0.62,0.55],['pointerdown',0.62,0.55],['pointermove',0.9,0.9],['pointerup',0.9,0.9]])window.__ptr(c,t,fx,fy);const after=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let diff=0;for(let i=0;i<after.length;i+=4)if(after[i]!==before[i]||after[i+1]!==before[i+1])diff++;return diff;})()");
   check('拖動虛線框後畫面改變（框跟著移動）',overlay>50);
   await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='框外擦掉').click()");
   check('「把框外擦掉」可復原',await E("(()=>{const u=[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='復原');return !u.disabled;})()"));
   await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='復原').click();[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='取消').click()");
   check('取消後關閉修圖視窗且不改貼圖',await E("!document.querySelector('.editor-overlay')"));
+  // 分塊點選去除、補平缺口：先在母圖做「角色＋分開的文字欄」，用橡皮擦工具之外的新工具處理
+  await click('crop-clear');
+  await E("(async()=>{const c=document.createElement('canvas');c.width=800;c.height=360;const x=c.getContext('2d');x.clearRect(0,0,800,360);x.fillStyle='#d4a020';x.fillRect(30,25,90,130);x.fillStyle='#d02020';x.fillRect(120,80,30,12);x.fillRect(150,25,30,130);const blob=await new Promise(r=>c.toBlob(r)),dt=new DataTransfer();dt.items.add(new File([blob],'region.png',{type:'image/png'}));const f=document.getElementById('crop-files');f.files=dt.files;f.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,700));})()");
+  await run(8);
+  const spx="(()=>{const c=document.querySelector('.crop-sticker canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
+  const sBefore=await E(spx);
+  await E("[...document.querySelectorAll('.crop-sticker button')].find(b=>b.textContent.includes('修圖')).click()");await delay(200);
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='分塊').click()");await delay(100);
+  check('「分塊」工具出現「切細」滑桿與「猜文字」按鈕',await E("(()=>{const o=document.querySelector('.editor-overlay');return !!o.querySelector('input[aria-label=切細程度]')&&[...o.querySelectorAll('button')].some(b=>b.textContent==='猜文字'&&!b.hidden);})()"));
+  await E("(()=>{const c=document.querySelector('.editor-canvas');const info=window.__regionProbe;})()");
+  // 點在文字欄上（畫布上約右側）：文字欄應整塊消失，角色保留
+  const before2=await E("(()=>{const c=document.querySelector('.editor-canvas');return c.getContext('2d').getImageData(0,0,c.width,c.height).data.slice();})().length");
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='猜文字').click()");await delay(150);
+  check('猜文字：自動去除疑似文字的塊並說明',await E("document.querySelector('.editor-overlay .field-hint[role=status]').textContent.includes('已去除')"));
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click()");await delay(300);
+  check('完成後貼圖少了文字欄（可見像素變少）但角色仍在',await E(spx)<sBefore&&await E(spx)>sBefore*0.4);
+  // 補平：把角色挖一個洞，用補平工具塗一下
+  await E("[...document.querySelectorAll('.crop-sticker button')].find(b=>b.textContent.includes('修圖')).click()");await delay(200);
+  const holeDone=await E("(()=>{const o=document.querySelector('.editor-overlay');const c=o.querySelector('.editor-canvas');const b=[...o.querySelectorAll('button')];b.find(x=>x.textContent==='擦掉').click();o.querySelector('input[aria-label=筆刷大小]').value='30';for(const [t,fx,fy] of [['pointerdown',0.5,0.5],['pointermove',0.52,0.5],['pointerup',0.52,0.5]])window.__ptr(c,t,fx,fy);return true;})()");
+  const holePx=await E("(()=>{const o=document.querySelector('.editor-overlay'),c=o.querySelector('.editor-canvas');return c.toDataURL().length;})()");
+  await E("(()=>{const o=document.querySelector('.editor-overlay');const c=o.querySelector('.editor-canvas');[...o.querySelectorAll('button')].find(x=>x.textContent==='補平').click();o.querySelector('input[aria-label=筆刷大小]').value='40';for(const [t,fx,fy] of [['pointerdown',0.5,0.5],['pointermove',0.52,0.5],['pointerup',0.52,0.5]])window.__ptr(c,t,fx,fy);})()");await delay(150);
+  check('補平：塗過缺口後顯示補了幾個像素',await E("document.querySelector('.editor-overlay .field-hint[role=status]').textContent.includes('已補平')"));
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='取消').click()");
   check('補回：從母圖把被切掉的區域塗回，仍可完成',await E("!document.querySelector('.editor-overlay')&&document.getElementById('crop-status').textContent.includes('已修圖')"));
   // main／tab 另外修圖（去除文字）
   const mainPx="(()=>{const c=document.querySelector('#crop-special canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
   const mainBefore=await E(mainPx);
   await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent.includes('手動修圖')).click()");await delay(200);
-  await E("(()=>{const c=document.querySelector('.editor-canvas');document.querySelector('.editor-overlay input[type=range]').value='80';for(const fx of [0.35,0.45,0.55,0.65]){window.__ptr(c,fx===0.35?'pointerdown':'pointermove',fx,0.5);}window.__ptr(c,'pointerup',0.65,0.5);[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click();})()");await delay(300);
+  await E("(()=>{[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='擦掉').click();const c=document.querySelector('.editor-canvas');document.querySelector('.editor-overlay input[type=range]').value='80';for(const fx of [0.35,0.45,0.55,0.65]){window.__ptr(c,fx===0.35?'pointerdown':'pointermove',fx,0.5);}window.__ptr(c,'pointerup',0.65,0.5);[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click();})()");await delay(300);
   check('main／tab 可另外修圖，不影響 01～N 號貼圖',await E(mainPx)<mainBefore&&await E("[...document.querySelectorAll('#crop-special button')].some(b=>b.textContent.includes('已自訂'))&&[...document.querySelectorAll('#crop-special button')].some(b=>b.textContent==='還原成貼圖原樣')"));
   await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='還原成貼圖原樣').click()");
   check('可把 main／tab 還原成貼圖原樣',await E(mainPx)===mainBefore);

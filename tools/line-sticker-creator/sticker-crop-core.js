@@ -180,18 +180,87 @@
     return {mode:'smart',cross:[],reasons:['每格圖案都在分割線內，不會被切到；但母圖是單色背景，智慧分割能順便把背景去成透明（LINE 貼圖需要透明背景）。']};
   }
   // 依透明度把圖案分成互不相連的區塊（8 鄰接），回傳每個區塊的面積與外框。
-  function alphaComponents(data,w,h){
+  function alphaComponents(data,w,h,min=8){
     const n=w*h,label=new Int32Array(n),queue=new Int32Array(n),comps=[];
     for(let start=0;start<n;start++){
-      if(data[start*4+3]<=8||label[start])continue;
+      if(data[start*4+3]<=min||label[start])continue;
       const id=comps.length+1,c={id,area:0,minx:w,maxx:-1,miny:h,maxy:-1};let head=0,tail=0;label[start]=id;queue[tail++]=start;
       while(head<tail){
         const q=queue[head++],x=q%w,y=(q-x)/w;c.area++;if(x<c.minx)c.minx=x;if(x>c.maxx)c.maxx=x;if(y<c.miny)c.miny=y;if(y>c.maxy)c.maxy=y;
-        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(data[r*4+3]>8&&!label[r]){label[r]=id;queue[tail++]=r;}}}
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(data[r*4+3]>min&&!label[r]){label[r]=id;queue[tail++]=r;}}}
       }
       comps.push(c);
     }
     return {label,comps};
+  }
+  // 把圖案分成「塊」：先分成互不相連的區塊，再把每塊在最細的連接處（頸部）切開，切口順著形狀走。
+  // level 1～6：數字越大，越容易在較粗的連接處切開（塊數變多）。回傳 region（每個像素的塊編號，0＝沒有圖案）與每塊的面積、外框。
+  function partitionArt(data,w,h,level=3,solid=200){
+    // 以「夠不透明」的像素（alpha≥solid）找區塊與厚度，避免半透明的光暈把文字和角色黏在一起；最後再把半透明邊緣歸給最近的塊。
+    const {label,comps}=alphaComponents(data,w,h,solid-1),n=w*h,region=new Int32Array(n),fractions=[0.06,0.1,0.15,0.22,0.32,0.45],frac=fractions[Math.max(0,Math.min(5,level-1))];
+    if(!comps.length)return {region,regions:[]};
+    const INF=1e9,dt=new Int32Array(n);
+    for(let p=0;p<n;p++)dt[p]=label[p]?INF:0;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const p=y*w+x;if(!dt[p])continue;let v=dt[p];if(x===0||y===0)v=Math.min(v,3);if(x)v=Math.min(v,dt[p-1]+3);if(y)v=Math.min(v,dt[p-w]+3);if(x&&y)v=Math.min(v,dt[p-w-1]+4);if(x<w-1&&y)v=Math.min(v,dt[p-w+1]+4);dt[p]=v;}
+    for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const p=y*w+x;if(!dt[p])continue;let v=dt[p];if(x===w-1||y===h-1)v=Math.min(v,3);if(x<w-1)v=Math.min(v,dt[p+1]+3);if(y<h-1)v=Math.min(v,dt[p+w]+3);if(x<w-1&&y<h-1)v=Math.min(v,dt[p+w+1]+4);if(x&&y<h-1)v=Math.min(v,dt[p+w-1]+4);dt[p]=v;}
+    const cost=p=>1+Math.round(30/(1+dt[p]/3)),dist=new Int32Array(n).fill(INF),hk=[],hv=[];
+    const push=(k,v)=>{let i=hk.length;hk.push(k);hv.push(v);while(i>0){const j=(i-1)>>1;if(hk[j]<=k)break;hk[i]=hk[j];hv[i]=hv[j];i=j;}hk[i]=k;hv[i]=v;};
+    const pop=()=>{const k0=hk[0],v0=hv[0],k=hk.pop(),v=hv.pop();if(hk.length){let i=0;for(;;){let c=2*i+1;if(c>=hk.length)break;if(c+1<hk.length&&hk[c+1]<hk[c])c++;if(hk[c]>=k)break;hk[i]=hk[c];hv[i]=hv[c];i=c;}hk[i]=k;hv[i]=v;}return [k0,v0];};
+    const pts=new Map();for(let p=0;p<n;p++)if(label[p]){if(!pts.has(label[p]))pts.set(label[p],[]);pts.get(label[p]).push(p);}
+    const piece=new Int32Array(n).fill(-1);let nextId=0;
+    for(const [id,list] of pts){
+      let maxDt=0;for(const p of list)if(dt[p]>maxDt)maxDt=dt[p];
+      const T=maxDt*frac,pieces=[],minArea=Math.max(30,list.length*0.005);
+      for(const start of list){
+        if(dt[start]<=T||piece[start]>=0)continue;
+        const members=[start];piece[start]=pieces.length;
+        for(let k=0;k<members.length;k++){
+          const q=members[k],qx=q%w,qy=(q-qx)/w;
+          for(let dy=-1;dy<=1;dy++){const yy=qy+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=qx+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(label[r]===id&&dt[r]>T&&piece[r]<0){piece[r]=pieces.length;members.push(r);}}}
+        }
+        pieces.push(members);
+      }
+      const big=pieces.filter(m=>m.length>=minArea);
+      for(const m of pieces)for(const q of m)piece[q]=-1;
+      if(big.length<2){const rid=++nextId;for(const p of list)region[p]=rid;continue;}
+      const ids=big.map(()=>++nextId);
+      big.forEach((m,i)=>{for(const q of m){region[q]=ids[i];dist[q]=0;push(0,q);}});
+      while(hk.length){
+        const [d,p]=pop();if(d>dist[p])continue;const x=p%w,y=(p-x)/w;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const q=yy*w+xx;
+          if(label[q]!==id)continue;const nd=d+cost(q);if(nd<dist[q]){dist[q]=nd;region[q]=region[p];push(nd,q);}}}
+      }
+      for(const p of list)if(!region[p]){const rid=++nextId;region[p]=rid;} // 理論上不會發生：沒被擴張到的像素自成一塊
+    }
+    {const q=[];for(let p=0;p<n;p++)if(region[p])q.push(p);
+      for(let head=0;head<q.length;head++){const p=q[head],x=p%w,y=(p-x)/w;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(!region[r]&&data[r*4+3]>8){region[r]=region[p];q.push(r);}}}}}
+    const stats=new Map();
+    for(let p=0;p<n;p++){const r=region[p];if(!r)continue;const x=p%w,y=(p-x)/w;let s=stats.get(r);if(!s){s={id:r,area:0,minx:w,maxx:-1,miny:h,maxy:-1};stats.set(r,s);}s.area++;if(x<s.minx)s.minx=x;if(x>s.maxx)s.maxx=x;if(y<s.miny)s.miny=y;if(y>s.maxy)s.maxy=y;}
+    return {region,regions:Array.from(stats.values()).sort((a,b)=>b.area-a.area)};
+  }
+  // 猜哪些「塊」是文字或裝飾：最大的當角色；其餘中心落在角色外框之外，或面積小於角色 1% 的，視為多餘。
+  function guessTextRegions(parts){
+    const {regions}=parts;if(regions.length<2)return [];
+    const main=regions[0];
+    return regions.slice(1).filter(c=>{const cx=(c.minx+c.maxx)/2,cy=(c.miny+c.maxy)/2;return cx<main.minx||cx>main.maxx||cy<main.miny||cy>main.maxy||c.area<main.area*0.01;}).map(c=>c.id);
+  }
+  // 補平缺口：mask=1 且目前透明的像素，由周圍不透明的像素顏色一圈一圈往內擴散補上（適合小缺口；缺口越大越模糊）。直接修改 data，回傳補了幾個像素。
+  function inpaint(data,w,h,mask,maxPasses=80){
+    const n=w*h,todo=new Uint8Array(n);let remain=0;
+    for(let p=0;p<n;p++)if(mask[p]&&data[p*4+3]<=8){todo[p]=1;remain++;}
+    const total=remain;
+    for(let pass=0;pass<maxPasses&&remain;pass++){
+      const upd=[];
+      for(let p=0;p<n;p++){
+        if(!todo[p])continue;const x=p%w,y=(p-x)/w;let r=0,g=0,b=0,k=0;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const q=yy*w+xx;if(todo[q]||data[q*4+3]<=8)continue;const wt=data[q*4+3]/255*(dx&&dy?0.7:1);r+=data[q*4]*wt;g+=data[q*4+1]*wt;b+=data[q*4+2]*wt;k+=wt;}}
+        if(k>0)upd.push(p,Math.round(r/k),Math.round(g/k),Math.round(b/k));
+      }
+      if(!upd.length)break;
+      for(let i=0;i<upd.length;i+=4){const p=upd[i];data[p*4]=upd[i+1];data[p*4+1]=upd[i+2];data[p*4+2]=upd[i+3];data[p*4+3]=255;todo[p]=0;remain--;}
+    }
+    return total-remain;
   }
   // 猜哪些區塊是文字或裝飾：最大的相連圖案當角色；其他區塊中心落在角色外框之外、或面積很小的都視為多餘。
   // 只能處理「和角色沒有相連」的文字；文字壓在角色上或與角色相連時分不開，需要手動修圖。回傳要擦掉的遮罩。
@@ -241,5 +310,5 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,partitionArt,guessTextRegions,inpaint,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });
