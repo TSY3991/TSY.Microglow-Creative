@@ -84,3 +84,12 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.equal(r.cells[0].data[((60-r.cells[0].y)*r.cells[0].width+(50-r.cells[0].x))*4+3],255);
   console.log('PASS background estimate survives a thin frame on the outer edge');
 }
+{
+  const W=400,H=200,xs=C.cuts(W,4),ys=C.cuts(H,2),red=[200,30,30,255];
+  const d=new Uint8ClampedArray(W*H*4);for(let i=0;i<W*H;i++)d.set([255,255,255,255],i*4);
+  const rect=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)d.set(red,(j*W+i)*4);};
+  rect(20,30,80,40);   // 格 0：右端剛好停在分割線前（x=99）的一長段，外面是背景 → 被切平
+  rect(320,30,40,40);rect(300,50,60,4);  // 格 3：只有 4 px 碰到左線 → 不算
+  const r=C.splitByContent(d,W,H,xs,ys,24);assert.deepEqual(r.clipped,[0]);
+  console.log('PASS clipped detection needs a long contiguous run along the cell edge');
+}

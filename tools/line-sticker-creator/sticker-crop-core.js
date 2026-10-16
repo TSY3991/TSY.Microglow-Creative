@@ -85,17 +85,22 @@
     const owner=p=>{const t=target[label[p]];if(t>=0)return t;const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
     for(let p=0;p<n;p++){if(!label[p]||target[label[p]]===-2)continue;const x=p%w,y=(p-x)/w,b=box[owner(p)];if(x<b.l)b.l=x;if(x>b.r)b.r=x;if(y<b.t)b.t=y;if(y>b.b)b.b=y;}
     // 圖案貼著所屬格子的邊緣、且邊緣外面就是背景（或圖片外）：母圖在這裡可能已被生成工具切平。
-    const edge=Array.from({length:cellCount},()=>[0,0,0,0]);
+    // 要有「連續一長段」貼邊才算被切平：手指、髮絲之類只在線上碰到幾個點的不算。
+    const lastX=new Int32Array(cellCount*4).fill(-9),lastY=new Int32Array(cellCount*4).fill(-9),run=new Int32Array(cellCount*4),best=new Int32Array(cellCount*4);
+    const hit=(a,side,x,y)=>{
+      const k=a*4+side,next=side<2?(lastY[k]===y-1&&lastX[k]===x):(lastY[k]===y&&lastX[k]===x-1);
+      run[k]=next?run[k]+1:1;lastX[k]=x;lastY[k]=y;if(run[k]>best[k])best[k]=run[k];
+    };
     for(let p=0;p<n;p++){
       if(!label[p]||target[label[p]]===-2)continue;
       const x=p%w,y=(p-x)/w,a=owner(p),cx=a%cols,cy=(a-cx)/cols,gone=q=>!label[q]||target[label[q]]===-2;
-      if(x===xs[cx]&&(x===0||gone(p-1)))edge[a][0]++;
-      if(x===xs[cx+1]-1&&(x===w-1||gone(p+1)))edge[a][1]++;
-      if(y===ys[cy]&&(y===0||gone(p-w)))edge[a][2]++;
-      if(y===ys[cy+1]-1&&(y===h-1||gone(p+w)))edge[a][3]++;
+      if(x===xs[cx]&&(x===0||gone(p-1)))hit(a,0,x,y);
+      if(x===xs[cx+1]-1&&(x===w-1||gone(p+1)))hit(a,1,x,y);
+      if(y===ys[cy]&&(y===0||gone(p-w)))hit(a,2,x,y);
+      if(y===ys[cy+1]-1&&(y===h-1||gone(p+w)))hit(a,3,x,y);
     }
     const clipped=[];
-    for(let a=0;a<cellCount;a++){const cx=a%cols,cy=(a-cx)/cols,limit=Math.max(6,0.04*Math.min(xs[cx+1]-xs[cx],ys[cy+1]-ys[cy]));if(Math.max(...edge[a])>=limit)clipped.push(a);}
+    for(let a=0;a<cellCount;a++){const cx=a%cols,cy=(a-cx)/cols,limit=Math.max(8,0.06*Math.min(xs[cx+1]-xs[cx],ys[cy+1]-ys[cy]));if(Math.max(best[a*4],best[a*4+1],best[a*4+2],best[a*4+3])>=limit)clipped.push(a);}
     const cells=box.map(b=>b.r<0?null:{x:b.l,y:b.t,width:b.r-b.l+1,height:b.b-b.t+1,data:null});
     cells.forEach(c=>{if(c)c.data=new Uint8ClampedArray(c.width*c.height*4);});
     for(let p=0;p<n;p++){
