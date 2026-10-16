@@ -1,0 +1,61 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const C=require('../sticker-core.js'),D=require('../sticker-data.js'),AI=require('../sticker-ai.js');
+function ready(count=24){const s=C.initial();Object.assign(s.settings,{source:'original',kind:'animal',style:'cute'});C.resize(s,count);return s;}
+
+test('所有既有角色風格進入整組與逐張母圖提示詞，參考圖不會取代風格',()=>{
+  for(const [style,name] of D.options.style.filter(([id])=>id)){
+    const s=ready();s.settings.style=style;if(style==='likeness')s.settings.source='photo';
+    if(style==='custom')s.settings.customStyle='淡彩水墨筆觸';
+    const snapshot=C.clone(s);
+    for(const platform of ['chatgpt','gemini','generic']){
+      s.settings.platform=platform;
+      for(const only of [undefined,1,2]){
+        const p=C.prompt(s,only);
+        if(style==='custom')assert.ok(p.includes(s.settings.customStyle));
+        else {assert.ok(p.includes(name));assert.ok(p.includes(D.styleGuides[style]),style);}
+        assert.match(p,/參考圖提供角色身份，不取代選定風格/);
+      }
+    }
+    s.settings.platform=snapshot.settings.platform;assert.deepEqual(s,snapshot);
+  }
+});
+
+test('全部職業／主題帶入領域詞彙，AI、預設與手動以及多張母圖皆不遺漏',()=>{
+  for(const [scene,info] of Object.entries(D.scenes).filter(([,v])=>v.job)){
+    assert.ok(info.terms,scene);
+    for(const mode of ['ai','preset','manual']){
+      const s=ready();Object.assign(s.settings,{scene,mode});const snapshot=C.clone(s);
+      for(const platform of ['chatgpt','gemini','generic']){
+        s.settings.platform=platform;
+        for(const only of [undefined,1,2]){
+          const p=C.prompt(s,only);assert.ok(p.includes(info.label));assert.ok(p.includes(info.terms),scene+' '+mode+' '+platform);
+        }
+      }
+      s.settings.platform=snapshot.settings.platform;assert.deepEqual(s,snapshot);
+      assert.ok(s.items.every(x=>!x.text&&!x.action&&!x.emotion)); // 詞彙不是固定台詞或自動補入
+    }
+  }
+});
+
+test('無文字與手寫內容保留，切換職業不偷改台詞，不把情境詞彙當要印的字',()=>{
+  const s=ready(8);s.settings.scene='job_temple';s.settings.textMode='none';
+  const p=C.prompt(s);assert.match(p,/參香、求籤、安太歲/);assert.match(p,/不產生任何文字/);assert.doesNotMatch(p,/要印的文字/);
+  s.settings.textMode='all';s.settings.mode='manual';s.items[0].text='保留我的原文';
+  const before=C.clone(s.items),q=C.prompt(s);assert.match(q,/要印的文字 "保留我的原文"/);assert.match(q,/不因情境換字/);assert.deepEqual(s.items,before);
+  s.settings.scene='job_photographer';assert.match(C.prompt(s),/快門、光圈、對焦/);assert.deepEqual(s.items,before);
+});
+
+test('網站 AI 與既有 Worker 契約相容，真的收到風格細節與職業詞彙；不帶句庫',async()=>{
+  const {validateInput,modelRequest}=await import('../worker/worker.mjs');
+  for(const [scene,info] of Object.entries(D.scenes).filter(([,v])=>v.job)){
+    const s=ready(8);s.settings.scene=scene;s.settings.style='handdrawn';
+    const input=AI.payload(s);assert.deepEqual(validateInput(input),input);
+    assert.ok(input.context.style.includes(D.styleGuides.handdrawn));assert.ok(input.context.scene.includes(info.terms));
+    assert.ok(input.context.scene.length<=1000&&input.context.style.length<=1000);
+    assert.ok(input.items.every(x=>x.text===''));
+    const upstream=modelRequest(input).contents[0].parts[0].text;assert.ok(upstream.includes(info.terms));
+    assert.ok(!Object.hasOwn(input.context,'lines')); // 沒有把預設台詞清單送入 AI
+  }
+  const free=ready(8);assert.equal(AI.payload(free).context.scene,'AI 自由發想');
+  assert.ok(!C.prompt(free).includes('情境詞彙（'));
+});

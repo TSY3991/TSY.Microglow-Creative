@@ -57,6 +57,43 @@
   ];
   for (const [id, scene] of Object.entries(scenes)) scene.group = id === "auto" ? "" : "通用情境";
   for (const [group, id, label, kw, lines] of careers) scenes["job_" + id] = { label, group, kw, job: true, lines: lines.split("|") };
+  // 創作詞彙只提供情境方向，不是要印的台詞，也不自動填進逐張內容。
+  const sceneTerms = {
+    office:"打卡、會議、報告、進度、加班、下班",boss:"交件、團隊、預算、決策、獎金、請假",
+    founder:"提案、產品、客戶、資金、合約、創業",admin:"公文、簽核、核銷、表單、歸檔、差勤",
+    engineer:"除錯、測試、維修、技術、紀錄、需求",software:"程式、Bug、Code Review、API、資料庫、部署",
+    ai:"模型、訓練、資料、GPU、推論、Token",pm:"需求、排程、風險、驗收、里程碑、交付",
+    uiux:"線稿、原型、動線、按鈕、Figma、可用性",designer:"色票、排版、提案、主視覺、交稿、送印",
+    teacher:"課本、作業、黑板、點名、考試、聯絡簿",professor:"論文、口試、研究、文獻、審稿、研討會",
+    tutor:"講義、解題、複習、模擬考、重點、考前衝刺",student:"作業、筆記、考試、報告、社團、放學",
+    grad:"論文、實驗、文獻、組會、投稿、畢業",researcher:"樣本、數據、分析、實驗、假設、同儕審查",
+    sales:"報價、拜訪、成交、簽約、訂單、交期",cs:"訂單、查詢、退款、專員、客訴、售後",
+    marketing:"文案、投放、轉換率、客群、素材、成效",social:"貼文、排程、留言、私訊、觸及、粉專",
+    accountant:"發票、單據、對帳、核銷、傳票、報稅",finance:"預算、現金流、成本、匯款、報表、收支",
+    restaurant:"訂位、帶位、點餐、出餐、加水、結帳",drink:"甜度、冰塊、珍珠、杯型、外送、取餐",
+    retail:"會員、尺寸、試穿、結帳、補貨、盤點",beauty:"預約、保養、面膜、防曬、膚況、放鬆",
+    hair:"剪髮、染髮、燙髮、洗頭、吹整、護髮",logistics:"出貨、配送、簽收、包裹、揀貨、追蹤單號",
+    driver:"導航、路況、乘車、安全帶、目的地、停車",youtuber:"拍攝、開箱、訂閱、直播、剪片、頻道",
+    creator:"合作、貼文、限時動態、業配、粉絲、創作",photographer:"快門、光圈、對焦、鏡頭、外拍、交片",
+    editor:"素材、時間軸、字幕、配樂、轉檔、渲染",media:"文章、寫稿、專欄、讀者、Podcast、更新",
+    aicreator:"生圖、提示詞、角色一致性、參考圖、修圖、額度",couple:"約會、想念、陪伴、擁抱、紀念日、關心",
+    family:"家人、回家、吃飯、家務、團聚、照顧",parent:"育兒、上學、故事、玩耍、洗澡、睡前",
+    pet:"毛孩、零食、散步、玩耍、撒嬌、餵食",temple:"參香、求籤、安太歲、祈福、供花、供桌、遶境、謝神",
+    club:"社課、社員、報名、簽到、幹部、成果發表"
+  };
+  for (const [id, terms] of Object.entries(sceneTerms)) scenes["job_" + id].terms = terms;
+  const styleGuides = {
+    likeness:"依參考圖保留五官比例、臉型與辨識特徵，以插畫方式簡化細節，不換成泛用娃娃臉。",
+    cute:"頭身比例偏可愛、五官圓潤、肢體簡潔、表情清楚；保留同一角色的辨識特徵。",
+    line:"以少量簡潔線條表現角色與表情，減少細節和繁複紋理，小尺寸仍清楚可辨。",
+    healing:"使用柔和配色、溫柔表情與手繪筆觸，輪廓圓潤，氣氛輕鬆親切。",
+    comic:"誇大眉眼、嘴形與肢體反應，用有張力的表情與姿勢製造幽默，每格依內容變化。",
+    clean:"輪廓乾淨清楚、線條粗細一致、色塊簡潔，縮小仍能辨識五官與手勢。",
+    jpsoft:"以柔和低彩度配色、圓潤造型、輕柔表情呈現日系軟萌氣質，避免過密細節。",
+    handdrawn:"保留自然手繪線條與細膩筆觸，色彩溫暖；紙感只放在圖案內的材質，不把透明背景變成紙底。",
+    meme:"以誇張反應、戲劇性手勢與職場迷因的幽默氣質呈現；情境與台詞仍依所選主題，不固定套用上班梗。",
+    festival:"以可愛圓潤造型和喜氣配色呈現，節慶裝飾依情境適量加入，不擅自固定為某一節日。"
+  };
   const options = {
     source: [["","請選擇角色來源"],["original","原創角色"],["photo","照片／圖片參考（人物、動物、物件）"]],
     kind: [["","請選擇角色類型"],["human","人物"],["animal","動物"],["object","擬人化物件"]],
@@ -89,7 +126,7 @@
     layoutMode:"auto",spacing:"wide",background:"transparent",backgroundColor:"#ffffff",
     platform:"chatgpt"
   };
-  const api = { scenes, common, options, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
+  const api = { scenes, styleGuides, common, options, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StickerData = api;
 })(typeof window !== "undefined" ? window : globalThis);

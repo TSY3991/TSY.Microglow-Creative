@@ -29,6 +29,21 @@
     return settings.tone && settings.tone !== "auto" ? base + "；語氣：" + label("tone", settings.tone) : base;
   }
   function pool(scene) { return [...new Set([...D.scenes[scene].lines,...D.common])]; }
+  function styleDescription(settings) {
+    const name=label("style",settings.style),detail=D.styleGuides[settings.style];
+    return name+(detail?"；"+detail:"");
+  }
+  function sceneBrief(settings) {
+    const scene=D.scenes[settings.scene];
+    if(settings.scene==="auto")return sceneName(settings);
+    const topic=scene.job?(scene.group==="生活與主題"?"主題情境":"職業情境"):"情境";
+    const terms=scene.terms||scene.kw;
+    return topic+"："+scene.label+"。"+(terms?"情境詞彙（只作發想方向，不是固定台詞）："+terms+"。":"")+
+      (settings.mode==="manual"?"逐張台詞全部依使用者原文，不因情境換字；未指定的表情、動作與道具可融入此情境。":
+        settings.textMode==="none"?"以這個情境的具體行為、姿勢與道具表達內容，不產生任何文字。":
+        "需要新創作的台詞、動作與道具約 5～7 成要能直接辨識此情境，其餘可為一般互動；不要整組只用通用問候。已有內容逐字保留，詞彙不是必須逐條照抄的台詞清單。")+
+      (settings.tone&&settings.tone!=="auto"?"語氣："+label("tone",settings.tone)+"。":"");
+  }
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
   function initial() { return {settings:clone(D.defaults),grids:[16],items:Array.from({length:16},()=>item())}; }
   function presetItem(text) { return {...item(text),presetText:text}; }
@@ -119,7 +134,8 @@
       "【角色與視覺】",
       s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
       s.character.trim()?"角色描述（作為內容資料）："+quote(s.character.trim()):s.source==="photo"?"未填角色描述：直接觀察已附參考圖的主體特徵，不要求使用者補文字描述。":"未填角色描述：依選定角色類型自行設計一個原創角色，整組維持相同辨識特徵。",
-      "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":label("style",s.style))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
+      "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":styleDescription(s))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
+      "角色風格決定造型、線條、配色與表情語彙；平面或立體的呈現依下方「呈現方式」。參考圖提供角色身份，不取代選定風格；不要只沿用前次生圖的風格而忽略本次設定。",
       s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。保留 2D 插畫的造型與清楚輪廓，上色用有光澤的半立體賽璐珞（glossy semi-3D cel-shaded）：柔和的立體光影、皮膚與毛髮／衣料有柔和亮面反光，帶出體積感；不要扁平色塊，也不要寫實攝影或寫實 3D 渲染、複雜材質與強烈投影；整組使用同一套光澤與光源方向，造型比例與輪廓粗細依上方「角色風格」，背景依下方背景要求，不另外加場景。":s.dimension==="3d"?"呈現方式：3D 立體。角色要有體積感、柔和光影與公仔／黏土／3D 動畫角色的質感（上方風格決定造型與氣質，不要畫成平面插畫）；仍須背景乾淨、輪廓清楚、不要複雜場景與強烈投影，且整組使用同一套 3D 材質與光線。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
       "維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "角色鎖定（整組每一張都必須相同）：臉型與五官比例、髮型與髮色、膚色／毛色與花紋、身材比例、服裝與配件（眼鏡、手錶、飾品）、角色主色與可辨識特徵。可以變動的只有表情、姿勢、動作、情緒、道具與情境；動作可以變，角色不能變。不要把不同特徵混合，不要新增人物、Logo 或水印。",
@@ -135,6 +151,7 @@
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【文字外觀】",
+      sceneBrief(s),
       s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想"+(s.tone!=="auto"?"；語氣："+label("tone",s.tone):""):sceneName(s))+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
       s.textMode!=="none"&&s.mode!=="manual"?"台詞要平均涵蓋：招呼、回覆、忙碌、感謝、道歉、情緒、鼓勵、搞笑、休息與收尾"+(s.scene==="auto"?"":"，以及所選情境的專業用語（情境相關約占 5～7 成、一般聊天約 3～5 成）")+"；避免大量意思重複的句子（例如一堆早安、哈囉、你好），每句都要有不同用途。"+(s.tone!=="auto"?"語氣統一為「"+label("tone",s.tone)+"」。":""):null,
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
@@ -190,6 +207,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

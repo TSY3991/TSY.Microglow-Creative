@@ -286,6 +286,9 @@
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled)status("已補入 "+filled+" 句；原有台詞未改動。");}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
+    if(key==="scene"&&previous!==el.value&&state.settings.mode==="ai"&&state.items.some(x=>C.hasText(state,x)&&x.text.trim())){
+      status("情境已改為「"+D.scenes[state.settings.scene].label+"」，已有台詞會保留。要依新情境重新創作，請按「將台詞交給 AI 重新創作」，再安排 AI 或產生提示詞；不會自動改掉原文。");
+    }
   }));
   $("settings-form").addEventListener("submit",e=>e.preventDefault());
   document.querySelectorAll("[data-step]").forEach(el=>el.addEventListener("click",()=>go(Number(el.dataset.step))));
@@ -337,6 +340,17 @@
     if(!confirm("只清除這個工具的瀏覽器草稿？目前頁面內容與其他網站資料會保留。"))return;
     try{localStorage.removeItem(storageKey);saveEnabled=false;$("save-local").checked=false;$("save-status").textContent="瀏覽器草稿已清除，目前頁面內容保留。";}
     catch{$("save-status").textContent="無法清除；請至瀏覽器網站資料設定處理。";}
+  });
+  $("reset-all").addEventListener("click",()=>{
+    if(!confirm("清除全部設定並重新開始？角色、台詞、參考圖、母圖、裁切／修圖進度與本工具的瀏覽器草稿都會清除；電腦上的原始圖片與已下載檔案不受影響。"))return;
+    try{localStorage.removeItem(storageKey);}
+    catch{status("無法清除瀏覽器草稿，尚未重新開始。請先匯出設定，或到瀏覽器的網站資料設定處理後再試。");return;}
+    clearAI();clearTimeout(missTimer);saveEnabled=false;
+    clearReference();document.querySelectorAll("form").forEach(form=>form.reset());
+    document.querySelectorAll('input[type="file"]').forEach(input=>input.value="");
+    // 重新建立頁面以釋放圖片、裁切、修圖與下載快取，也使尚未完成的操作無法套回新設定。
+    try{history.replaceState(null,"",location.pathname+location.search);}catch{}
+    window.scrollTo(0,0);location.reload();
   });
   $("export").addEventListener("click",()=>{
     const blob=new Blob([JSON.stringify(C.serialize(state),null,2)+"\n"],{type:"application/json;charset=utf-8"});

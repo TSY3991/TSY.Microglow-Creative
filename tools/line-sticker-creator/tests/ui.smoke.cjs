@@ -144,6 +144,21 @@ let browser,ws,server;
     const summaryMetric=await E("({width:innerWidth,scroll:document.documentElement.scrollWidth})");check(width+"px 摘要無橫向溢出",summaryMetric.scroll<=summaryMetric.width);
     await E("document.querySelector('[data-step=\"1\"]').click()");
   }
+  check("頁面上方提供清除全部按鈕",await E("!!document.querySelector('.topbar #reset-all')"));
+  await set("bulk","重設前的批次內容");await click("save-local");
+  await E("document.getElementById('ai-consent').checked=true");
+  await E("(async()=>{const c=document.createElement('canvas');c.width=c.height=800;const g=c.getContext('2d');g.fillStyle='#008080';for(let i=0;i<16;i++)g.fillRect(i%4*200+40,Math.floor(i/4)*200+40,120,120);const blob=await new Promise(r=>c.toBlob(r));await StickerCrop.set(0,new File([blob],'reset-test.png',{type:'image/png'}));document.getElementById('tab-crop').click();StickerCrop.run();})()");
+  for(let i=0;i<100;i++){if(await E("document.querySelectorAll('.crop-sticker').length===16&&!document.getElementById('crop-run').disabled"))break;await delay(50);}
+  check("重設測試先建立參考圖、草稿與裁切結果",await E("!document.getElementById('reference-preview').hidden&&!!localStorage.getItem('microglow:line-sticker-creator:v1')&&StickerCrop.count()===1&&document.querySelectorAll('.crop-sticker').length===16"));
+  await E("window.confirm=()=>false");await click("reset-all");
+  check("取消全部清除時，設定、參考圖、母圖與草稿都保留",await E("document.getElementById('bulk').value==='重設前的批次內容'&&!document.getElementById('reference-preview').hidden&&StickerCrop.count()===1&&!!localStorage.getItem('microglow:line-sticker-creator:v1')"));
+  await E("window.confirm=()=>true;window.__removeItem=Storage.prototype.removeItem;Storage.prototype.removeItem=function(){throw Error('test storage blocked')}");await click("reset-all");
+  check("草稿清除失敗時明說未重設，原資料保留",await E("document.getElementById('status').textContent.includes('尚未重新開始')&&document.getElementById('bulk').value==='重設前的批次內容'&&StickerCrop.count()===1"));
+  await E("Storage.prototype.removeItem=window.__removeItem");await click("reset-all");await delay(350);await loaded();
+  check("確認後回第一步與預設設定，批次文字及 AI 同意一併歸零",await E("document.getElementById('source').value===''&&document.getElementById('style').value===''&&document.getElementById('count').value==='16'&&document.getElementById('scene').value==='auto'&&document.getElementById('bulk').value===''&&!document.getElementById('ai-consent').checked&&document.getElementById('step-counter').textContent==='1／4'"));
+  check("全部清除移除母圖、裁切、提示詞、參考圖與本站草稿，保留其他工具資料",await E("StickerCrop.count()===0&&document.querySelectorAll('.crop-sticker').length===0&&document.getElementById('prompt-area').hidden&&document.getElementById('prompt-output').value===''&&document.getElementById('reference-preview').hidden&&!localStorage.getItem('microglow:line-sticker-creator:v1')&&localStorage.getItem('unrelated-tool')==='keep'&&location.hash===''&&document.getElementById('tab-prompt').getAttribute('aria-selected')==='true'"));
+  await set("source","original");await set("kind","animal");await set("style","cute");await click("next");await click("next");await click("next");await click("generate");
+  check("全部清除後仍能重新設定並產生提示詞",await E("!document.getElementById('prompt-area').hidden&&document.getElementById('prompt-output').value.includes('共 16 張')"));
   const shots=process.argv[2];
   if(shots){
     fs.mkdirSync(shots,{recursive:true});

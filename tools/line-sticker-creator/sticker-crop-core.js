@@ -106,6 +106,8 @@
       const piece=new Int32Array(n).fill(-1),cellOf=p=>{const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
       for(const [id,list] of pts){
         let maxDt=0;for(const p of list)if(dt[p]>maxDt)maxDt=dt[p];
+        // 每個明顯有這塊圖案的格子都要有標記；只找到部分格子的主體就停止，會把漏掉的整張歸給鄰格。
+        const needed=[];for(let c=0;c<cellCount;c++)if(stats[id].counts[c]>=stats[id].size*0.05)needed.push(c);
         let marked=false;
         for(const f of [0.2,0.3,0.4,0.55,0.7]){
           const T=maxDt*f,pieces=[];
@@ -119,7 +121,8 @@
             pieces.push({members,cell:cellOf(Math.round(sy/members.length)*w+Math.round(sx/members.length))});
           }
           const big=pieces.filter(x=>x.members.length>=Math.max(30,cellArea*0.01));
-          if(big.length>=2&&new Set(big.map(x=>x.cell)).size>=2){
+          const represented=new Set(big.map(x=>x.cell));
+          if(big.length>=2&&represented.size>=2&&needed.every(c=>represented.has(c))){
             for(const pc of big)for(const q of pc.members){own[q]=pc.cell;dist[q]=0;push(0,q);}
             marked=true;
           }

@@ -149,3 +149,21 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.equal(filled>=100,true);assert.equal(f[(95*W+95)*4+3],255);assert.ok(Math.abs(f[(95*W+95)*4]-200)<=3&&Math.abs(f[(95*W+95)*4+1]-30)<=3);
   console.log('PASS partitionArt separates text from character at the neck; inpaint fills small gaps');
 }
+{
+  // 多格相連時，不能只因找到兩個主體就停止：較細的第三格也必須拿到自己的圖案。
+  const W=400,H=100,xs=C.cuts(W,4),ys=[0,H];
+  for(const joined of [false,true]){
+    const d=new Uint8ClampedArray(W*H*4).fill(255);
+    const rect=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)d.set([40,90,150,255],(j*W+i)*4);};
+    rect(10,25,80,50);rect(110,25,80,50);rect(210,47,80,6);
+    if(joined){rect(90,48,20,4);rect(190,48,20,4);}
+    const original=new Uint8ClampedArray(d),r=C.splitByContent(d,W,H,xs,ys,24);
+    assert.deepEqual(d,original); // 原始母圖不受影響
+    for(const k of [0,1,2])assert.ok(r.cells[k],`cell ${k+1} must keep its artwork`);
+    assert.equal(r.cells[3],null); // 真正沒有圖案的格子仍保持空白
+    const c=r.cells[2],x=250,y=50;
+    assert.ok(x>=c.x&&x<c.x+c.width&&y>=c.y&&y<c.y+c.height);
+    assert.equal(c.data[((y-c.y)*c.width+x-c.x)*4+3],255);
+  }
+  console.log('PASS every significant cell gets a marker, including thin joined art; empty cells stay empty');
+}
