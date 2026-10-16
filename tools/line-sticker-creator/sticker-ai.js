@@ -72,7 +72,10 @@
         '目前指定的 Gemini 模型無法使用，請管理者檢查模型設定。':'目前指定的 Gemini 模型無法使用，請管理者確認模型名稱與可用性。原有內容保留。',
         'Gemini 暫時無法使用。':'Gemini 目前暫時無法使用，請稍後再試。原有內容保留；本工具未自動重試。'
       };
-      let detail;try{const body=await response.json();if(response.status===503&&typeof body?.error==='string'&&Object.hasOwn(known,body.error))detail=known[body.error];}catch{}
+      let detail;try{const body=await response.json();if(response.status===503&&typeof body?.error==='string'&&Object.hasOwn(known,body.error))detail=known[body.error];
+        const categories={REQUEST_REJECTED:'Gemini 拒絕本次請求，目前無法進一步分類原因，請將診斷碼提供管理者。',FREE_TIER_REGION:'Gemini 回報目前地區無法使用免費方案；本工具不會自動啟用付費。',REGION_UNSUPPORTED:'Gemini 拒絕目前服務連線地區的請求，請管理者檢查服務執行地區與 Google 使用條件。',BILLING_REQUIRED:'Gemini 回報帳務或方案條件未滿足；本工具不會自動啟用付費。',CREDENTIAL:'Gemini 回報驗證設定問題，請管理者檢查金鑰權限。',SCHEMA:'Gemini 拒絕目前的輸出格式設定，請管理者檢查回應結構。',OUTPUT_LIMIT:'Gemini 回報輸出長度設定不符，請管理者檢查模型限制。',INPUT_LIMIT:'Gemini 回報輸入內容超過模型限制，請縮短描述。',MODEL:'Gemini 回報模型設定不符，請管理者檢查模型可用性。'};
+        const d=body?.diagnostic;if(response.status===503&&d?.version===1&&typeof d.category==='string'&&Object.hasOwn(categories,d.category))detail=categories[d.category]+'原有內容保留。診斷：'+d.category+(/^[A-Z]{3}$/.test(d.edge||'')?'／'+d.edge:'');
+      }catch{}
       throw new Error(detail || message[response.status] || "AI 服務未完成安排，原有內容保留，請稍後再試。");
     }
     return suggestions(await response.json(), input);

@@ -47,7 +47,7 @@ test("Worker 僅接受允許來源與路由，preflight 不觸發 Gemini", async
   assert.equal((await handle(request(input, { Origin: "https://evil.example" }), env, upstream)).status, 403);
   assert.equal((await handle(request(input, { Origin: "" }), env, upstream)).status, 403);
   assert.equal((await handle(new Request("https://worker.example/other", { headers: { Origin: origin } }), env, upstream)).status, 404);
-  const options = await handle(request(null, {}, "OPTIONS"), env, upstream); assert.equal(options.status, 204); assert.equal(options.headers.get("Access-Control-Allow-Origin"), origin);
+  const options = await handle(request(null, {}, "OPTIONS"), env, upstream); assert.equal(options.status, 204); assert.equal(options.headers.get('X-Sticker-Diagnostic'),'1'); assert.equal(options.headers.get("Access-Control-Allow-Origin"), origin);
   assert.equal((await handle(request(null, {}, "GET"), env, upstream)).status, 405); assert.equal(calls, 0);
 });
 test("Worker 未啟用或缺少金鑰與限流 binding 時不呼叫 Gemini", async () => {
@@ -140,3 +140,12 @@ test('服務 503 區分模型、權限與設定失敗，只顯示白名單原因
   global.fetch=async()=>new Response('not-json secret-debug-value',{status:503});await assert.rejects(()=>AI.request('https://test.example/arrange',input),/尚未啟用或暫時無法使用/);
  }finally{global.fetch=old;}
 });
+
+test('Worker 安全診斷分類 400 原因，不回傳原始訊息、金鑰或請求內容',async()=>{
+ const {upstreamDiagnostic,handle}=await worker;
+ for(const [message,category]of [['User location is not supported for the API use.','REGION_UNSUPPORTED'],['Free tier is not available in your country.','FREE_TIER_REGION'],['Billing must be enabled','BILLING_REQUIRED'],['Invalid response_schema field','SCHEMA'],['max_output_tokens exceeds limit','OUTPUT_LIMIT'],['Input token limit exceeded','INPUT_LIMIT']]){const d=upstreamDiagnostic({error:{status:'INVALID_ARGUMENT',message}},400,'HKG');assert.equal(d.category,category);assert.equal(d.edge,'HKG');assert.equal(d.status,'INVALID_ARGUMENT');}
+ const secret='private-key-and-user-prompt',r=await handle(request(AI.payload(state(40))),environment(),async()=>Response.json({error:{status:'INVALID_ARGUMENT',message:secret,details:[{fieldViolations:[{field:'generation_config.response_schema',description:secret}]}]}},{status:400}));
+ const out=await r.json();assert.equal(r.status,503);assert.equal(out.diagnostic.category,'REQUEST_REJECTED');assert.deepEqual(out.diagnostic.fields,['responseSchema']);assert.ok(!JSON.stringify(out).includes(secret));
+ const malformed=upstreamDiagnostic({error:{status:secret,message:7,details:{fieldViolations:secret}}},400,secret);assert.equal(malformed.status,'UNKNOWN');assert.ok(!Object.hasOwn(malformed,'edge'));
+});
+test('前端顯示地區與格式診斷，不呈現未列入白名單的內容',async()=>{const old=global.fetch;try{for(const [category,part]of [['REGION_UNSUPPORTED','服務連線地區'],['SCHEMA','輸出格式'],['untrusted-secret','請求格式']]){global.fetch=async()=>Response.json({error:'Gemini 無法接受目前的請求設定。',diagnostic:{version:1,category,edge:'HKG',message:'raw-secret'}},{status:503});await assert.rejects(()=>AI.request('https://test.example/arrange',AI.payload(state())),e=>e.message.includes(part)&&!e.message.includes('untrusted-secret')&&!e.message.includes('raw-secret'));}}finally{global.fetch=old;}});
