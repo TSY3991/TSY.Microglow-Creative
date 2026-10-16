@@ -47,6 +47,7 @@
       draw();
     }
     const sizeLabel=el('label','筆刷');const size=el('input');size.type='range';size.min=4;size.max=80;size.value=24;size.setAttribute('aria-label','筆刷大小');sizeLabel.append(size);
+    size.addEventListener('input',()=>draw()); // 調整粗細後立即更新範圍圈，不必再移動滑鼠。
     const undoBtn=mk('復原',()=>{const prev=undo.pop();if(prev){const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(prev,0,0);parts=null;if(tool==='region')ensureParts();draw();}undoBtn.disabled=!undo.length;},'','復原上一筆');undoBtn.disabled=true;
     const resetBtn=mk('還原',()=>{undo.push(clone(work));undoBtn.disabled=false;const g=work.getContext('2d');g.clearRect(0,0,W,H);g.drawImage(original,0,0);parts=null;if(tool==='region')ensureParts();draw();},'','還原成原本裁出的樣子');
     const levelLabel=el('label','切細');const levelInput=el('input');levelInput.type='range';levelInput.min=1;levelInput.max=5;levelInput.value=3;levelInput.setAttribute('aria-label','切細程度');levelLabel.append(levelInput);levelLabel.hidden=true;

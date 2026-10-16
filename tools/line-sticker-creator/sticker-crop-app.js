@@ -8,11 +8,15 @@
   const canvas=(w,h)=>{const c=el('canvas');c.width=w;c.height=h;return c;};
   const message=text=>{$('crop-status').textContent=text;};
   const names=list=>list.map(n=>n).join('、');
+  const brand=window.StickerBrand(()=>{
+    touched();$('crop-review').checked=false;controls();
+    if(stickers.length)renderResults();
+  });
   // keep=true：只因去白底設定而重裁，保留每張已調整的大小與位置；其餘變更（母圖、網格、張數）一律歸零。
   function invalidate(keep){
     revision++;clearPrepared();mainNote='';
     if(keep){if(stickers.length)adjust=stickers.map(s=>({zoom:s.zoom,dx:s.dx,dy:s.dy}));}else{adjust=[];selected=0;}
-    stickers=[];$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;
+    stickers=[];$('crop-brand-preview').getContext('2d').clearRect(0,0,1110,960);$('crop-brand-preview-hint').textContent='裁切後顯示預覽。';$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;
   }
   // 只有四個角落都不透明才提醒；角色剛好碰到格角時可能誤報，因此僅提示、不阻擋。
   function opaqueCorners(source){const w=source.width,h=source.height,ctx=source.getContext('2d');return [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].every(([x,y])=>ctx.getImageData(x,y,1,1).data[3]>=250);}
@@ -29,11 +33,13 @@
     const smart=$('crop-mode').value==='smart';
     $('crop-mode').disabled=busy;$('crop-white').disabled=busy||smart;$('crop-strength').disabled=busy||(!smart&&!$('crop-white').checked);
     document.querySelectorAll('#crop-mothers button,#crop-mothers select,#crop-mothers input,#crop-results button,#crop-results input').forEach(e=>{e.disabled=busy;});
-    $('crop-download').disabled=busy||!stickers.length||blank.length>0||!checked;
+    document.querySelectorAll('#crop-brand input,#crop-brand button').forEach(e=>{e.disabled=busy;});
+    $('crop-download').disabled=busy||brand.loading()||!stickers.length||blank.length>0||!checked;
     for(const id of ['crop-save-zip','crop-share'])$(id).disabled=busy||!prepared||!checked;
     let hint='';
     if(!busy){
-      if(!mothers.length)hint='請先加入母圖。';
+      if(brand.loading())hint='商標讀取中，請稍候。';
+      else if(!mothers.length)hint='請先加入母圖。';
       else if(!stickers.length)hint='請先按「確認分割線並裁切」。';
       else if(blank.length)hint='第 '+names(blank)+' 張是空白格（全透明），請調整母圖分割線後重新裁切。';
       else if(!checked)hint='請先勾選上方的逐張檢查，才能打包下載。';
@@ -174,7 +180,7 @@
     }catch(error){incoming.forEach(m=>m.image.close());if(token===uploadRevision)message('未加入圖片，原圖保留：'+error.message);}
     finally{controls();}
   };
-  function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);}}
+  function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);if(W===370)brand.draw(target);}}
   function openEditor(s,i,opener){
     const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
     window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:s.source,at:s.at,auto:s.auto||null,remove:s.remove,threshold:s.threshold,opener,label:String(i+1).padStart(2,'0')+'.png',
@@ -224,9 +230,14 @@
         if(s.edited)box.append(el('p','這張已手動修圖；重新裁切會回到自動結果。'));
       }
       const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;mainNote='';special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
-      for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);touched();};l.append(input);box.append(l);}
+      for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);updateBrandPreview();touched();};l.append(input);box.append(l);}
       box.append(button('還原大小與位置',()=>{s.zoom=100;s.dx=s.dy=0;renderResults();touched();}));$('crop-results').append(box);
-    });special();
+    });special();updateBrandPreview();
+  }
+  function updateBrandPreview(){
+    const target=$('crop-brand-preview'),ctx=target.getContext('2d'),first=$('crop-results').querySelector('canvas');ctx.clearRect(0,0,target.width,target.height);
+    if(first){ctx.imageSmoothingEnabled=false;ctx.drawImage(first,0,0,target.width,target.height);}
+    $('crop-brand-preview-hint').textContent=first?'這是輸出像素的 3 倍檢查，放大不會增加原始細節。':'裁切後顯示預覽。';
   }
   function hardCut(m,r,remove,threshold){
     const c=canvas(r.width,r.height),ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(m.image,r.x,r.y,r.width,r.height,0,0,r.width,r.height);
@@ -282,7 +293,7 @@
   $('crop-review').onchange=controls;
   $('crop-clear').onclick=()=>{if(!mothers.length)return;if(!confirm('移除此頁全部母圖與裁切預覽？原始檔案不受影響。'))return;uploadRevision++;mothers.forEach(m=>m.image.close());mothers=[];invalidate();renderMothers();controls();message('已移除母圖；電腦上的原始檔案保留。');};
   $('crop-download').onclick=async()=>{
-    if(busy||!$('crop-review').checked||stickers.length!==plan.count||stickers.some(s=>!s.source))return;busy=true;controls();const token=revision,entries=[];
+    if(busy||brand.loading()||!$('crop-review').checked||stickers.length!==plan.count||stickers.some(s=>!s.source))return;busy=true;controls();const token=revision,entries=[];
     try{
       const jobs=[['main.png',forMain(stickers[selected]),240,240,10],['tab.png',forMain(stickers[selected]),96,74,4],...stickers.map((s,i)=>[String(i+1).padStart(2,'0')+'.png',s,370,320,10])];
       for(const [name,s,w,h,pad] of jobs){if(token!==revision)throw Error('圖片設定已變更，請重新檢查後下載。');const c=canvas(w,h);renderSticker(s,c,w,h,pad);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('圖片編碼失敗。');entries.push({name,data:C.png72(new Uint8Array(await blob.arrayBuffer()))});c.width=c.height=1;}

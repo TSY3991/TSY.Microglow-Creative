@@ -15,24 +15,25 @@
   <title>LINE 貼圖創作工具｜微光創作工具</title>
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
-  <link rel="stylesheet" href="./sticker-creator.css?v=20261015e">
+  <link rel="stylesheet" href="./sticker-creator.css?v=20261016a">
   <script defer src="./sticker-data.js?v=20261016b"></script>
   <script defer src="./sticker-core.js?v=20261016b"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261016b"></script>
-  <script defer src="./sticker-app.js?v=20261016c"></script>
-  <link rel="stylesheet" href="./sticker-crop.css?v=20261016d">
+  <script defer src="./sticker-app.js?v=20261016d"></script>
+  <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261016f"></script>
-  <script defer src="./sticker-crop-editor.js?v=20261016h"></script>
-  <script defer src="./sticker-crop-app.js?v=20261016m"></script>
-  <script defer src="./sticker-tabs.js?v=20261015b"></script>
+  <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
+  <script defer src="./sticker-brand.js?v=20261016a"></script>
+  <script defer src="./sticker-crop-app.js?v=20261016n"></script>
+  <script defer src="./sticker-tabs.js?v=20261016a"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
 <body class="line-sticker-tool">
   <a class="skip-link" href="#creator">跳到創作設定</a>
   <main class="sticker-shell">
     <nav class="topbar" aria-label="返回導覽">
-      <div class="nav-links"><a class="return-link" href="../../">回創作工具大廳</a><a class="return-link" href="https://tsy3991.github.io/TSY.Microglow-Website/">入口網站</a><button type="button" class="button" id="reset-all">清除全部</button></div>
+      <div class="nav-links"><a class="return-link" href="../../">回創作工具大廳</a><a class="return-link" href="https://tsy3991.github.io/TSY.Microglow-Website/">入口網站</a></div>
     </nav>
     <header class="hero">
       <div class="hero-copy"><p class="eyebrow">Microglow Creative</p><h1>LINE 貼圖創作工具</h1><p class="hero-description">讓日常的小表情，<br>成為聊天裡的一點微光。</p><p class="hero-caption">設定角色、寫下台詞，把你的想法整理成生圖提示詞。</p><span class="draft-badge"><span class="status-dot" aria-hidden="true"></span>提示詞產生工具・一般靜態貼圖</span></div>
@@ -54,6 +55,7 @@
     <noscript><p class="notice">請啟用 JavaScript 以使用設定、摘要與提示詞功能。</p></noscript>
     <div id="creator" class="creator" hidden>
       <nav class="step-nav" aria-label="創作步驟"><button type="button" data-step="1"><span>1</span>角色與風格</button><button type="button" data-step="2"><span>2</span>台詞與文字</button><button type="button" data-step="3"><span>3</span>母圖設定</button><button type="button" data-step="4"><span>4</span>摘要與提示詞</button></nav>
+      <div class="creator-actions"><button type="button" class="button" id="reset-all">清除全部</button></div>
       <div class="workspace">
         <div class="settings-column">
           <p id="validation" class="notice error-notice" role="alert" hidden></p>
@@ -159,10 +161,6 @@
           <p id="status" class="status-message" role="status" aria-live="polite"></p>
           <div class="step-actions"><button type="button" class="button" id="previous">上一步</button><span id="step-counter"></span><button type="button" class="button primary" id="next">下一步 →</button></div>
         </div>
-        <aside class="preview-column">
-          <section class="panel preview-panel"><div class="preview-heading"><p class="section-kicker">YOUR STICKER SET</p><span class="outline-badge" id="live-step">步驟 1／4</span></div><h2>這一組的小計畫</h2><div id="live-summary"></div><p class="gentle-note">角色辨識度保持一致，<br>每張的心情與動作各有變化。</p></section>
-          <section class="panel save-panel" aria-labelledby="save-title"><h2 id="save-title">留住這份設定</h2><label class="check-field"><input type="checkbox" id="save-local"><span>儲存在目前瀏覽器</span></label><p class="field-hint">只保存文字設定，不含照片；取消勾選會移除這個工具的瀏覽器草稿。</p><div class="save-actions"><button type="button" id="export" class="button">匯出設定檔</button><button type="button" id="import" class="button">匯入設定檔</button><input type="file" id="import-file" accept=".json,application/json" hidden><button type="button" id="clear" class="button">清除瀏覽器草稿</button></div><p id="save-status" class="field-hint" role="status"></p></section>
-        </aside>
       </div>
     </div>
     <section id="sticker-crop" class="panel crop-panel tab-off" aria-labelledby="crop-title">
@@ -188,6 +186,15 @@
       <div id="crop-match" class="field-hint" role="status" hidden><p id="crop-match-text"></p><button id="crop-match-fix" class="button small primary" type="button" hidden></button></div>
       <div class="inline-actions"><button id="crop-run" class="button primary" type="button">確認分割線並裁切</button><button id="crop-clear" class="button" type="button">移除全部母圖</button></div>
       <p id="crop-status" role="status" aria-live="polite">尚未加入母圖。</p>
+      <fieldset id="crop-brand" class="brand-panel"><legend>品牌／商標小標記（選填）</legend>
+        <p class="field-hint">輸入品牌名稱或加入商標，也可以兩者並用。網站會縮小後自動找下方較平整的位置，低透明度合成到每張編號貼圖；main.png、tab.png 保留原樣。標記只在本機處理，不會上傳。</p>
+        <label class="field" for="crop-brand-text"><span>品牌名稱（最多 24 字）</span><input id="crop-brand-text" type="text" maxlength="24" placeholder="例如：微光創作室" autocomplete="off"></label>
+        <label class="field" for="crop-brand-file"><span>商標圖片</span><input id="crop-brand-file" type="file" accept="image/png,image/webp,image/jpeg"><span class="field-hint">建議透明 PNG；最多 5 MB／400 萬像素。</span></label>
+        <label class="field" for="crop-brand-opacity"><span>標記明顯程度 <output id="crop-brand-level" for="crop-brand-opacity">18%</output></span><input id="crop-brand-opacity" type="range" min="8" max="35" value="18"></label>
+        <button id="crop-brand-clear" class="button small" type="button">移除品牌標記</button><p id="crop-brand-status" role="status" class="field-hint"></p>
+        <p class="field-hint">預設較淡，請展開下方放大預覽確認；下載後放大可能有助辨識，但不保證平常看不到或放大一定能辨認，也不能防止移除或盜用。品牌設定與圖片不會存入設定檔。</p>
+        <details><summary>放大檢查第一張貼圖（3 倍）</summary><canvas id="crop-brand-preview" width="1110" height="960" aria-label="第一張貼圖三倍放大預覽"></canvas><p id="crop-brand-preview-hint" class="field-hint">裁切後顯示預覽。</p></details>
+      </fieldset>
       <div id="crop-results" class="crop-results" data-backdrop="dark"></div>
       <div id="crop-special" class="crop-special" data-backdrop="dark"></div>
       <label class="check-field"><input id="crop-review" type="checkbox"><span>我已逐張檢查角色、文字、透明背景與留白，並確認主要圖片與標籤圖片。</span></label>
@@ -198,6 +205,7 @@
       <p class="notice">下載後請解壓檢查，再至 LINE Creators Market 上傳。此工具不會代為發布，也不保證通過審核。一般靜態貼圖可用 8／16／24／32／40 張；透明背景與圖片內容仍需人工確認。</p>
       <p class="field-hint">規格依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>，查證日期：2026-10-14。</p>
     </section>
+    <section class="panel save-panel" aria-labelledby="save-title"><h2 id="save-title">留住這份設定</h2><label class="check-field"><input type="checkbox" id="save-local"><span>儲存在目前瀏覽器</span></label><p class="field-hint">只保存文字設定，不含照片；取消勾選會移除這個工具的瀏覽器草稿。</p><div class="save-actions"><button type="button" id="export" class="button">匯出設定檔</button><button type="button" id="import" class="button">匯入設定檔</button><input type="file" id="import-file" accept=".json,application/json" hidden><button type="button" id="clear" class="button">清除瀏覽器草稿</button></div><p id="save-status" class="field-hint" role="status"></p></section>
     <footer><span>微光創作工具</span><p>一點靈感，一點微光。</p><span>試用版・生成效果需自行核對</span></footer>
   </main>
 </body>

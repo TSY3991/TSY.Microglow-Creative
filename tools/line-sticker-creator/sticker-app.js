@@ -183,10 +183,6 @@
   function live() {
     window.StickerCropPlan={count:state.settings.count,grids:state.grids.slice()};
     window.dispatchEvent(new Event("sticker-crop-plan"));
-    const s=state.settings,box=$("live-summary");box.replaceChildren();
-    const rows=[["角色來源",s.source?C.label("source",s.source):"尚未選擇"],["角色風格",s.style?C.label("style",s.style):"尚未選擇"],["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["貼圖總張數",s.count+" 張"],["母圖分配",state.grids.map(x=>x===16?"4×4":"4×2").join(" ＋ ")||"尚未設定"],["文字模式",C.label("textMode",s.textMode)]];
-    if(s.source==="photo")rows.push(["參考圖",referenceUrl?"已選擇・需另外附到 AI":"請在 AI 對話附圖"]);
-    for(const [title,value]of rows){const row=node("div",undefined,"live-row");row.append(node("span",title),node("strong",value));box.append(row);}
   }
   function summary() {
     const box=$("summary");box.replaceChildren();
@@ -248,7 +244,7 @@
       if(Number(el.dataset.step)===step)el.setAttribute("aria-current","step");else el.removeAttribute("aria-current");
     });
     $("previous").disabled=step===1;$("next").hidden=step===4;
-    $("step-counter").textContent=step+"／4";$("live-step").textContent="步驟 "+step+"／4";
+    $("step-counter").textContent=step+"／4";
     if(step===4){summary();renderMulti();}
     $("title-"+step).focus();save();
   }
@@ -270,7 +266,7 @@
         try{$("prompt-output").value=C.prompt(state);$("copy-feedback").textContent="";status(key==="platform"?"已改用「"+C.label("platform",el.value)+"」版本，提示詞已更新，請重新複製。":"已改為「"+C.label("dimension",el.value).split("：")[0]+"」，提示詞已更新，請重新複製。");}
         catch{invalidate();return;}
       }
-      save();if(step===4)renderMulti();return;
+      save();if(step===4){summary();renderMulti();}return;
     }
     if(key==="count"){
       const before=state.items.length;C.resize(state,Number(el.value));renderItems();renderGrids();controls();
@@ -347,7 +343,12 @@
     catch{status("無法清除瀏覽器草稿，尚未重新開始。請先匯出設定，或到瀏覽器的網站資料設定處理後再試。");return;}
     clearAI();clearTimeout(missTimer);saveEnabled=false;
     clearReference();document.querySelectorAll("form").forEach(form=>form.reset());
-    document.querySelectorAll('input[type="file"]').forEach(input=>input.value="");
+    // 頁底儲存區與裁切區不在表單內，也要清掉瀏覽器可能在重新載入時還原的欄位值。
+    document.querySelectorAll("input,textarea,select").forEach(control=>{
+      if(control.tagName==="SELECT"){control.selectedIndex=0;for(const option of control.options)if(option.defaultSelected)option.selected=true;}
+      else if(control.type==="checkbox"||control.type==="radio")control.checked=control.defaultChecked;
+      else control.value=control.type==="file"?"":control.defaultValue;
+    });
     // 重新建立頁面以釋放圖片、裁切、修圖與下載快取，也使尚未完成的操作無法套回新設定。
     try{history.replaceState(null,"",location.pathname+location.search);}catch{}
     window.scrollTo(0,0);location.reload();

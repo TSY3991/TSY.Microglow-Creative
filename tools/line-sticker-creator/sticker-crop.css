@@ -44,8 +44,6 @@
 .line-sticker-tool .editor-bar label{display:flex;gap:.4rem;align-items:center;font-size:.85rem}
 .line-sticker-tool .editor-bar input[type=range]{width:90px;accent-color:#197c70}
 .line-sticker-tool .editor-canvas{display:block;max-width:100%;height:auto;margin:.4rem auto;border-radius:8px;touch-action:none;cursor:crosshair;background:#26333a}
-.line-sticker-tool .editor-canvas.tool-erase{cursor:url(./cursor-eraser.png) 8 24,crosshair}
-.line-sticker-tool .editor-canvas.tool-restore{cursor:url(./cursor-restore.png) 16 16,crosshair}
 .line-sticker-tool .editor-canvas.tool-frame{cursor:default}
 .line-sticker-tool .editor-canvas.tool-frame.hit-move{cursor:move}
 .line-sticker-tool .editor-canvas.tool-frame.hit-ns{cursor:ns-resize}
@@ -54,3 +52,7 @@
 .line-sticker-tool .editor-canvas.tool-frame.hit-nesw{cursor:nesw-resize}
 .line-sticker-tool .editor-canvas.tool-region{cursor:pointer}
 .line-sticker-tool .editor-canvas.tool-fill{cursor:crosshair}
+
+.line-sticker-tool .brand-panel{min-width:0;margin:1.2rem 0;padding:1rem;border:1px solid var(--line);border-radius:16px}
+.line-sticker-tool .brand-panel input[type=range]{width:100%;accent-color:var(--teal);min-height:28px;padding:0;border:0;background:transparent}
+.line-sticker-tool #crop-brand-preview{display:block;width:100%;max-width:1110px;height:auto;background:#26333a}

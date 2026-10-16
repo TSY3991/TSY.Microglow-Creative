@@ -24,12 +24,4 @@
   window.addEventListener('hashchange',()=>{show(wanted());$('tab-prompt').closest('nav').scrollIntoView({block:'start'});});
   $('crop-to-prompt').addEventListener('click',()=>{choose('prompt',false);$('tab-prompt').closest('nav').scrollIntoView({block:'start'});});
   show(wanted());
-  // 右側欄（小計畫＋儲存設定）只在整欄放得進視窗時才固定；太矮時固定會讓下半截（匯出／匯入按鈕）卡在畫面外、捲不到。
-  const column=document.querySelector('.preview-column');
-  if(column){
-    const fit=()=>column.classList.toggle('is-sticky',window.innerWidth>850&&column.offsetHeight+40<=window.innerHeight);
-    window.addEventListener('resize',fit);
-    if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(column);
-    fit();
-  }
 })();

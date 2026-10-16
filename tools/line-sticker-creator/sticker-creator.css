@@ -31,13 +31,14 @@
 .line-sticker-tool .art-star { position:absolute; color:var(--teal); font-size:1.8rem; }.line-sticker-tool .star-one { right:16%; top:0; }.line-sticker-tool .star-two { left:10%; bottom:44px; color:var(--gold); }
 .line-sticker-tool .art-caption { position:absolute; bottom:2px; width:100%; text-align:center; color:var(--teal-dark); font-size:.76rem; letter-spacing:.1em; }
 .line-sticker-tool .creator { margin-top:26px; }
+.line-sticker-tool .creator-actions { display:flex; justify-content:flex-end; margin:0 0 16px; }
+.line-sticker-tool .save-panel { margin-top:24px; min-width:0; overflow-wrap:anywhere; }
 .line-sticker-tool .step-nav { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:22px; }
 .line-sticker-tool .step-nav button { display:flex; gap:9px; align-items:center; justify-content:center; min-height:60px; padding:12px 8px; border:1px solid var(--line); border-radius:12px; color:var(--ink-soft); background:var(--panel); font:inherit; font-size:.86rem; cursor:pointer; }
 .line-sticker-tool .step-nav button span { display:grid; place-items:center; width:25px; height:25px; border-radius:50%; background:var(--panel-soft); font-size:.75rem; flex-shrink:0; }
 .line-sticker-tool .step-nav [aria-current] { background:var(--teal-dark); color:white; border-color:var(--teal-dark); }.line-sticker-tool .step-nav [aria-current] span { color:var(--teal-dark); background:white; }
-.line-sticker-tool .workspace { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:22px; align-items:start; }
-.line-sticker-tool .settings-column,.line-sticker-tool .preview-column { min-width:0; }
-.line-sticker-tool .preview-column { display:grid; gap:18px; }
+.line-sticker-tool .workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:22px; align-items:start; }
+.line-sticker-tool .settings-column { min-width:0; }
 .line-sticker-tool .panel { padding:26px; background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:0 4px 16px rgba(42,47,45,.035); }
 .line-sticker-tool .panel-heading { display:flex; gap:12px; align-items:center; margin-bottom:24px; }
 .line-sticker-tool .section-symbol { display:grid; place-items:center; width:40px; height:40px; flex-shrink:0; color:var(--teal-dark); background:var(--teal-soft); border-radius:12px; font-size:1.4rem; }
@@ -121,7 +122,6 @@
 .line-sticker-tool .mode-tabs button[aria-selected="true"] { background:var(--teal-dark); color:white; border-color:var(--teal-dark); }
 @media(max-width:600px) { .line-sticker-tool .mode-tabs button { font-size:.82rem; padding:8px 6px; } }
 .line-sticker-tool .why-split ul { margin:8px 0 0; padding-left:1.2em; line-height:1.8; font-size:.85rem; }
-.line-sticker-tool .preview-column.is-sticky { position:sticky; top:20px; }
 .line-sticker-tool .multi-flow { border:1px solid var(--line); border-radius:16px; padding:16px; margin:16px 0; background:var(--panel); }
 .line-sticker-tool .multi-flow h3 { margin:0 0 6px; font-size:1.05rem; }
 .line-sticker-tool .mother-steps { list-style:none; padding:0; margin:14px 0; display:grid; gap:14px; }
