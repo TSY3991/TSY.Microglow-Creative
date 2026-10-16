@@ -145,6 +145,34 @@ let browser,ws,server;
   await E("document.querySelector('.crop-mother .inline-actions button').click()");
   await run(8);
   check('智慧分割：背景被去除、狀態說明依圖案歸格',await E("document.querySelector('.crop-sticker canvas').getContext('2d').getImageData(0,0,1,1).data[3]===0&&document.getElementById('crop-status').textContent.includes('依圖案歸格')"));
+  // 直接在母圖預覽上拖分割線
+  await E("document.querySelector('.crop-mother-preview').scrollIntoView({block:'center'})");
+  await E("(()=>{window.__ptr=(el,type,fx,fy)=>{const r=el.getBoundingClientRect();el.dispatchEvent(new PointerEvent(type,{clientX:r.left+r.width*fx,clientY:r.top+r.height*fy,pointerId:1,pointerType:'mouse',button:0,bubbles:true}));};})()");
+  const before=Number(await E("document.querySelector('.cut-row input[type=number]').value"));
+  await E("(()=>{const c=document.querySelector('.crop-mother-preview'),v=Number(document.querySelector('.cut-row input[type=number]').value),f=v/window.StickerCrop.info(0).width;window.__ptr(c,'pointermove',f,0.5);window.__ptr(c,'pointerdown',f,0.5);window.__ptr(c,'pointermove',f+0.05,0.5);window.__ptr(c,'pointerup',f+0.05,0.5);})()");
+  const after=Number(await E("document.querySelector('.cut-row input[type=number]').value"));
+  check('在母圖預覽上按住分割線拖曳，數字與預覽即時跟著移動，並清除舊裁切結果',after>before&&await E("document.querySelectorAll('.crop-sticker').length===0"));
+  await run(8);
+  // 修圖：擦掉、補回
+  check('每張貼圖有修圖按鈕',await E("[...document.querySelectorAll('.crop-sticker button')].some(b=>b.textContent.includes('修圖'))"));
+  await E("[...document.querySelectorAll('.crop-sticker button')].find(b=>b.textContent.includes('修圖')).click()");await delay(200);
+  check('開啟修圖視窗，有擦掉／補回／復原／還原／完成',await E("(()=>{const o=document.querySelector('.editor-overlay');const t=o.textContent;return !!o&&t.includes('擦掉')&&t.includes('補回被切掉的部分')&&t.includes('復原上一筆')&&t.includes('還原成原本裁出的樣子')&&t.includes('完成');})()"));
+  const alphaAt="(()=>{const c=document.querySelector('.crop-sticker canvas'),g=c.getContext('2d');let n=0;const d=g.getImageData(0,0,370,320).data;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
+  const visibleBefore=await E(alphaAt);
+  await E("(()=>{const c=document.querySelector('.editor-canvas');document.querySelector('.editor-overlay input[type=range]').value='80';for(const fx of [0.3,0.4,0.5,0.6,0.7]){window.__ptr(c,fx===0.3?'pointerdown':'pointermove',fx,0.5);}window.__ptr(c,'pointerup',0.7,0.5);})()");
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click()");await delay(300);
+  check('擦掉後完成：貼圖的可見像素變少，並標示已修圖',await E(alphaAt)<visibleBefore&&await E("document.getElementById('crop-status').textContent.includes('已修圖')&&!document.querySelector('.editor-overlay')&&document.querySelector('.crop-sticker').textContent.includes('已手動修圖')"));
+  check('修圖使已打包檔案失效（可再打包）',await E("document.getElementById('crop-ready').hidden"));
+  await E("[...document.querySelectorAll('.crop-sticker button')].find(b=>b.textContent.includes('修圖')).click()");await delay(200);
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='還原成原本裁出的樣子').click()");
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click()");await delay(300);
+  check('還原成原本裁出的樣子後，可見像素回到修圖前',await E(alphaAt)===visibleBefore);
+  await E("[...document.querySelectorAll('.crop-sticker button')].find(b=>b.textContent.includes('修圖')).click()");await delay(200);
+  await E("(()=>{[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='補回被切掉的部分').click();const c=document.querySelector('.editor-canvas');for(const fx of [0.02,0.1,0.9,0.98])window.__ptr(c,fx===0.02?'pointerdown':'pointermove',fx,0.5);window.__ptr(c,'pointerup',0.98,0.5);})()");
+  await E("[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click()");await delay(300);
+  check('補回：從母圖把被切掉的區域塗回，仍可完成',await E("!document.querySelector('.editor-overlay')&&document.getElementById('crop-status').textContent.includes('已修圖')"));
+  await E("document.getElementById('crop-run').click()");for(let i=0;i<60;i++){await delay(100);if(await E("document.querySelectorAll('.crop-sticker').length===8&&!document.getElementById('crop-run').disabled"))break;}
+  check('重新裁切回到自動結果（修圖標示消失）',await E("!document.querySelector('.crop-sticker').textContent.includes('已手動修圖')"));
   for(const width of [320,390,768,1280]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 裁切預覽無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
   check('母圖處理未呼叫 AI',responses.every(r=>!r.url.includes('workers.dev')));
   await send('Emulation.setUserAgentOverride',{userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Line/14.0.0'});await send('Page.reload',{ignoreCache:true});await loaded();await E('window.confirm=()=>true');await set('count','8');

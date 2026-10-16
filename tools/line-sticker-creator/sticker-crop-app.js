@@ -122,7 +122,8 @@
       grid.onchange=()=>{m.rows=Number(grid.value);resetCuts(m);invalidate();renderMothers();controls();};gridLabel.append(grid);info.append(gridLabel);
       const previewScale=Math.min(600/m.image.width,450/m.image.height),c=canvas(Math.max(1,Math.round(m.image.width*previewScale)),Math.max(1,Math.round(m.image.height*previewScale)));c.className='crop-mother-preview';c.setAttribute('aria-label','母圖與分割線預覽（紅線為分割線，藍線為正在調整）');drawMother(m,c);view.append(c);
       const details=el('details');details.open=true;details.append(el('summary','調整分割線（拖曳時預覽即時移動）'));
-      const tip=el('p','藍色線是正在調整的那一條；數字單位是像素，數字越大，直線越往右、橫線越往下。智慧分割時分割線只用來決定圖案歸哪一格；硬切時就是實際切開的位置。');tip.className='field-hint';details.append(tip);const groups=el('div');groups.className='cut-groups';details.append(groups);
+      const tip=el('p','藍色線是正在調整的那一條；用滑鼠可以直接在上方母圖拖曳線條（手機請用滑桿與箭頭）；數字單位是像素，數字越大，直線越往右、橫線越往下。智慧分割時分割線只用來決定圖案歸哪一格；硬切時就是實際切開的位置。');tip.className='field-hint';details.append(tip);const groups=el('div');groups.className='cut-groups';details.append(groups);
+      const lineList=[];
       for(const [axis,title] of [['x','直線'],['y','橫線']]){const group=el('div');group.className='cut-group';group.append(el('h4',axis==='x'?'直線（左右切，用 ← → 移動）':'橫線（上下切，用 ↑ ↓ 移動）'));groups.append(group);m[axis].slice(1,-1).forEach((value,k)=>{
         const idx=k+1,size=axis==='x'?m.image.width:m.image.height,name='母圖 '+(i+1)+' '+title+' '+idx;
         const row=el('div'),range=el('input'),num=el('input');row.className='cut-row';
@@ -131,13 +132,32 @@
         const apply=v=>{const next=Math.min(m[axis][idx+1]-1,Math.max(m[axis][idx-1]+1,Math.round(v)));m[axis][idx]=next;range.value=next;num.value=next;invalidate();drawMother(m,c,{axis,index:idx});controls();scheduleAdvice();};
         const done=()=>{num.value=m[axis][idx];range.value=m[axis][idx];drawMother(m,c);message(name+' 已調整為 '+m[axis][idx]+' px，請重新裁切。');};
         range.oninput=()=>apply(Number(range.value));num.oninput=()=>{if(num.value!==''&&Number.isFinite(Number(num.value)))apply(Number(num.value));};
-        range.onchange=done;num.onchange=done;
+        range.onchange=done;num.onchange=done;lineList.push({axis,idx,apply,done});
         const nudge=(sym,tip,d)=>{const b=el('button',sym);b.type='button';b.className='button small nudge';b.title=tip+'（'+name+'）';b.setAttribute('aria-label',name+tip);b.onclick=()=>{apply(m[axis][idx]+d);message(name+' 目前在 '+m[axis][idx]+' px，請重新裁切。');};return b;};
         const top=el('div');top.className='cut-top';
         top.append(el('span',title+' '+idx),nudge(axis==='x'?'←':'↑',axis==='x'?'向左移 1 像素':'向上移 1 像素',-1),num,nudge(axis==='x'?'→':'↓',axis==='x'?'向右移 1 像素':'向下移 1 像素',1));
         row.append(top,range);group.append(row);
       });}
       info.append(details);
+      // 直接在母圖預覽上拖分割線（滑鼠／觸控筆；手指觸控會和捲動衝突，仍用滑桿與箭頭）。
+      let drag=null;
+      const near=ev=>{
+        const r=c.getBoundingClientRect(),px=ev.clientX-r.left,py=ev.clientY-r.top;let best=null,gap=10;
+        for(const L of lineList){const v=m[L.axis][L.idx],d=Math.abs(L.axis==='x'?px-v/m.image.width*r.width:py-v/m.image.height*r.height);if(d<gap){gap=d;best=L;}}
+        return best;
+      };
+      const toValue=(ev,L)=>{const r=c.getBoundingClientRect();return L.axis==='x'?(ev.clientX-r.left)/r.width*m.image.width:(ev.clientY-r.top)/r.height*m.image.height;};
+      c.addEventListener('pointermove',ev=>{
+        if(ev.pointerType==='touch'||busy)return;
+        if(drag){drag.apply(toValue(ev,drag));return;}
+        const L=near(ev);c.classList.toggle('line-x',!!L&&L.axis==='x');c.classList.toggle('line-y',!!L&&L.axis==='y');
+      });
+      c.addEventListener('pointerdown',ev=>{
+        if(ev.pointerType==='touch'||busy||ev.button!==0)return;
+        const L=near(ev);if(!L)return;drag=L;try{c.setPointerCapture(ev.pointerId);}catch{}ev.preventDefault();
+      });
+      const release=()=>{if(!drag)return;const L=drag;drag=null;L.done();};
+      c.addEventListener('pointerup',release);c.addEventListener('pointercancel',release);
       const actions=el('div');actions.className='inline-actions';actions.append(button('平均分割',()=>{resetCuts(m);invalidate();renderMothers();controls();}),button('前移',()=>{if(i){[mothers[i-1],mothers[i]]=[m,mothers[i-1]];invalidate();renderMothers();controls();}}),button('後移',()=>{if(i<mothers.length-1){[mothers[i+1],mothers[i]]=[m,mothers[i+1]];invalidate();renderMothers();controls();}}),button('移除',()=>{uploadRevision++;m.image.close();mothers.splice(i,1);invalidate();renderMothers();controls();}));info.append(actions);
       box.append(info,view);$('crop-mothers').append(box);
     });
@@ -155,9 +175,18 @@
     finally{controls();}
   };
   function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);}}
+  function openEditor(s,i,opener){
+    const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
+    window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:s.source,at:s.at,auto:s.auto||null,remove:s.remove,threshold:s.threshold,opener,label:String(i+1).padStart(2,'0')+'.png',
+      onDone:(canvas,at)=>{if(!s.auto)s.auto={source:s.source,at:s.at};s.source=canvas;s.at=at;s.edited=true;s.opaque=false;s.joined=false;s.clipped=false;renderResults();touched();message(String(i+1).padStart(2,'0')+'.png 已修圖；重新按「確認分割線並裁切」會回到自動結果。');}});
+  }
   function special(){ $('crop-special').replaceChildren();if(!stickers[selected]?.source)return;for(const [name,w,h,pad] of [['main.png',240,240,10],['tab.png',96,74,4]]){const box=el('div'),c=canvas(w,h);box.append(el('strong',name+'｜'+w+'×'+h),c);renderSticker(stickers[selected],c,w,h,pad);$('crop-special').append(box);}}
   function renderResults(){
-    $('crop-results').replaceChildren();stickers.forEach((s,i)=>{const box=el('article');box.className='crop-sticker';box.append(el('h3',String(i+1).padStart(2,'0')+'.png'));const c=canvas(370,320);c.setAttribute('aria-label','貼圖 '+(i+1)+' 預覽');renderSticker(s,c);box.append(c);if(!s.source)box.append(el('p','此格全透明，請調整母圖分割線後重新裁切。'));else if(s.joined)box.append(el('p','圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；請檢查，必要時重新生成這一格。'));else if(s.opaque)box.append(el('p','四個角落都不透明，背景可能還在。請用深色底確認；LINE 要求透明背景。'));if(s.clipped&&s.source)box.append(el('p','圖案貼著格子邊緣，母圖在這裡可能已被切掉。請檢查；必要時回提示詞頁重新複製提示詞（已自動加寬留白），重新生成這張母圖。'));
+    $('crop-results').replaceChildren();stickers.forEach((s,i)=>{const box=el('article');box.className='crop-sticker';box.append(el('h3',String(i+1).padStart(2,'0')+'.png'));const c=canvas(370,320);c.setAttribute('aria-label','貼圖 '+(i+1)+' 預覽');renderSticker(s,c);box.append(c);if(!s.source)box.append(el('p','此格全透明，請調整母圖分割線後重新裁切。'));else if(s.joined)box.append(el('p','圖案和相鄰貼圖相連，已順著圖案形狀分開；請檢查，必要時按下面的「修圖」擦掉多餘或補回被切掉的部分。'));else if(s.opaque)box.append(el('p','四個角落都不透明，背景可能還在。請用深色底確認；LINE 要求透明背景。'));if(s.clipped&&s.source)box.append(el('p','圖案貼著格子邊緣，母圖在這裡可能已被切掉。請檢查；必要時回提示詞頁重新複製提示詞（已自動加寬留白），重新生成這張母圖。'));
+      if(s.source&&s.at){
+        const edit=button(s.edited?'修圖（已修改過）':'修圖：擦掉多餘／補回被切掉的部分',()=>openEditor(s,i,edit));edit.className='button small';box.append(edit);
+        if(s.edited)box.append(el('p','這張已手動修圖；重新裁切會回到自動結果。'));
+      }
       const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
       for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);touched();};l.append(input);box.append(l);}
       box.append(button('還原大小與位置',()=>{s.zoom=100;s.dx=s.dy=0;renderResults();touched();}));$('crop-results').append(box);
@@ -168,7 +197,7 @@
     const pixels=ctx.getImageData(0,0,r.width,r.height);if(remove){pixels.data.set(C.eraseWhite(pixels.data,r.width,r.height,threshold));ctx.putImageData(pixels,0,0);}
     const b=C.bounds(pixels.data,r.width,r.height);let source=null,opaque=false;
     if(b){source=canvas(b.width,b.height);source.getContext('2d',{willReadFrequently:true}).drawImage(c,b.x,b.y,b.width,b.height,0,0,b.width,b.height);opaque=opaqueCorners(source);}
-    c.width=c.height=1;return {source,opaque};
+    c.width=c.height=1;return {source,opaque,b};
   }
   $('crop-match-fix').onclick=()=>{const cells=mothers.reduce((n,m)=>n+m.rows*4,0);if(C.counts.includes(cells))window.dispatchEvent(new CustomEvent('sticker-set-count',{detail:{count:cells}}));};
   $('crop-run').onclick=async()=>{
@@ -188,18 +217,18 @@
           message('分析母圖 '+(j+1)+'／'+mothers.length+'…');await new Promise(requestAnimationFrame);
           const full=canvas(m.image.width,m.image.height),fctx=full.getContext('2d',{willReadFrequently:true});fctx.drawImage(m.image,0,0);
           const image=fctx.getImageData(0,0,full.width,full.height);full.width=full.height=1;
-          split=C.splitByContent(image.data,m.image.width,m.image.height,m.x,m.y,tol);
+          split=C.splitByContent(image.data,m.image.width,m.image.height,m.x,m.y,tol);m.outside=split?split.outside:null;
           if(!split)notes.push('母圖 '+(j+1)+' 的背景不是單一顏色（有漸層、陰影或花紋），智慧去背無法使用，這張已改依分割線切開；要去掉白底可把「裁切方式」改成硬切並勾選「去除白色背景」');
         }
         for(let k=0;k<geometry[j].length;k++){
           if(token!==revision)throw Error('設定已變更，請重新裁切。');
-          let source=null,opaque=false,joined=false;
+          let source=null,opaque=false,joined=false,at=null,b=null;
           if(split){
             const cell=split.cells[k];
-            if(cell){source=canvas(cell.width,cell.height);source.getContext('2d').putImageData(new ImageData(cell.data,cell.width,cell.height),0,0);}
+            if(cell){source=canvas(cell.width,cell.height);source.getContext('2d').putImageData(new ImageData(cell.data,cell.width,cell.height),0,0);at={x:cell.x,y:cell.y};}
             joined=split.merged.includes(k);
-          }else({source,opaque}=hardCut(m,geometry[j][k],remove,threshold));
-          const a=adjust[results.length]||{zoom:100,dx:0,dy:0};results.push({source,opaque,joined,clipped:clipSet.has(k),zoom:a.zoom,dx:a.dx,dy:a.dy});
+          }else{({source,opaque,b}=hardCut(m,geometry[j][k],remove,threshold));if(b)at={x:geometry[j][k].x+b.x,y:geometry[j][k].y+b.y};}
+          const a=adjust[results.length]||{zoom:100,dx:0,dy:0};results.push({source,opaque,joined,clipped:clipSet.has(k),mother:j,rect:geometry[j][k],at,remove,threshold,zoom:a.zoom,dx:a.dx,dy:a.dy});
           if(results.length%8===0||results.length===plan.count)message('裁切中 '+results.length+'／'+plan.count);
           await new Promise(requestAnimationFrame);
         }
@@ -207,7 +236,7 @@
       if(token!==revision)throw Error('設定已變更，請重新裁切。');
       stickers=results;if(selected>=results.length)selected=0;$('crop-review').checked=false;renderResults();
       const kept=adjust.some(a=>a.zoom!==100||a.dx||a.dy),opaque=opaqueList(),joined=results.map((x,n)=>x.joined?n+1:0).filter(Boolean),clippedList=results.map((x,n)=>x.clipped&&x.source?n+1:0).filter(Boolean);
-      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，只能依分割線切開，可能切到圖；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(clippedList.length?'第 '+names(clippedList)+' 張的圖案貼著格子邊緣，母圖可能已被切掉；':'')+(notes.length?notes.join('；')+'；':'')+'請用深淺預覽逐張檢查，確認後下載。');
+      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，已順著圖案形狀分開，請檢查，必要時用「修圖」調整；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(clippedList.length?'第 '+names(clippedList)+' 張的圖案貼著格子邊緣，母圖可能已被切掉；':'')+(notes.length?notes.join('；')+'；':'')+'請用深淺預覽逐張檢查，確認後下載。');
     }catch(error){message(error.message);}finally{busy=false;controls();}
   };
   $('crop-mode').onchange=()=>{modeChosen=true;adviceButtons();controls();if(stickers.length){invalidate(true);controls();message('裁切方式已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};

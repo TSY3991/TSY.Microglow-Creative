@@ -21,9 +21,10 @@
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015c"></script>
   <script defer src="./sticker-app.js?v=20261016a"></script>
-  <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
-  <script defer src="./sticker-crop-core.js?v=20261016b"></script>
-  <script defer src="./sticker-crop-app.js?v=20261016f"></script>
+  <link rel="stylesheet" href="./sticker-crop.css?v=20261016a">
+  <script defer src="./sticker-crop-core.js?v=20261016c"></script>
+  <script defer src="./sticker-crop-editor.js?v=20261016b"></script>
+  <script defer src="./sticker-crop-app.js?v=20261016i"></script>
   <script defer src="./sticker-tabs.js?v=20261015b"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
@@ -183,7 +184,7 @@
         <label class="field" for="crop-strength"><span>背景辨識強度</span><select id="crop-strength"><option value="248">保守（預設）・只去接近背景色，保留白色描邊</option><option value="240">一般・稍微寬鬆</option><option value="230">較強・更寬鬆，可能吃掉淺色描邊</option></select></label>
         <label class="field" for="crop-backdrop"><span>預覽底色（不會印在輸出圖片）</span><select id="crop-backdrop"><option value="dark">深色（建議，容易看出白邊）</option><option value="checker">透明棋盤格</option><option value="light">淺色</option></select></label>
       </div>
-      <p class="field-hint">智慧分割會先找出母圖的單一背景色，去掉與圖片邊緣相連的背景，再把相連的圖案（角色、文字、效果）整塊分給所屬格子，圖案超出分割線也不會被切開；只有兩張貼圖的圖案彼此相連時才依分割線切開，並會在該張標示。它辨識不了衣服、描邊與文字：與背景相連的白色內容可能一起被去掉，封閉的白底可能殘留，背景不是單一顏色時會改用硬切。硬切則完全依分割線，保留原圖背景不代表已符合透明背景要求。請以深淺底逐張確認。</p>
+      <p class="field-hint">智慧分割會先找出母圖的單一背景色，去掉與圖片邊緣相連的背景，再把相連的圖案（角色、文字、效果）整塊分給所屬格子，圖案超出分割線也不會被切開；兩張貼圖的圖案彼此相連時，會從各格中央的圖案往外分，順著最細的連接處切開（不是直線），並在該張標示；切不好可按卡片上的「修圖」擦掉多餘、或把被切掉的部分補回。它辨識不了衣服、描邊與文字：與背景相連的白色內容可能一起被去掉，封閉的白底可能殘留，背景不是單一顏色時會改用硬切。硬切則完全依分割線，保留原圖背景不代表已符合透明背景要求。請以深淺底逐張確認。</p>
       <div id="crop-match" class="field-hint" role="status" hidden><p id="crop-match-text"></p><button id="crop-match-fix" class="button small primary" type="button" hidden></button></div>
       <div class="inline-actions"><button id="crop-run" class="button primary" type="button">確認分割線並裁切</button><button id="crop-clear" class="button" type="button">移除全部母圖</button></div>
       <p id="crop-status" role="status" aria-live="polite">尚未加入母圖。</p>

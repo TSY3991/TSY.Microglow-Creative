@@ -82,7 +82,68 @@
       else{target[id]=-1;for(let c=0;c<cellCount;c++)if(counts[c]>=size*0.05)merged.add(c);}
     }
     const box=Array.from({length:cellCount},()=>({l:w,t:h,r:-1,b:-1}));
-    const owner=p=>{const t=target[label[p]];if(t>=0)return t;const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
+    // 相連的圖案（兩張貼圖的圖案碰在一起）：不沿直線切，而是從每格中央的圖案往外「長」，在最細的連接處交會，
+    // 這樣切口會順著圖案的形狀走。每一步的成本與該處厚度成反比（厚處便宜、細處貴），所以分界落在頸部。
+    const own=new Int16Array(n).fill(-1);
+    if(target.some(t=>t===-1)){
+      const INF=1e9,dt=new Int32Array(n);
+      const mergedPx=p=>label[p]&&target[label[p]]===-1;
+      for(let p=0;p<n;p++)dt[p]=mergedPx(p)?INF:0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){const p=y*w+x;if(!dt[p])continue;let v=dt[p];
+        if(x===0||y===0)v=Math.min(v,3);
+        if(x)v=Math.min(v,dt[p-1]+3);if(y)v=Math.min(v,dt[p-w]+3);if(x&&y)v=Math.min(v,dt[p-w-1]+4);if(x<w-1&&y)v=Math.min(v,dt[p-w+1]+4);dt[p]=v;}
+      for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){const p=y*w+x;if(!dt[p])continue;let v=dt[p];
+        if(x===w-1||y===h-1)v=Math.min(v,3);
+        if(x<w-1)v=Math.min(v,dt[p+1]+3);if(y<h-1)v=Math.min(v,dt[p+w]+3);if(x<w-1&&y<h-1)v=Math.min(v,dt[p+w+1]+4);if(x&&y<h-1)v=Math.min(v,dt[p+w-1]+4);dt[p]=v;}
+      const cost=p=>1+Math.round(30/(1+dt[p]/3));
+      const dist=new Int32Array(n).fill(INF),hk=[],hv=[];
+      const push=(k,v)=>{let i=hk.length;hk.push(k);hv.push(v);while(i>0){const j=(i-1)>>1;if(hk[j]<=k)break;hk[i]=hk[j];hv[i]=hv[j];i=j;}hk[i]=k;hv[i]=v;};
+      const pop=()=>{const k0=hk[0],v0=hv[0],k=hk.pop(),v=hv.pop();if(hk.length){let i=0;for(;;){let c=2*i+1;if(c>=hk.length)break;if(c+1<hk.length&&hk[c+1]<hk[c])c++;if(hk[c]>=k)break;hk[i]=hk[c];hv[i]=hv[c];i=c;}hk[i]=k;hv[i]=v;}return [k0,v0];};
+      // 種子（標記）：把每塊相連圖案逐步「侵蝕」（只留下夠厚的部分），直到斷成兩塊以上、且分屬不同格，
+      // 這些厚實的主體就是各格的標記；細細的連接處在侵蝕時先斷掉，所以切口會落在頸部。
+      const pts=new Map();
+      for(let p=0;p<n;p++)if(mergedPx(p)){const id=label[p];if(!pts.has(id))pts.set(id,[]);pts.get(id).push(p);}
+      const piece=new Int32Array(n).fill(-1),cellOf=p=>{const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
+      for(const [id,list] of pts){
+        let maxDt=0;for(const p of list)if(dt[p]>maxDt)maxDt=dt[p];
+        let marked=false;
+        for(const f of [0.2,0.3,0.4,0.55,0.7]){
+          const T=maxDt*f,pieces=[];
+          for(const start of list){
+            if(dt[start]<=T||piece[start]>=0)continue;
+            const members=[start];piece[start]=pieces.length;let sx=0,sy=0;
+            for(let k=0;k<members.length;k++){
+              const q=members[k],qx=q%w,qy=(q-qx)/w;sx+=qx;sy+=qy;
+              for(let dy=-1;dy<=1;dy++){const yy=qy+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=qx+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(label[r]===id&&dt[r]>T&&piece[r]<0){piece[r]=pieces.length;members.push(r);}}}
+            }
+            pieces.push({members,cell:cellOf(Math.round(sy/members.length)*w+Math.round(sx/members.length))});
+          }
+          const big=pieces.filter(x=>x.members.length>=Math.max(30,cellArea*0.01));
+          if(big.length>=2&&new Set(big.map(x=>x.cell)).size>=2){
+            for(const pc of big)for(const q of pc.members){own[q]=pc.cell;dist[q]=0;push(0,q);}
+            marked=true;
+          }
+          for(const pc of pieces)for(const q of pc.members)piece[q]=-1;
+          if(marked)break;
+        }
+        if(!marked){ // 侵蝕分不開：退回「每格中央一小塊」當種子（12%→40% 逐步放寬）
+          const seededCell=new Set();
+          for(const f of [0.12,0.2,0.3,0.4]){
+            const found=new Set();
+            for(const p of list){const x=p%w,y=(p-x)/w,c=colOf[x],r=rowOf[y],cw=xs[c+1]-xs[c],ch=ys[r+1]-ys[r],key=r*cols+c;
+              if(seededCell.has(key))continue;
+              if(Math.abs(x-(xs[c]+cw/2))<=cw*f&&Math.abs(y-(ys[r]+ch/2))<=ch*f){own[p]=key;dist[p]=0;push(0,p);found.add(key);}}
+            found.forEach(k=>seededCell.add(k));
+          }
+        }
+      }
+      while(hk.length){
+        const [d,p]=pop();if(d>dist[p])continue;const x=p%w,y=(p-x)/w;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const q=yy*w+xx;
+          if(label[q]!==label[p])continue;const nd=d+cost(q);if(nd<dist[q]){dist[q]=nd;own[q]=own[p];push(nd,q);}}}
+      }
+    }
+    const owner=p=>{const t=target[label[p]];if(t>=0)return t;if(own[p]>=0)return own[p];const x=p%w;return rowOf[(p-x)/w]*cols+colOf[x];};
     for(let p=0;p<n;p++){if(!label[p]||target[label[p]]===-2)continue;const x=p%w,y=(p-x)/w,b=box[owner(p)];if(x<b.l)b.l=x;if(x>b.r)b.r=x;if(y<b.t)b.t=y;if(y>b.b)b.b=y;}
     // 圖案貼著所屬格子的邊緣、且邊緣外面就是背景（或圖片外）：母圖在這裡可能已被生成工具切平。
     // 要有「連續一長段」貼邊才算被切平：手指、髮絲之類只在線上碰到幾個點的不算。
@@ -108,7 +169,7 @@
       c.data[o]=data[i];c.data[o+1]=data[i+1];c.data[o+2]=data[i+2];c.data[o+3]=data[i+3];
     }
     const sorted=set=>Array.from(set).sort((a,b)=>a-b);
-    return {cells,merged:sorted(merged),spill:sorted(spill),clipped,components:stats.length-1,transparent:bg.transparent};
+    return {cells,merged:sorted(merged),spill:sorted(spill),clipped,components:stats.length-1,transparent:bg.transparent,outside,width:w,height:h};
   }
   // 依 splitByContent 的結果（無法判斷背景時傳 null）建議用哪一種裁切方式，並附上白話原因。
   function advise(split){

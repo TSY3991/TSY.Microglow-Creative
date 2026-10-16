@@ -23,7 +23,7 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.deepEqual([r.cells[1].width,r.cells[1].height],[60,95]);              // 沒被分割線切掉
   assert.equal(r.cells[5],null);                                               // 溢出的部分沒有被當成另一張
   assert.deepEqual(r.merged,[2,6]);
-  assert.deepEqual([r.cells[2].height,r.cells[6].height],[40,40]);             // 相連圖案只能依線切開
+  assert.equal(r.cells[2].height+r.cells[6].height,80);assert.ok(Math.abs(r.cells[2].height-40)<=3);   // 粗細一致、沒有頸部的相連圖案：從兩格中央往外長，約在中間交會
   const hole=r.cells[3];                                                       // 白洞中心 (350,40)
   assert.equal(hole.data[((40-hole.y)*hole.width+(350-hole.x))*4+3],255);      // 封閉白洞保留不透明
   assert.equal(r.cells[7],null);                                               // 雜訊不成為貼圖
@@ -92,4 +92,17 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   rect(320,30,40,40);rect(300,50,60,4);  // 格 3：只有 4 px 碰到左線 → 不算
   const r=C.splitByContent(d,W,H,xs,ys,24);assert.deepEqual(r.clipped,[0]);
   console.log('PASS clipped detection needs a long contiguous run along the cell edge');
+}
+{
+  // 兩個圖案只靠一條細頸相連，頸在分割線之外：切口應落在頸部，而不是直線切開大圖案
+  const W=400,H=100,xs=C.cuts(W,4),ys=[0,100],d=new Uint8ClampedArray(W*H*4);for(let i=0;i<W*H;i++)d.set([255,255,255,255],i*4);
+  const rect=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)d.set([200,30,30,255],(j*W+i)*4);};
+  rect(10,20,131,60);   // 格 0 的大圖案，伸到 x=140，越過分割線 x=100
+  rect(141,47,10,6);    // 細頸
+  rect(151,30,40,40);   // 格 1 的小圖案
+  const r=C.splitByContent(d,W,H,xs,ys,24);
+  assert.deepEqual(r.merged,[0,1]);
+  assert.ok(r.cells[0].width>=131&&r.cells[0].width<=140);                       // 大圖案完整留在格 0，沒被 x=100 切開（切口在頸部）
+  assert.ok(r.cells[1].width<=50&&r.cells[1].x>=141);                              // 格 1 只拿到頸部之後的部分
+  console.log('PASS joined art is cut at the narrow neck, following the shape');
 }
