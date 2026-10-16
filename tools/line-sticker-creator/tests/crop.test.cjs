@@ -31,9 +31,8 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   // 透明背景的母圖
   const t=new Uint8ClampedArray(W*H*4);rect(t,W,10,10,50,80,red);
   const rt=C.splitByContent(t,W,H,xs,ys,24);assert.ok(rt.transparent);assert.equal(rt.cells[0].width,50);
-  // 邊緣不是單一顏色就不猜
-  const m=make(W,H);for(let x=0;x<W;x++){m.set([x%256,(x*7)%256,(x*13)%256,255],x*4);m.set([(x*3)%256,x%256,(x*5)%256,255],((H-1)*W+x)*4);}
-  for(let y=0;y<H;y++){m.set([(y*11)%256,y%256,(y*3)%256,255],y*W*4);m.set([(y*5)%256,(y*9)%256,y%256,255],(y*W+W-1)*4);}
+  // 背景整張都是漸層／雜訊（連往內幾圈也不是單一顏色）就不猜
+  const m=make(W,H);for(let y=0;y<H;y++)for(let x=0;x<W;x++)m.set([(x*7+y*3)%256,(x*3+y*11)%256,(x*13+y*5)%256,255],(y*W+x)*4);
   assert.equal(C.splitByContent(m,W,H,xs,ys,24),null);
   // 淺灰白描邊：保守強度（12）保留，較強（40）會吃掉
   const o=make(W,H);rect(o,W,10,10,54,84,[232,232,232,255]);rect(o,W,12,12,50,80,blue);
@@ -74,4 +73,14 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   const gr=new Uint8ClampedArray(W*H*4);for(let y=0;y<H;y++)for(let x=0;x<W;x++)gr.set([x%256,(y*3)%256,(x+y)%256,255],(y*W+x)*4);
   assert.equal(C.estimateBackground(gr,W,H,24),null);
   console.log('PASS background removal: frames around cells, grey checkerboard, gradient not guessed');
+}
+{
+  const W=400,H=200,xs=C.cuts(W,4),ys=C.cuts(H,2),d=new Uint8ClampedArray(W*H*4).fill(255);
+  for(let x=0;x<W;x++)for(const y of [0,1,H-2,H-1])d.set([30,30,30,255],(y*W+x)*4);
+  for(let y=0;y<H;y++)for(const x of [0,1,W-2,W-1])d.set([30,30,30,255],(y*W+x)*4);
+  for(let y=25;y<75;y++)for(let x=30;x<70;x++)d.set([200,30,30,255],(y*W+x)*4);
+  const bg=C.estimateBackground(d,W,H,24);assert.ok(bg&&!bg.transparent);       // 最外圈是框線，往內取樣仍找得到白底
+  const r=C.splitByContent(d,W,H,xs,ys,24);assert.ok(r);
+  assert.equal(r.cells[0].data[((60-r.cells[0].y)*r.cells[0].width+(50-r.cells[0].x))*4+3],255);
+  console.log('PASS background estimate survives a thin frame on the outer edge');
 }

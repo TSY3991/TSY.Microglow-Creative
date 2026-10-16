@@ -177,7 +177,7 @@
           const full=canvas(m.image.width,m.image.height),fctx=full.getContext('2d',{willReadFrequently:true});fctx.drawImage(m.image,0,0);
           const image=fctx.getImageData(0,0,full.width,full.height);full.width=full.height=1;
           split=C.splitByContent(image.data,m.image.width,m.image.height,m.x,m.y,tol);
-          if(!split)notes.push('母圖 '+(j+1)+' 的背景不是單一顏色，已改依分割線切開');
+          if(!split)notes.push('母圖 '+(j+1)+' 的背景不是單一顏色（有漸層、陰影或花紋），智慧去背無法使用，這張已改依分割線切開；要去掉白底可把「裁切方式」改成硬切並勾選「去除白色背景」');
         }
         for(let k=0;k<geometry[j].length;k++){
           if(token!==revision)throw Error('設定已變更，請重新裁切。');

@@ -14,10 +14,19 @@
     return y.slice(1).flatMap((v,j)=>x.slice(1).map((u,i)=>({x:x[i],y:y[j],width:u-x[i],height:v-y[j]})));
   }
   // 背景：邊緣像素絕大多數透明，或接近同一個顏色；否則回傳 null（無法可靠判斷，由呼叫端改用分割線硬切）。
+  // 生成工具常在圖片最外圈留一道細框線或陰影，所以除了最外圈，也試著往內 1%～5% 的幾圈取樣，取第一個能判斷出背景的。
   function estimateBackground(data,w,h,tol){
-    const samples=[],step=Math.max(1,Math.floor(2*(w+h)/4000));
+    for(const f of [0,0.01,0.02,0.03,0.05]){
+      const inset=f?Math.max(1,Math.round(f*Math.min(w,h))):0;
+      if(w-2*inset<8||h-2*inset<8)break;
+      const found=estimateRing(data,w,h,tol,inset);if(found)return found;
+    }
+    return null;
+  }
+  function estimateRing(data,w,h,tol,inset){
+    const samples=[],step=Math.max(1,Math.floor(2*(w+h)/4000)),x0=inset,y0=inset,x1=w-1-inset,y1=h-1-inset;
     const take=(x,y)=>{const i=(y*w+x)*4;samples.push([data[i],data[i+1],data[i+2],data[i+3]]);};
-    for(let x=0;x<w;x+=step){take(x,0);take(x,h-1);}for(let y=0;y<h;y+=step){take(0,y);take(w-1,y);}
+    for(let x=x0;x<=x1;x+=step){take(x,y0);take(x,y1);}for(let y=y0;y<=y1;y+=step){take(x0,y);take(x1,y);}
     if(samples.filter(v=>v[3]<=8).length>=samples.length*0.8)return {transparent:true};
     const solid=samples.filter(v=>v[3]>8),mid=c=>solid.map(v=>v[c]).sort((a,b)=>a-b)[solid.length>>1],color=[mid(0),mid(1),mid(2)];
     const near=solid.filter(v=>Math.abs(v[0]-color[0])<=tol&&Math.abs(v[1]-color[1])<=tol&&Math.abs(v[2]-color[2])<=tol).length;
