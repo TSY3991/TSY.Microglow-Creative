@@ -23,7 +23,7 @@
   <script defer src="./sticker-app.js?v=20261015i"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
   <script defer src="./sticker-crop-core.js?v=20261016a"></script>
-  <script defer src="./sticker-crop-app.js?v=20261016c"></script>
+  <script defer src="./sticker-crop-app.js?v=20261016d"></script>
   <script defer src="./sticker-tabs.js?v=20261015b"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
@@ -168,6 +168,7 @@
       <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="crop-title">母圖裁切與下載</h2><p>把生成的母圖帶回來，整理成一般靜態貼圖素材。</p></div></div>
       <p>圖片只在目前瀏覽器處理，不上傳網站或 Gemini，也不存入瀏覽器草稿。重新整理頁面後需重新選圖。原始檔案保留，可重新裁切。<button type="button" class="button small" id="crop-to-prompt">← 回到提示詞設定</button></p>
       <p id="crop-plan" class="notice"></p>
+      <p id="crop-match" class="field-hint" role="status" hidden></p>
       <label class="field" for="crop-files"><span>加入母圖（可多選）</span><input id="crop-files" type="file" multiple accept="image/png,image/jpeg,image/webp"><span class="field-hint">最多 5 張，每張 20 MB／1,600 萬像素，合計 3,200 萬像素。依序由左到右、由上到下裁切；可前移、後移調整母圖順序。</span></label>
       <div id="crop-mothers" class="crop-mothers"></div>
       <section id="crop-advice" class="notice crop-advice" aria-labelledby="crop-advice-title" hidden>

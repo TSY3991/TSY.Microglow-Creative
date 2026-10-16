@@ -20,6 +20,9 @@
   function controls(){
     if(prepared&&prepared.revision!==revision)clearPrepared();
     const checked=$('crop-review').checked,blank=stickers.map((s,i)=>s.source?0:i+1).filter(Boolean);
+    const cells=mothers.reduce((n,m)=>n+m.rows*4,0),match=$('crop-match');
+    match.hidden=!mothers.length;match.classList.toggle('notice',mothers.length>0&&cells!==plan.count);
+    if(mothers.length)match.textContent=cells===plan.count?'✔ 已放 '+mothers.length+' 張母圖，共 '+cells+' 格，和目前設定的 '+plan.count+' 張相符，可以裁切。':'⚠ 目前母圖共 '+cells+' 格，但第二步設定是 '+plan.count+' 張，兩者必須一樣才能裁切。可調整每張母圖的「格數」（4×2／4×4）、增減母圖，或回第二步改張數。';
     $('crop-run').disabled=busy;$('crop-files').disabled=busy;$('crop-clear').disabled=busy;
     const smart=$('crop-mode').value==='smart';
     $('crop-mode').disabled=busy;$('crop-white').disabled=busy||smart;$('crop-strength').disabled=busy||(!smart&&!$('crop-white').checked);
