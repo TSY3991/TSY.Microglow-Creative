@@ -20,10 +20,10 @@
   <script defer src="./sticker-core.js?v=20261015j"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-ai.js?v=20261015c"></script>
-  <script defer src="./sticker-app.js?v=20261015i"></script>
+  <script defer src="./sticker-app.js?v=20261016a"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261015d">
   <script defer src="./sticker-crop-core.js?v=20261016b"></script>
-  <script defer src="./sticker-crop-app.js?v=20261016d"></script>
+  <script defer src="./sticker-crop-app.js?v=20261016f"></script>
   <script defer src="./sticker-tabs.js?v=20261015b"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
@@ -168,7 +168,6 @@
       <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="crop-title">母圖裁切與下載</h2><p>把生成的母圖帶回來，整理成一般靜態貼圖素材。</p></div></div>
       <p>圖片只在目前瀏覽器處理，不上傳網站或 Gemini，也不存入瀏覽器草稿。重新整理頁面後需重新選圖。原始檔案保留，可重新裁切。<button type="button" class="button small" id="crop-to-prompt">← 回到提示詞設定</button></p>
       <p id="crop-plan" class="notice"></p>
-      <p id="crop-match" class="field-hint" role="status" hidden></p>
       <label class="field" for="crop-files"><span>加入母圖（可多選）</span><input id="crop-files" type="file" multiple accept="image/png,image/jpeg,image/webp"><span class="field-hint">最多 5 張，每張 20 MB／1,600 萬像素，合計 3,200 萬像素。依序由左到右、由上到下裁切；可前移、後移調整母圖順序。</span></label>
       <div id="crop-mothers" class="crop-mothers"></div>
       <section id="crop-advice" class="notice crop-advice" aria-labelledby="crop-advice-title" hidden>
@@ -185,6 +184,7 @@
         <label class="field" for="crop-backdrop"><span>預覽底色（不會印在輸出圖片）</span><select id="crop-backdrop"><option value="dark">深色（建議，容易看出白邊）</option><option value="checker">透明棋盤格</option><option value="light">淺色</option></select></label>
       </div>
       <p class="field-hint">智慧分割會先找出母圖的單一背景色，去掉與圖片邊緣相連的背景，再把相連的圖案（角色、文字、效果）整塊分給所屬格子，圖案超出分割線也不會被切開；只有兩張貼圖的圖案彼此相連時才依分割線切開，並會在該張標示。它辨識不了衣服、描邊與文字：與背景相連的白色內容可能一起被去掉，封閉的白底可能殘留，背景不是單一顏色時會改用硬切。硬切則完全依分割線，保留原圖背景不代表已符合透明背景要求。請以深淺底逐張確認。</p>
+      <div id="crop-match" class="field-hint" role="status" hidden><p id="crop-match-text"></p><button id="crop-match-fix" class="button small primary" type="button" hidden></button></div>
       <div class="inline-actions"><button id="crop-run" class="button primary" type="button">確認分割線並裁切</button><button id="crop-clear" class="button" type="button">移除全部母圖</button></div>
       <p id="crop-status" role="status" aria-live="polite">尚未加入母圖。</p>
       <div id="crop-results" class="crop-results" data-backdrop="dark"></div>

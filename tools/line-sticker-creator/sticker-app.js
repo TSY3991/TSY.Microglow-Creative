@@ -497,6 +497,12 @@
   $("to-crop").addEventListener("click",()=>{$("tab-crop").click();$("tab-crop").closest("nav").scrollIntoView({block:"start"});setTimeout(()=>crop().run(),80);});
   window.addEventListener("sticker-mothers-changed",()=>{if(step===4)renderMulti();});
   // 裁切頁發現母圖有圖被切到：不讓使用者選，直接把之後的提示詞改成更寬的格子留白。
+  // 裁切頁：母圖格數與設定張數不符時，一鍵把張數改成和母圖一樣（走原本的張數選單流程）。
+  window.addEventListener("sticker-set-count",event=>{
+    const count=Number(event.detail&&event.detail.count);if(!D.counts.includes(count)||count===state.settings.count)return;
+    $("count").value=String(count);$("count").dispatchEvent(new Event("change",{bubbles:true}));
+    status("已把張數改成 "+count+" 張（依你放入的母圖）；母圖分配已自動重排。");
+  });
   window.addEventListener("sticker-clipped",()=>{
     if(state.settings.spacing==="widest")return;
     state.settings.spacing="widest";renderGrids();

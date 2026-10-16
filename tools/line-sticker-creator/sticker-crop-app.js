@@ -22,7 +22,9 @@
     const checked=$('crop-review').checked,blank=stickers.map((s,i)=>s.source?0:i+1).filter(Boolean);
     const cells=mothers.reduce((n,m)=>n+m.rows*4,0),match=$('crop-match');
     match.hidden=!mothers.length;match.classList.toggle('notice',mothers.length>0&&cells!==plan.count);
-    if(mothers.length)match.textContent=cells===plan.count?'✔ 已放 '+mothers.length+' 張母圖，共 '+cells+' 格，和目前設定的 '+plan.count+' 張相符，可以裁切。':'⚠ 目前母圖共 '+cells+' 格，但第二步設定是 '+plan.count+' 張，兩者必須一樣才能裁切。可調整每張母圖的「格數」（4×2／4×4）、增減母圖，或回第二步改張數。';
+    const text=$('crop-match-text'),fix=$('crop-match-fix'),fixable=mothers.length>0&&cells!==plan.count&&C.counts.includes(cells);
+    if(mothers.length)text.textContent=cells===plan.count?'✔ 已放 '+mothers.length+' 張母圖，共 '+cells+' 格，和目前設定的 '+plan.count+' 張相符，可以裁切。':'⚠ 目前母圖共 '+cells+' 格，但第二步設定是 '+plan.count+' 張，兩者必須一樣才能裁切。'+(fixable?'按下面的按鈕，把張數改成和母圖一樣的 '+cells+' 張。':'可調整每張母圖的「格數」（4×2／4×4）、增減母圖，或回第二步改張數。');
+    fix.hidden=!fixable;if(fixable)fix.textContent='把張數改成 '+cells+' 張';
     $('crop-run').disabled=busy;$('crop-files').disabled=busy;$('crop-clear').disabled=busy;
     const smart=$('crop-mode').value==='smart';
     $('crop-mode').disabled=busy;$('crop-white').disabled=busy||smart;$('crop-strength').disabled=busy||(!smart&&!$('crop-white').checked);
@@ -95,6 +97,12 @@
   }
   const chooseMode=mode=>{$('crop-mode').value=mode;$('crop-mode').dispatchEvent(new Event('change'));};
   $('crop-advice-smart').onclick=()=>chooseMode('smart');$('crop-advice-hard').onclick=()=>chooseMode('hard');
+  // 母圖是 4×4 還是 4×2（僅「加入母圖」自由上傳用；步驟四逐張卡片以第二步的分配為準）：圖片長寬比明顯接近其中一種就照圖片判斷，例如設定 16 張卻放兩張 16 格的圖；看不出來才依第二步的分配。
+  function guessRows(image,index){
+    const r=image.width/image.height,r4=C.expectedSize(4).width/C.expectedSize(4).height,r2=C.expectedSize(2).width/C.expectedSize(2).height,d4=Math.abs(r-r4)/r4,d2=Math.abs(r-r2)/r2;
+    if(Math.min(d4,d2)<0.3)return d4<=d2?4:2;
+    return (plan.grids[index]||8)/4;
+  }
   function resetCuts(m){m.x=C.cuts(m.image.width,4);m.y=C.cuts(m.image.height,m.rows);}
   function drawMother(m,c,active){
     const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(m.image,0,0,c.width,c.height);
@@ -140,7 +148,7 @@
     try{
       if(mothers.length+files.length>5)throw Error('最多保留 5 張母圖。');
       let pixels=mothers.reduce((n,m)=>n+m.image.width*m.image.height,0);
-      for(const file of files){if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('請選 PNG、JPG 或 WebP，單張最多 20 MB。');const image=await createImageBitmap(file);incoming.push({file,image,rows:(plan.grids[mothers.length+incoming.length]||8)/4});if(image.width<4||image.height<4||image.width*image.height>16000000)throw Error('單張尺寸需至少 4×4，且不超過 1,600 萬像素。');pixels+=image.width*image.height;if(pixels>32000000)throw Error('母圖合計最多 3,200 萬像素，請縮小圖片。');}
+      for(const file of files){if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('請選 PNG、JPG 或 WebP，單張最多 20 MB。');const image=await createImageBitmap(file);incoming.push({file,image,rows:guessRows(image,mothers.length+incoming.length)});if(image.width<4||image.height<4||image.width*image.height>16000000)throw Error('單張尺寸需至少 4×4，且不超過 1,600 萬像素。');pixels+=image.width*image.height;if(pixels>32000000)throw Error('母圖合計最多 3,200 萬像素，請縮小圖片。');}
       if(token!==uploadRevision){incoming.forEach(m=>m.image.close());return;}
       incoming.forEach(resetCuts);mothers.push(...incoming);invalidate();renderMothers();message('母圖已加入。請確認順序與分割線，再裁切。');
     }catch(error){incoming.forEach(m=>m.image.close());if(token===uploadRevision)message('未加入圖片，原圖保留：'+error.message);}
@@ -162,6 +170,7 @@
     if(b){source=canvas(b.width,b.height);source.getContext('2d',{willReadFrequently:true}).drawImage(c,b.x,b.y,b.width,b.height,0,0,b.width,b.height);opaque=opaqueCorners(source);}
     c.width=c.height=1;return {source,opaque};
   }
+  $('crop-match-fix').onclick=()=>{const cells=mothers.reduce((n,m)=>n+m.rows*4,0);if(C.counts.includes(cells))window.dispatchEvent(new CustomEvent('sticker-set-count',{detail:{count:cells}}));};
   $('crop-run').onclick=async()=>{
     if(busy)return;
     if(!mothers.length){message('還沒有母圖：請先按上方「加入母圖」選擇檔案，再回來按這個按鈕。');$('crop-files').scrollIntoView({block:'center'});$('crop-files').focus();return;}
