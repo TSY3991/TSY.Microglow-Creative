@@ -203,7 +203,7 @@ let browser,ws,server;
   const sp="(()=>{const c=document.querySelector('.crop-sticker canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
   const m0=await E(mp),s0=await E(sp);
   await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='自動去除文字').click()");await delay(300);
-  check('一鍵自動去除文字：main／tab 變小（文字欄與碎片被擦掉），01 號貼圖不變',await E(mp)<m0&&await E(sp)===s0&&await E("document.getElementById('crop-status').textContent.includes('已自動擦掉')"));
+  check('一鍵自動去除文字：main／tab 變小（文字欄與碎片被擦掉），01 號貼圖不變，並在按鈕旁說明結果',await E(mp)<m0&&await E(sp)===s0&&await E("document.querySelector('#crop-special .notice').textContent.includes('已擦掉約')"));
   await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='還原成貼圖原樣').click()");
   await E("document.getElementById('crop-run').click()");for(let i=0;i<60;i++){await delay(100);if(await E("document.querySelectorAll('.crop-sticker').length===8&&!document.getElementById('crop-run').disabled"))break;}
   check('重新裁切回到自動結果（修圖標示消失）',await E("!document.querySelector('.crop-sticker').textContent.includes('已手動修圖')"));

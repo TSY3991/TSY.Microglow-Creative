@@ -10,7 +10,7 @@
   const names=list=>list.map(n=>n).join('、');
   // keep=true：只因去白底設定而重裁，保留每張已調整的大小與位置；其餘變更（母圖、網格、張數）一律歸零。
   function invalidate(keep){
-    revision++;clearPrepared();
+    revision++;clearPrepared();mainNote='';
     if(keep){if(stickers.length)adjust=stickers.map(s=>({zoom:s.zoom,dx:s.dx,dy:s.dy}));}else{adjust=[];selected=0;}
     stickers=[];$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;
   }
@@ -183,23 +183,28 @@
   // main／tab 可以另外修圖（例如去掉文字，只留角色），不影響 01～N 的貼圖。
   const forMain=s=>s.mainSource?{...s,source:s.mainSource,zoom:100,dx:0,dy:0}:s;
   // 一鍵：把選中貼圖中和角色不相連的文字／裝飾擦掉，再清小碎片，只用在 main／tab。
+  let mainNote='';
   function autoMain(){
     const s=stickers[selected];if(!s||!s.source||busy)return;
     const w=s.source.width,h=s.source.height,ctx=s.source.getContext('2d',{willReadFrequently:true}),img=ctx.getImageData(0,0,w,h);
     const found=C.textBlobs(img.data,w,h);
-    if(!found.count){message('沒有找到和角色分開的文字或裝飾。若文字壓在角色身上，請按「手動修圖」用橡皮擦處理。');return;}
+    if(!found.count){mainNote='沒有找到可以自動分開的文字：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來，所以沒有任何變化。請按「手動修圖」，用「移動框線」框住角色後按「框外擦掉」，或用橡皮擦擦掉。';message(mainNote);special();return;}
     for(let p=0;p<found.mask.length;p++)if(found.mask[p])img.data[p*4+3]=0;
     C.cleanSpecks(img.data,w,h);
     const b=C.bounds(img.data,w,h);if(!b){message('自動處理後畫面是空的，已保留原圖。');return;}
     const full=canvas(w,h);full.getContext('2d').putImageData(img,0,0);
     const out=canvas(b.width,b.height);out.getContext('2d').drawImage(full,b.x,b.y,b.width,b.height,0,0,b.width,b.height);
+    let before=0,after=0;{const o=ctx.getImageData(0,0,w,h).data;for(let i=3;i<o.length;i+=4){if(o[i]>8)before++;if(img.data[i]>8)after++;}}
+    const pct=before?Math.round((before-after)/before*100):0;
+    mainNote=pct<3?'只擦掉了不到 3% 的內容，畫面幾乎沒變：文字的外框和角色（或太陽、愛心等裝飾）連在一起，電腦分不出來。請按「手動修圖」，用「移動框線」框住角色後按「框外擦掉」，或用橡皮擦處理。':'已擦掉約 '+pct+'% 的內容（'+found.count+' 個和角色分開的區塊）。如果文字還在，表示它和角色連在一起，請按「手動修圖」處理。';
     s.mainSource=out;s.mainAt={x:s.at.x+b.x,y:s.at.y+b.y};special();touched();
-    message('已自動擦掉 '+found.count+' 個和角色分開的文字或裝飾區塊（只影響 main／tab）。請看預覽；沒擦乾淨或被文字擋住的地方，按「手動修圖」處理。');
+    message(mainNote);
   }
   function mainControls(){
     const s=stickers[selected],box=el('div');box.className='special-controls';
     box.append(el('p',s.mainSource?'main.png 與 tab.png 目前用第 '+String(selected+1).padStart(2,'0')+' 張「去除文字後」的版本（自動或手動修過）；要回到完整圖案按「還原成貼圖原樣」。':'main.png 與 tab.png 目前是第 '+String(selected+1).padStart(2,'0')+' 張的完整圖案（含文字）。想只留角色：按「自動去除文字」（會擦掉和角色分開的文字與裝飾），再用「手動修圖」微調；文字壓在角色身上時需要手動處理。','field-hint'));
     const autoBtn=button('自動去除文字',()=>autoMain());autoBtn.className='button small primary';box.append(autoBtn);
+    if(mainNote){const n=el('p',mainNote);n.className='notice';n.setAttribute('role','status');box.append(n);}
     const edit=button(s.mainSource?'手動修圖（已自訂）':'手動修圖（只影響 main 與 tab）',()=>{
       const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
       const base=s.mainSource?{source:s.mainSource,at:s.mainAt}:{source:s.source,at:s.at};
@@ -208,7 +213,7 @@
         cleanup:true,onDone:(canvas,at)=>{s.mainSource=canvas;s.mainAt=at;special();touched();message('main／tab 已自訂（不含文字的版本）；01～'+String(stickers.length).padStart(2,'0')+' 號貼圖不受影響。');}});
     });
     box.append(edit);
-    if(s.mainSource){const back=button('還原成貼圖原樣',()=>{delete s.mainSource;delete s.mainAt;special();touched();});box.append(back);}
+    if(s.mainSource){const back=button('還原成貼圖原樣',()=>{delete s.mainSource;delete s.mainAt;mainNote='';special();touched();});box.append(back);}
     $('crop-special').append(box);
   }
   function special(){ $('crop-special').replaceChildren();if(!stickers[selected]?.source)return;for(const [name,w,h,pad] of [['main.png',240,240,10],['tab.png',96,74,4]]){const box=el('div'),c=canvas(w,h);box.append(el('strong',name+'｜'+w+'×'+h),c);renderSticker(forMain(stickers[selected]),c,w,h,pad);$('crop-special').append(box);}mainControls();}
@@ -218,7 +223,7 @@
         const edit=button(s.edited?'修圖（已修改過）':'修圖：擦掉多餘／補回被切掉的部分',()=>openEditor(s,i,edit));edit.className='button small';box.append(edit);
         if(s.edited)box.append(el('p','這張已手動修圖；重新裁切會回到自動結果。'));
       }
-      const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
+      const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;mainNote='';special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
       for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);touched();};l.append(input);box.append(l);}
       box.append(button('還原大小與位置',()=>{s.zoom=100;s.dx=s.dy=0;renderResults();touched();}));$('crop-results').append(box);
     });special();
