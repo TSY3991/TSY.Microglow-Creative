@@ -131,3 +131,12 @@ test('AI 台詞限 8 字，拒絕過長整批不動，手寫長句與無文字�
 test('短句和台灣用字規則透過既有 Worker 契約送出，不需新後端欄位',async()=>{
   const input=AI.payload(state()),{validateInput,modelRequest}=await worker;assert.deepEqual(validateInput(input),input);assert.ok(input.context.scene.includes(C.dialogueRule));assert.ok(modelRequest(input).contents[0].parts[0].text.includes(C.dialogueRule));
 });
+
+test('服務 503 區分模型、權限與設定失敗，只顯示白名單原因，不洩漏未知回應',async()=>{
+ const old=global.fetch,input=AI.payload(state());try{
+  for(const [body,part]of [[{error:'目前指定的 Gemini 模型無法使用，請管理者檢查模型設定。'},'模型無法使用'],[{error:'Gemini 金鑰驗證失敗，請管理者檢查金鑰。'},'金鑰驗證失敗'],[{error:'網站 AI 尚未啟用。'},'設定尚未完成'],[{error:'Gemini 暫時無法使用。'},'暫時無法使用'],[{error:'secret-debug-value'},'尚未啟用或暫時無法使用']]){
+   global.fetch=async()=>Response.json(body,{status:503});await assert.rejects(()=>AI.request('https://test.example/arrange',input),e=>e.message.includes(part)&&!e.message.includes('secret-debug-value'));
+  }
+  global.fetch=async()=>new Response('not-json secret-debug-value',{status:503});await assert.rejects(()=>AI.request('https://test.example/arrange',input),/尚未啟用或暫時無法使用/);
+ }finally{global.fetch=old;}
+});

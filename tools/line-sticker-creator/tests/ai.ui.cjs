@@ -49,6 +49,7 @@ let configured=false,mode="good",requests=0,delayed=null;
         const data={items:input.items.map(x=>({id:x.id,text:"AI台詞"+x.id,emotion:"瞇眼笑"+x.id,action:"揮手"+x.id}))};
         if(mode==="long")data.items[1].text="這一句超過八個字需要改寫";
         if(mode==="bad")data.items[data.items.length-1].id=1;
+        if(mode==='model-unavailable'){await send('Fetch.fulfillRequest',{requestId:p.requestId,responseCode:503,responseHeaders:headers,body:Buffer.from(JSON.stringify({error:'目前指定的 Gemini 模型無法使用，請管理者檢查模型設定。'})).toString('base64')});return;}
         const deliver=()=>send("Fetch.fulfillRequest",{requestId:p.requestId,responseCode:mode==="quota"?429:200,responseHeaders:headers,body:Buffer.from(JSON.stringify(data)).toString("base64")});
         if(mode==="delayed")delayed=deliver;else await deliver();
       })().catch(e=>{errors.push(e.message);send("Fetch.failRequest",{requestId:p.requestId,errorReason:"Failed"}).catch(()=>{});});
@@ -81,6 +82,8 @@ let configured=false,mode="good",requests=0,delayed=null;
   check("未同意前不能傳送 AI",await E("document.getElementById('ai-arrange').disabled"));
   await click("ai-consent");check("同意後可安排",await E("!document.getElementById('ai-arrange').disabled"));
   async function settled(){for(let i=0;i<100;i++){if(await E("!document.getElementById('ai-cancel').hidden")){await delay(30);continue;}return;}throw Error("AI 等待未結束");}
+  mode='model-unavailable';await click('ai-arrange');await settled();
+  check('模型失敗明確顯示原因，保留內容且可再操作',await E("document.getElementById('ai-status').textContent.includes('模型無法使用')&&document.getElementById('item-0-text').value==='保留台詞'&&document.getElementById('item-1-text').value===''&&!document.getElementById('ai-arrange').disabled&&document.getElementById('ai-cancel').hidden"));
   mode="quota";await click("ai-arrange");await settled();
   check("429 明確顯示限制並保留設定",await E("document.getElementById('ai-status').textContent.includes('額度')&&document.getElementById('item-0-text').value==='保留台詞'&&document.getElementById('ai-preview').hidden"));
   mode="bad";await click("ai-arrange");await settled();

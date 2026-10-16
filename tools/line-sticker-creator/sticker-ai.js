@@ -63,7 +63,17 @@
     const response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal });
     if (!response.ok) {
       const message = { 400: "請檢查角色與逐張內容。", 403: "目前網站沒有使用這項 AI 服務的權限。", 413: "內容太多，請縮短描述後再試。", 429: "AI 免費額度或使用頻率已達限制，請稍後再試；仍可手動設定。", 503: "網站 AI 尚未啟用或暫時無法使用，仍可手動設定。", 504: "AI 回覆逾時，原有內容保留，請稍後再試。" };
-      throw new Error(message[response.status] || "AI 服務未完成安排，原有內容保留，請稍後再試。");
+      const known={
+        '網站 AI 尚未啟用。':'網站 AI 服務設定尚未完成，請管理者檢查啟用開關、金鑰與限流設定。原有內容保留。',
+        '服務來源辨識未就緒。':'網站 AI 無法辨識請求來源，請管理者檢查服務設定。原有內容保留。',
+        'Gemini 無法接受目前的請求設定。':'Gemini 不接受目前的請求設定，請管理者檢查模型與請求格式。原有內容保留。',
+        'Gemini 金鑰驗證失敗，請管理者檢查金鑰。':'Gemini 金鑰驗證失敗，請管理者檢查金鑰。原有內容保留。',
+        'Gemini 金鑰或專案沒有使用權限，請管理者檢查設定。':'Gemini 專案或金鑰沒有使用權限，請管理者檢查設定。原有內容保留。',
+        '目前指定的 Gemini 模型無法使用，請管理者檢查模型設定。':'目前指定的 Gemini 模型無法使用，請管理者確認模型名稱與可用性。原有內容保留。',
+        'Gemini 暫時無法使用。':'Gemini 目前暫時無法使用，請稍後再試。原有內容保留；本工具未自動重試。'
+      };
+      let detail;try{const body=await response.json();if(response.status===503&&typeof body?.error==='string'&&Object.hasOwn(known,body.error))detail=known[body.error];}catch{}
+      throw new Error(detail || message[response.status] || "AI 服務未完成安排，原有內容保留，請稍後再試。");
     }
     return suggestions(await response.json(), input);
   }
