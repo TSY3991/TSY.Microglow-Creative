@@ -182,15 +182,30 @@
   }
   // main／tab 可以另外修圖（例如去掉文字，只留角色），不影響 01～N 的貼圖。
   const forMain=s=>s.mainSource?{...s,source:s.mainSource,zoom:100,dx:0,dy:0}:s;
+  // 一鍵：把選中貼圖中和角色不相連的文字／裝飾擦掉，再清小碎片，只用在 main／tab。
+  function autoMain(){
+    const s=stickers[selected];if(!s||!s.source||busy)return;
+    const w=s.source.width,h=s.source.height,ctx=s.source.getContext('2d',{willReadFrequently:true}),img=ctx.getImageData(0,0,w,h);
+    const found=C.textBlobs(img.data,w,h);
+    if(!found.count){message('沒有找到和角色分開的文字或裝飾。若文字壓在角色身上，請按「手動修圖」用橡皮擦處理。');return;}
+    for(let p=0;p<found.mask.length;p++)if(found.mask[p])img.data[p*4+3]=0;
+    C.cleanSpecks(img.data,w,h);
+    const b=C.bounds(img.data,w,h);if(!b){message('自動處理後畫面是空的，已保留原圖。');return;}
+    const full=canvas(w,h);full.getContext('2d').putImageData(img,0,0);
+    const out=canvas(b.width,b.height);out.getContext('2d').drawImage(full,b.x,b.y,b.width,b.height,0,0,b.width,b.height);
+    s.mainSource=out;s.mainAt={x:s.at.x+b.x,y:s.at.y+b.y};special();touched();
+    message('已自動擦掉 '+found.count+' 個和角色分開的文字或裝飾區塊（只影響 main／tab）。請看預覽；沒擦乾淨或被文字擋住的地方，按「手動修圖」處理。');
+  }
   function mainControls(){
     const s=stickers[selected],box=el('div');box.className='special-controls';
-    box.append(el('p','main.png 與 tab.png 目前是第 '+String(selected+1).padStart(2,'0')+' 張的完整圖案（含文字）。想只留角色、去掉文字：按「去除文字／修圖」，用「移動框線」框住角色後按「框外擦掉」，或直接擦掉文字。','field-hint'));
-    const edit=button(s.mainSource?'再修圖（已自訂）':'去除文字／修圖（只影響 main 與 tab）',()=>{
+    box.append(el('p',s.mainSource?'main.png 與 tab.png 目前用第 '+String(selected+1).padStart(2,'0')+' 張「去除文字後」的版本（自動或手動修過）；要回到完整圖案按「還原成貼圖原樣」。':'main.png 與 tab.png 目前是第 '+String(selected+1).padStart(2,'0')+' 張的完整圖案（含文字）。想只留角色：按「自動去除文字」（會擦掉和角色分開的文字與裝飾），再用「手動修圖」微調；文字壓在角色身上時需要手動處理。','field-hint'));
+    const autoBtn=button('自動去除文字',()=>autoMain());autoBtn.className='button small primary';box.append(autoBtn);
+    const edit=button(s.mainSource?'手動修圖（已自訂）':'手動修圖（只影響 main 與 tab）',()=>{
       const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
       const base=s.mainSource?{source:s.mainSource,at:s.mainAt}:{source:s.source,at:s.at};
       window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:base.source,at:base.at,auto:{source:s.source,at:s.at},remove:s.remove,threshold:s.threshold,opener:edit,label:'main／tab',
         hint:'這裡的修改只用在 main.png 與 tab.png。亮的是目前的圖，半透明的是母圖其他部分；例如文字可直接擦掉，或框住角色後按「框外擦掉」。',
-        onDone:(canvas,at)=>{s.mainSource=canvas;s.mainAt=at;special();touched();message('main／tab 已自訂（不含文字的版本）；01～'+String(stickers.length).padStart(2,'0')+' 號貼圖不受影響。');}});
+        cleanup:true,onDone:(canvas,at)=>{s.mainSource=canvas;s.mainAt=at;special();touched();message('main／tab 已自訂（不含文字的版本）；01～'+String(stickers.length).padStart(2,'0')+' 號貼圖不受影響。');}});
     });
     box.append(edit);
     if(s.mainSource){const back=button('還原成貼圖原樣',()=>{delete s.mainSource;delete s.mainAt;special();touched();});box.append(back);}

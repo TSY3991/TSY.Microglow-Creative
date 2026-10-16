@@ -106,3 +106,21 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.ok(r.cells[1].width<=50&&r.cells[1].x>=141);                              // 格 1 只拿到頸部之後的部分
   console.log('PASS joined art is cut at the narrow neck, following the shape');
 }
+{
+  const W=300,H=200,d=new Uint8ClampedArray(W*H*4);
+  const rect=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)d.set([200,30,30,255],(j*W+i)*4);};
+  rect(60,40,100,120);        // 角色
+  rect(200,30,24,130);        // 旁邊分開的文字欄：中心在角色外框外 → 視為多餘
+  rect(100,10,4,4);           // 角色外框內的小碎片：太小 → 視為多餘
+  rect(70,170,30,20);         // 角色外框外的另一塊：視為多餘
+  const r=C.textBlobs(d,W,H);assert.equal(r.count,3);
+  assert.equal(r.mask[(60*W)+210],1);assert.equal(r.mask[(60*W)+100],0);assert.equal(r.mask[(11*W)+101],1);
+  // 只有一塊或都在角色外框內：不動
+  const one=new Uint8ClampedArray(W*H*4);for(let y=40;y<160;y++)for(let x=60;x<160;x++)one.set([1,1,1,255],(y*W+x)*4);
+  assert.equal(C.textBlobs(one,W,H).count,0);
+  // 清碎片：只清孤立的小塊，不動大的
+  const e=new Uint8ClampedArray(W*H*4);const box=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)e.set([9,9,9,255],(j*W+i)*4);};
+  box(50,50,100,100);box(200,20,3,3);box(220,100,5,5);box(180,150,30,30);
+  assert.equal(C.cleanSpecks(e,W,H),2);assert.equal(e[(21*W+201)*4+3],0);assert.equal(e[(160*W+190)*4+3],255);assert.equal(e[(100*W+100)*4+3],255);
+  console.log('PASS textBlobs removes detached text/decoration; cleanSpecks removes only isolated tiny pieces');
+}

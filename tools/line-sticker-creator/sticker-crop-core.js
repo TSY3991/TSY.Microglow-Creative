@@ -179,6 +179,44 @@
     if(split.transparent)return {mode:'hard',cross:[],reasons:['每格圖案都在分割線內，母圖本身已是透明背景，兩種方式結果幾乎相同；硬切最單純，不會誤去掉白色描邊。']};
     return {mode:'smart',cross:[],reasons:['每格圖案都在分割線內，不會被切到；但母圖是單色背景，智慧分割能順便把背景去成透明（LINE 貼圖需要透明背景）。']};
   }
+  // 依透明度把圖案分成互不相連的區塊（8 鄰接），回傳每個區塊的面積與外框。
+  function alphaComponents(data,w,h){
+    const n=w*h,label=new Int32Array(n),queue=new Int32Array(n),comps=[];
+    for(let start=0;start<n;start++){
+      if(data[start*4+3]<=8||label[start])continue;
+      const id=comps.length+1,c={id,area:0,minx:w,maxx:-1,miny:h,maxy:-1};let head=0,tail=0;label[start]=id;queue[tail++]=start;
+      while(head<tail){
+        const q=queue[head++],x=q%w,y=(q-x)/w;c.area++;if(x<c.minx)c.minx=x;if(x>c.maxx)c.maxx=x;if(y<c.miny)c.miny=y;if(y>c.maxy)c.maxy=y;
+        for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w||(!dx&&!dy))continue;const r=yy*w+xx;if(data[r*4+3]>8&&!label[r]){label[r]=id;queue[tail++]=r;}}}
+      }
+      comps.push(c);
+    }
+    return {label,comps};
+  }
+  // 猜哪些區塊是文字或裝飾：最大的相連圖案當角色；其他區塊中心落在角色外框之外、或面積很小的都視為多餘。
+  // 只能處理「和角色沒有相連」的文字；文字壓在角色上或與角色相連時分不開，需要手動修圖。回傳要擦掉的遮罩。
+  function textBlobs(data,w,h){
+    const {label,comps}=alphaComponents(data,w,h);
+    if(comps.length<2)return {mask:null,count:0};
+    const main=comps.reduce((a,b)=>b.area>a.area?b:a);
+    const drop=new Set();
+    for(const c of comps){
+      if(c===main)continue;
+      const cx=(c.minx+c.maxx)/2,cy=(c.miny+c.maxy)/2,inside=cx>=main.minx&&cx<=main.maxx&&cy>=main.miny&&cy<=main.maxy;
+      if(!inside||c.area<main.area*0.01)drop.add(c.id);
+    }
+    if(!drop.size)return {mask:null,count:0};
+    const mask=new Uint8Array(w*h);for(let p=0;p<mask.length;p++)if(drop.has(label[p]))mask[p]=1;
+    return {mask,count:drop.size};
+  }
+  // 清掉擦完後留下的小碎片：面積小於最大區塊 0.4%（且不到 40 像素以上的）孤立區塊。直接修改 data 的 alpha，回傳清掉幾塊。
+  function cleanSpecks(data,w,h,ratio=0.004,min=40){
+    const {label,comps}=alphaComponents(data,w,h);if(!comps.length)return 0;
+    const biggest=comps.reduce((a,b)=>b.area>a.area?b:a),limit=Math.max(min,biggest.area*ratio),drop=new Set(comps.filter(c=>c!==biggest&&c.area<limit).map(c=>c.id));
+    if(!drop.size)return 0;
+    for(let p=0;p<label.length;p++)if(drop.has(label[p]))data[p*4+3]=0;
+    return drop.size;
+  }
   // Only remove near-white pixels reachable from the frame. Never mutate the source.
   function eraseWhite(data,w,h,threshold=248){
     const out=new Uint8ClampedArray(data),seen=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;
@@ -203,5 +241,5 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

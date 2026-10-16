@@ -46,7 +46,12 @@
     const inBtn=mk('框內補回',()=>{snapshot();const g=work.getContext('2d');g.save();g.beginPath();g.rect(frame.x,frame.y,frame.w,frame.h);g.clip();g.drawImage(ext,0,0);g.restore();draw();},'','把框內全部從母圖補回');
     const outBtn=mk('框外擦掉',()=>{snapshot();const g=work.getContext('2d');g.clearRect(0,0,W,Math.max(0,frame.y));g.clearRect(0,frame.y+frame.h,W,H-frame.y-frame.h);g.clearRect(0,frame.y,Math.max(0,frame.x),frame.h);g.clearRect(frame.x+frame.w,frame.y,W-frame.x-frame.w,frame.h);draw();},'','把框外全部擦掉');
     inBtn.hidden=outBtn.hidden=true;
-    bar.append(eraseBtn,restoreBtn,frameBtn,sizeLabel,inBtn,outBtn,undoBtn,resetBtn);
+    const speckBtn=mk('清碎片',()=>{
+      snapshot();const g=work.getContext('2d',{willReadFrequently:true}),data=g.getImageData(0,0,W,H),n=C.cleanSpecks(data.data,W,H);
+      if(n){g.putImageData(data,0,0);note.textContent='已清掉 '+n+' 個小碎片。';}else{undo.pop();undoBtn.disabled=!undo.length;note.textContent='沒有需要清的小碎片。';}
+      draw();
+    },'','清除擦完後孤立的小碎片');
+    bar.append(eraseBtn,restoreBtn,frameBtn,sizeLabel,inBtn,outBtn,speckBtn,undoBtn,resetBtn);
     const note=el('p','','field-hint');note.setAttribute('role','status');
     const actions=el('div',undefined,'inline-actions');
     const done=mk('完成',finish,'primary'),cancel=mk('取消',close);
@@ -115,7 +120,9 @@
     view.addEventListener('pointerleave',()=>{if(tool!=='frame'){hover=null;draw();}});
     function close(){if(!current)return;document.removeEventListener('keydown',onKey,true);overlay.remove();current=null;if(ctx.opener&&ctx.opener.focus)ctx.opener.focus();}
     function finish(){
-      const data=work.getContext('2d',{willReadFrequently:true}).getImageData(0,0,W,H),b=C.bounds(data.data,W,H);
+      const wctx=work.getContext('2d',{willReadFrequently:true}),data=wctx.getImageData(0,0,W,H);
+      if(ctx.cleanup&&C.cleanSpecks(data.data,W,H))wctx.putImageData(data,0,0); // main／tab：完成時自動清掉孤立小碎片
+      const b=C.bounds(data.data,W,H);
       if(!b){note.textContent='畫面上沒有任何圖案了，請按「復原」或「還原」。';return;}
       const out=canvas(b.width,b.height);out.getContext('2d').drawImage(work,b.x,b.y,b.width,b.height,0,0,b.width,b.height);
       const result={canvas:out,at:{x:x0+b.x,y:y0+b.y}};close();ctx.onDone(result.canvas,result.at);

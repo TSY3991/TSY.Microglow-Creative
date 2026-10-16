@@ -190,11 +190,21 @@ let browser,ws,server;
   // main／tab 另外修圖（去除文字）
   const mainPx="(()=>{const c=document.querySelector('#crop-special canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
   const mainBefore=await E(mainPx);
-  await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent.includes('去除文字')).click()");await delay(200);
+  await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent.includes('手動修圖')).click()");await delay(200);
   await E("(()=>{const c=document.querySelector('.editor-canvas');document.querySelector('.editor-overlay input[type=range]').value='80';for(const fx of [0.35,0.45,0.55,0.65]){window.__ptr(c,fx===0.35?'pointerdown':'pointermove',fx,0.5);}window.__ptr(c,'pointerup',0.65,0.5);[...document.querySelectorAll('.editor-overlay button')].find(b=>b.textContent==='完成').click();})()");await delay(300);
   check('main／tab 可另外修圖，不影響 01～N 號貼圖',await E(mainPx)<mainBefore&&await E("[...document.querySelectorAll('#crop-special button')].some(b=>b.textContent.includes('已自訂'))&&[...document.querySelectorAll('#crop-special button')].some(b=>b.textContent==='還原成貼圖原樣')"));
   await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='還原成貼圖原樣').click()");
   check('可把 main／tab 還原成貼圖原樣',await E(mainPx)===mainBefore);
+  // 一鍵自動去除文字：角色旁邊另有分開的「文字欄」
+  await click('crop-clear');
+  await E("(async()=>{const c=document.createElement('canvas');c.width=800;c.height=360;const x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,800,360);x.fillStyle='#008080';x.fillRect(30,25,90,130);x.fillStyle='#d02020';x.fillRect(145,25,30,130);x.fillRect(60,165,10,8);const blob=await new Promise(r=>c.toBlob(r)),dt=new DataTransfer();dt.items.add(new File([blob],'text.png',{type:'image/png'}));const f=document.getElementById('crop-files');f.files=dt.files;f.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,700));})()");
+  await run(8);
+  const mp="(()=>{const c=document.querySelector('#crop-special canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
+  const sp="(()=>{const c=document.querySelector('.crop-sticker canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>8)n++;return n;})()";
+  const m0=await E(mp),s0=await E(sp);
+  await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='自動去除文字').click()");await delay(300);
+  check('一鍵自動去除文字：main／tab 變小（文字欄與碎片被擦掉），01 號貼圖不變',await E(mp)<m0&&await E(sp)===s0&&await E("document.getElementById('crop-status').textContent.includes('已自動擦掉')"));
+  await E("[...document.querySelectorAll('#crop-special button')].find(b=>b.textContent==='還原成貼圖原樣').click()");
   await E("document.getElementById('crop-run').click()");for(let i=0;i<60;i++){await delay(100);if(await E("document.querySelectorAll('.crop-sticker').length===8&&!document.getElementById('crop-run').disabled"))break;}
   check('重新裁切回到自動結果（修圖標示消失）',await E("!document.querySelector('.crop-sticker').textContent.includes('已手動修圖')"));
   for(const width of [320,390,768,1280]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<600});check(width+'px 裁切預覽無溢出',await E('document.documentElement.scrollWidth<=innerWidth'));}
