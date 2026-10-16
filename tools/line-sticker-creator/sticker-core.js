@@ -44,6 +44,12 @@
         "需要新創作的台詞、動作與道具約 5～7 成要能直接辨識此情境，其餘可為一般互動；不要整組只用通用問候。已有內容逐字保留，詞彙不是必須逐條照抄的台詞清單。")+
       (settings.tone&&settings.tone!=="auto"?"語氣："+label("tone",settings.tone)+"。":"");
   }
+  function contentBrief(settings){
+    const priority='內容搭配優先順序：已填台詞逐字保留；新創作由情境決定說什麼，語氣決定怎麼說，角色描述與角色風格輔助表達個性。視覺風格不強迫改變措辭，不因軟萌或 Q 版就強加撒嬌或幼兒語氣。';
+    const tone=!settings.tone||settings.tone==='auto'?'自動語氣：綜合角色描述中的個性、所選角色風格與情境的對象、場合，決定自然且一致的說話方式；職業內容保持合宜與可辨識度，不只照角色可愛程度決定台詞。':'指定語氣優先：依「'+label('tone',settings.tone)+'」創作新台詞；角色風格只輔助個性，不得覆蓋指定語氣。';
+    const source=settings.mode==='preset'?'預設句庫原文保留，不依風格或語氣改寫；新指定只影響未填的台詞、表情、動作與道具。':settings.mode==='manual'?'自行輸入的原文保留，不因情境或語氣換字；未指定的表情、動作與道具可配合。':'只補空白台詞、表情與動作；原有內容即使與新設定不同也不自動重寫。';
+    return settings.textMode==='none'?'整組無文字：情境與角色個性只透過表情、動作與道具表達，不新增台詞。':priority+tone+source;
+  }
   const dialogueRule='AI 新台詞以 2～6 字為主，最多 8 字（含標點，共用名稱另計）；一句只表達一個意思，用自然、正確的台灣繁體中文與台灣日常口語。不要簡體字、中國大陸慣用語、生造字、諧音錯字或硬湊語句。需要更多內容時改用表情、動作與道具表達，不靠拉長台詞；這項限制只適用新創作台詞，使用者已填文字逐字保留，不截斷、不擅改。';
   function item(text="") { return {text,hasText:true,includeName:true,emotion:"",action:""}; }
   function initial() { return {settings:clone(D.defaults),grids:[16],items:Array.from({length:16},()=>item())}; }
@@ -154,6 +160,7 @@
       "",
       "【文字外觀】",
       sceneBrief(s),
+      contentBrief(s),
       s.mode==="ai"?"台詞來源：AI 自由創作。發想情境："+(s.scene==="auto"?"不限定，自由發想"+(s.tone!=="auto"?"；語氣："+label("tone",s.tone):""):sceneName(s))+"。未填台詞依角色個性與生活互動創作有口語特色的短句，讓情緒、語氣與句式多元；不要照固定問候清單或每次使用相同開場順序。使用者已填的台詞仍逐字保留；每次生成可重新發想，但不保證跨次完全沒有重複。":"台詞來源："+label("mode",s.mode)+"；未填台詞可依情境補充。",
       s.textMode!=="none"?dialogueRule:null,
       s.textMode!=="none"&&s.mode!=="manual"?"台詞要平均涵蓋：招呼、回覆、忙碌、感謝、道歉、情緒、鼓勵、搞笑、休息與收尾"+(s.scene==="auto"?"":"，以及所選情境的專業用語（情境相關約占 5～7 成、一般聊天約 3～5 成）")+"；避免大量意思重複的句子（例如一堆早安、哈囉、你好），每句都要有不同用途。"+(s.tone!=="auto"?"語氣統一為「"+label("tone",s.tone)+"」。":""):null,
@@ -211,6 +218,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

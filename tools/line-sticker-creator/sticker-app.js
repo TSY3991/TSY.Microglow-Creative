@@ -44,6 +44,7 @@
   }
   function invalidate() {
     clearAI("設定已變更，請重新安排 AI 建議。");
+    if(!state.items.some(x=>C.hasText(state,x)&&x.text.trim()))$("content-update-notice").hidden=true;
     generated=false;
     $("prompt-area").hidden=true;$("prompt-output").value="";$("copy-feedback").textContent="";
     $("validation").hidden=true;
@@ -51,6 +52,11 @@
     document.querySelectorAll('[aria-invalid="true"]').forEach(e=>e.removeAttribute("aria-invalid"));
     live();save();
     if(step===4)renderMulti();
+  }
+  function refreshContentNotice(title){
+    const box=$('content-update-notice');box.dataset.subject=title;
+    const detail=state.settings.mode==='ai'?'要依新設定重新創作，請按「將台詞交給 AI 重新創作」，再安排 AI 或產生提示詞。':state.settings.mode==='preset'?'預設句庫不會依風格或語氣改寫；換情境要按「套用預設情境台詞」，想依新設定重寫可先改選「台詞由 AI 發揮」。':'自行輸入的原文不會改寫；請手動修改，或改選「台詞由 AI 發揮」後重新創作。';
+    box.hidden=false;box.textContent=title+'已變更，已有台詞會保留，尚未依新設定重寫。'+detail;status(box.textContent);if(step===4)summary();
   }
   function conditions() {
     document.querySelectorAll("[data-visible]").forEach(el=>{
@@ -126,6 +132,7 @@
   function rowField(parent,title,input) { const wrap=node("label",undefined,"field");wrap.htmlFor=input.id;wrap.append(node("span",title),input);parent.append(wrap); }
   function renderItems() {
     const box=$("items");box.replaceChildren();
+    if(!state.items.some(x=>C.hasText(state,x)&&x.text.trim()))$("content-update-notice").hidden=true;
     $("trim-items").hidden=state.items.length<=state.settings.count;
     state.items.forEach((entry,i)=>{
       const card=node("article",undefined,"sticker-item");
@@ -186,6 +193,7 @@
   }
   function summary() {
     const box=$("summary");box.replaceChildren();
+    if(!$("content-update-notice").hidden)box.append(node("p",$("content-update-notice").textContent,"notice"));
     const s=state.settings;
     const blanks=state.items.slice(0,s.count).filter(x=>C.hasText(state,x)&&!x.text.trim()).length;
     if(blanks)box.append(node("p","還有 "+blanks+" 張台詞沒填：提示詞會寫成「由生圖平台依情境設計」。"+(aiEndpoint?"想先用網站 AI 設計，請回第二步按「AI 安排台詞、表情與動作」。":"")+"也可以直接交給生圖平台發想。","notice"));
@@ -250,7 +258,7 @@
   }
   function replaceItems(items,message) {
     if(state.items.some(x=>x.text||x.emotion||x.action)&&!confirm(message+"目前逐張內容會被取代；是否繼續？"))return;
-    state.items=items;renderItems();invalidate();status("已套用；請逐張確認內容。");
+    $("content-update-notice").hidden=true;state.items=items;renderItems();invalidate();status("已套用；請逐張確認內容。");
   }
   document.querySelectorAll("[data-setting]").forEach(el=>el.addEventListener(el.tagName==="SELECT"||el.type==="color"?"change":"input",()=>{
     const key=el.dataset.setting,previous=state.settings[key];
@@ -283,8 +291,10 @@
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled)status("已補入 "+filled+" 句；原有台詞未改動。");}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
-    if(key==="scene"&&previous!==el.value&&state.settings.mode==="ai"&&state.items.some(x=>C.hasText(state,x)&&x.text.trim())){
-      status("情境已改為「"+D.scenes[state.settings.scene].label+"」，已有台詞會保留。要依新情境重新創作，請按「將台詞交給 AI 重新創作」，再安排 AI 或產生提示詞；不會自動改掉原文。");
+    if(key==='mode'&&!$('content-update-notice').hidden)refreshContentNotice($('content-update-notice').dataset.subject||'設定');
+    if(['style','customStyle','character','scene','tone'].includes(key)&&previous!==el.value&&state.items.some(x=>C.hasText(state,x)&&x.text.trim())){
+      const title={style:'角色風格',customStyle:'風格描述',character:'角色描述',scene:'情境',tone:'台詞語氣'}[key];
+      refreshContentNotice(title);
     }
   }));
   for(const id of ['dimension','platform'])$(id).addEventListener('input',()=>$(id).dispatchEvent(new Event('change',{bubbles:true})));
@@ -375,7 +385,7 @@
       if(file.size>250000)throw new Error("設定檔超過 250 KB。");
       const incoming=C.deserialize(await file.text());
       if(!confirm("匯入將取代目前頁面的設定。是否繼續？"))return;
-      clearReference();hideApplied();state=incoming;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
+      clearReference();hideApplied();state=incoming;$("content-update-notice").hidden=true;controls();renderItems();renderGrids();invalidate();step=1;go(1);status("已匯入設定；請重新檢查摘要。");
     }catch(error){status("匯入失敗，原有內容保留："+error.message);}
   });
   try{

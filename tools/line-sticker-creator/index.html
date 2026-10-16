@@ -17,10 +17,10 @@
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
   <link rel="stylesheet" href="./sticker-creator.css?v=20261016a">
   <script defer src="./sticker-data.js?v=20261016b"></script>
-  <script defer src="./sticker-core.js?v=20261016c"></script>
+  <script defer src="./sticker-core.js?v=20261016d"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
-  <script defer src="./sticker-ai.js?v=20261016c"></script>
-  <script defer src="./sticker-app.js?v=20261016e"></script>
+  <script defer src="./sticker-ai.js?v=20261016d"></script>
+  <script defer src="./sticker-app.js?v=20261016f"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261016f"></script>
   <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
@@ -90,6 +90,7 @@
               </div>
               <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用預設情境台詞</button><button type="button" class="button" id="fill-missing">補入預設台詞</button><button type="button" class="button" id="ai-reset-text">將台詞交給 AI 重新創作</button></div>
               <p class="field-hint">「台詞由 AI 發揮」預設留白，不套固定句庫。可交給下方網站 AI 先創作，或由生圖平台依提示詞發想；已有自行輸入與先前 AI 台詞會保留，想重做請按「將台詞交給 AI 重新創作」。字體、顏色的 AI 設定只影響文字外觀。</p>
+              <p id="content-update-notice" class="notice" role="status" hidden></p>
               <section class="notice ai-planner" aria-labelledby="ai-title">
                 <h3 id="ai-title">AI 安排台詞、表情與動作</h3>
                 <p>依角色、風格、情境與逐張台詞補齊空白，已填內容不會被改。完成後會自動補入空白欄位並列出內容，不滿意可一鍵復原；這項功能只安排文字，不會生成圖片。張數較多時需稍候，最多等待約一分鐘。</p>

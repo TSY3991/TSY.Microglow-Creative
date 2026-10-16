@@ -70,3 +70,13 @@ test('3D 軟萌風格優先建立立體造型，不沿用平面渲染；半 3D �
   for(const only of [undefined,1,2]){const p=C.prompt(s,only);assert.match(p,/日系軟萌/);assert.match(p,/fully modeled 3D character render/);assert.match(p,/側面厚度/);assert.match(p,/重新建立立體造型/);assert.ok(!p.includes('呈現方式：半 3D'));assert.ok(!p.includes('consistent linework'));}
   s.settings.dimension='semi';assert.match(C.prompt(s),/呈現方式：半 3D（Semi-3D）/);assert.ok(!C.prompt(s).includes('fully modeled 3D character render'));
 });
+
+test('角色、情境與語氣搭配規則進入整組與逐張母圖及既有 Worker',async()=>{
+  const {validateInput,modelRequest}=await import('../worker/worker.mjs');
+  for(const mode of ['ai','preset','manual'])for(const [tone]of D.options.tone){const s=ready();Object.assign(s.settings,{mode,tone,style:'jpsoft',scene:'job_teacher',character:'個性沉穩'});s.items[0].text='保留我的原文';const before=C.clone(s);const rule=C.contentBrief(s.settings);
+    for(const platform of ['chatgpt','gemini','generic']){s.settings.platform=platform;for(const only of [undefined,1,2]){const p=C.prompt(s,only);assert.ok(p.includes(rule));assert.match(p,/情境決定說什麼，語氣決定怎麼說/);if(tone==='auto')assert.match(p,/自動語氣：綜合角色描述/);else assert.ok(p.includes('指定語氣優先：依「'+C.label('tone',tone)+'」'));}}
+    s.settings.platform=before.settings.platform;assert.deepEqual(s,before);const input=AI.payload(s);assert.deepEqual(validateInput(input),input);assert.ok(modelRequest(input).contents[0].parts[0].text.includes(rule));assert.ok(input.context.scene.length<=1000);if(mode==='preset')assert.match(rule,/預設句庫原文保留/);if(mode==='manual')assert.match(rule,/自行輸入的原文保留/);
+  }
+  for(const scene of Object.keys(D.scenes)){const s=ready(8);s.settings.scene=scene;assert.ok(AI.payload(s).context.scene.length<=1000);}
+  const s=ready(8);s.settings.textMode='none';assert.match(C.contentBrief(s.settings),/不新增台詞/);assert.doesNotMatch(C.contentBrief(s.settings),/創作新台詞/);
+});

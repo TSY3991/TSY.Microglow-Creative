@@ -8,7 +8,7 @@
     const s = state.settings;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character: s.character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.dialogueRule },
+      context: { source: s.source, kind: C.label("kind", s.kind), character: s.character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }
