@@ -20,7 +20,7 @@
   function controls(){
     if(prepared&&prepared.revision!==revision)clearPrepared();
     const checked=$('crop-review').checked,blank=stickers.map((s,i)=>s.source?0:i+1).filter(Boolean);
-    $('crop-run').disabled=busy||!mothers.length;$('crop-files').disabled=busy;$('crop-clear').disabled=busy;
+    $('crop-run').disabled=busy;$('crop-files').disabled=busy;$('crop-clear').disabled=busy;
     const smart=$('crop-mode').value==='smart';
     $('crop-mode').disabled=busy;$('crop-white').disabled=busy||smart;$('crop-strength').disabled=busy||(!smart&&!$('crop-white').checked);
     document.querySelectorAll('#crop-mothers button,#crop-mothers select,#crop-mothers input,#crop-results button,#crop-results input').forEach(e=>{e.disabled=busy;});
@@ -45,7 +45,7 @@
   function updatePlan(){plan=window.StickerCropPlan;$('crop-plan').textContent='目前 '+plan.count+' 張；母圖依序 '+plan.grids.map(n=>'4×'+n/4).join(' ＋ ');}
   window.addEventListener('sticker-crop-plan',()=>{const next=window.StickerCropPlan;if(JSON.stringify(plan)!==JSON.stringify(next)){updatePlan();invalidate();controls();message('張數或母圖分配已變更，原圖保留，請確認網格後重新裁切。');}});
   // 自動建議：母圖放入或分割線變動後，在背景快速分析（縮小到 900 px 內，不上傳），建議智慧分割或硬切。
-  let adviceTimer=0,adviceToken=0,advicePending=null,modeChosen=false;
+  let adviceTimer=0,adviceToken=0,advicePending=null,adviceDone=null,modeChosen=false;
   const tolerance=()=>({248:12,240:24,230:40}[Number($('crop-strength').value)]||12);
   async function analyze(m){
     const tol=tolerance(),key=JSON.stringify([m.x,m.y,tol]);
@@ -82,8 +82,9 @@
   }
   function scheduleAdvice(){
     clearTimeout(adviceTimer);const token=++adviceToken;
+    if(adviceDone){adviceDone();adviceDone=null;} // 被取代的排程也要放行，否則正在等它的「裁切」會永遠卡住
     if(!mothers.length){$('crop-advice').hidden=true;advicePending=null;return;}
-    let done;advicePending=new Promise(resolve=>{done=resolve;});
+    let done;advicePending=new Promise(resolve=>{done=resolve;});adviceDone=done;
     adviceTimer=setTimeout(async()=>{
       try{const list=[];for(const m of mothers.slice()){list.push(await analyze(m));if(token!==adviceToken)return;await new Promise(r=>setTimeout(r));}showAdvice(list);}
       catch{}finally{if(token===adviceToken)advicePending=null;done();}
@@ -159,9 +160,11 @@
     c.width=c.height=1;return {source,opaque};
   }
   $('crop-run').onclick=async()=>{
-    if(busy)return;invalidate(true);const token=revision;busy=true;controls();const results=[],notes=[];
+    if(busy)return;
+    if(!mothers.length){message('還沒有母圖：請先按上方「加入母圖」選擇檔案，再回來按這個按鈕。');$('crop-files').scrollIntoView({block:'center'});$('crop-files').focus();return;}
+    invalidate(true);const token=revision;busy=true;controls();const results=[],notes=[];
     try{
-      let waiting;while((waiting=advicePending))await waiting;
+      let waiting;for(let n=0;n<20&&(waiting=advicePending);n++)await Promise.race([waiting,new Promise(r=>setTimeout(r,4000))]); // 最多等 4 秒，分析沒完成也照常裁切
       if(token!==revision)throw Error('設定已變更，請重新裁切。');
       const geometry=mothers.map((m,j)=>{try{return C.rectangles(m.image.width,m.image.height,m.x,m.y);}catch(error){throw Error('母圖 '+(j+1)+'：'+error.message);}});
       if(!C.counts.includes(plan.count)||geometry.reduce((n,a)=>n+a.length,0)!==plan.count)throw Error('總格數必須符合目前 '+plan.count+' 張設定；請調整母圖網格或第二步的張數。');

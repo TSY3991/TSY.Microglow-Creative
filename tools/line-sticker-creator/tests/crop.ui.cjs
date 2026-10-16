@@ -103,6 +103,7 @@ let browser,ws,server;
   check('尚未勾選檢查時，下載按鈕旁說明原因',await E("document.getElementById('crop-download').disabled&&document.getElementById('crop-download-hint').textContent.includes('勾選')"));
   check('預覽底色預設深色',await E("document.getElementById('crop-results').dataset.backdrop==='dark'"));
   await send('Page.reload',{ignoreCache:true});await loaded();await E('window.confirm=()=>true');await click('tab-crop');await set('count','8');
+  await click('crop-run');check('沒有母圖時按裁切會說明下一步，而不是毫無反應',await E("!document.getElementById('crop-run').disabled&&document.getElementById('crop-status').textContent.includes('請先按上方「加入母圖」')"));
   check('預設為智慧分割，去白底勾選停用',await E("document.getElementById('crop-mode').value==='smart'&&document.getElementById('crop-white').disabled&&!document.getElementById('crop-strength').disabled"));
   await upload();await delay(900);
   check('放入母圖後自動出現建議框，並預選建議的裁切方式',await E("(()=>{const b=document.getElementById('crop-advice');return !b.hidden&&b.querySelector('h3').textContent.includes('建議用「智慧分割」')&&b.querySelectorAll('li').length===1&&document.getElementById('crop-mode').value==='smart'&&document.getElementById('crop-advice-smart').textContent.includes('（建議）')&&document.getElementById('crop-advice-smart').getAttribute('aria-pressed')==='true';})()"));
@@ -116,6 +117,12 @@ let browser,ws,server;
   check('圖案貼邊時建議框提醒第 1 張可能被切平',await E("(()=>{const p=document.getElementById('crop-advice-clip');return !p.hidden&&p.textContent.includes('第 1 張')&&!p.textContent.includes('第 2 張');})()"));
   await run(8);
   check('裁切後該張結果卡片標示可能被切到',await E("(()=>{const n=[...document.querySelectorAll('.crop-sticker')];return n[0].textContent.includes('貼著格子邊緣')&&!n[2].textContent.includes('貼著格子邊緣');})()"));
+  // 回歸：背景分析還在等待時按裁切，又移動分割線（重新排程分析）——裁切不可卡死
+  await click('crop-clear');await E("(async()=>{const c=document.createElement('canvas');c.width=800;c.height=360;const x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,800,360);x.fillStyle='#008080';x.fillRect(40,25,120,130);const blob=await new Promise(r=>c.toBlob(r)),dt=new DataTransfer();dt.items.add(new File([blob],'quick.png',{type:'image/png'}));const e=document.getElementById('crop-files');e.files=dt.files;e.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,60));})()");
+  await E("document.getElementById('crop-run').click()");await delay(40);
+  await E("(()=>{const r=document.querySelector('.cut-row input[type=range]');r.value=String(Number(r.value)+1);r.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  let quick=false;for(let i=0;i<80&&!quick;i++){await delay(100);quick=await E("document.querySelectorAll('.crop-sticker').length===8&&!document.getElementById('crop-run').disabled");if(!quick)await E("(()=>{const b=document.getElementById('crop-run');if(!b.disabled&&!document.querySelectorAll('.crop-sticker').length)b.click();})()");}
+  check('分析等待中按裁切又調整分割線，仍能完成裁切不卡死',quick);
   await click('crop-clear');await upload();await delay(600);
   await E("(()=>{const r=document.querySelector('.cut-row input[type=range]');r.value='50';r.dispatchEvent(new Event('input',{bubbles:true}));})()");
   await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
