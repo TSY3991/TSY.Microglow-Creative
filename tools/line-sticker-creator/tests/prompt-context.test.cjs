@@ -39,7 +39,7 @@ test('全部職業／主題帶入領域詞彙，AI、預設與手動以及多張
 
 test('無文字與手寫內容保留，切換職業不偷改台詞，不把情境詞彙當要印的字',()=>{
   const s=ready(8);s.settings.scene='job_temple';s.settings.textMode='none';
-  const p=C.prompt(s);assert.match(p,/參香、求籤、安太歲/);assert.match(p,/不產生任何文字/);assert.doesNotMatch(p,/要印的文字/);
+  const p=C.prompt(s);assert.match(p,/廟會、遶境、祈福/);assert.match(p,/內容守則（LINE 審核）/);assert.match(p,/依原設定保留，不刪除也不替換/);assert.doesNotMatch(p,/不畫成神明/);assert.doesNotMatch(p,/安太歲|供桌/);assert.match(p,/不產生任何文字/);assert.doesNotMatch(p,/要印的文字/);
   s.settings.textMode='all';s.settings.mode='manual';s.items[0].text='保留我的原文';
   const before=C.clone(s.items),q=C.prompt(s);assert.match(q,/要印的文字 "保留我的原文"/);assert.match(q,/不因情境換字/);assert.deepEqual(s.items,before);
   s.settings.scene='job_photographer';assert.match(C.prompt(s),/快門、光圈、對焦/);assert.deepEqual(s.items,before);
@@ -80,3 +80,4 @@ test('角色、情境與語氣搭配規則進入整組與逐張母圖及既有 W
   for(const scene of Object.keys(D.scenes)){const s=ready(8);s.settings.scene=scene;assert.ok(AI.payload(s).context.scene.length<=1000);}
   const s=ready(8);s.settings.textMode='none';assert.match(C.contentBrief(s.settings),/不新增台詞/);assert.doesNotMatch(C.contentBrief(s.settings),/創作新台詞/);
 });
+{const s2=ready(8);s2.settings.scene='greeting';const p2=C.prompt(s2);assert.match(p2,/不寫勸人信教/);assert.match(p2,/商標、品牌 logo/);assert.match(p2,/逐字照印/);assert.doesNotMatch(p2,/不畫成神明/);console.log('PASS LINE review rules in prompt');}

@@ -16,7 +16,7 @@
   function invalidate(keep){
     revision++;clearPrepared();mainNote='';
     if(keep){if(stickers.length)adjust=stickers.map(s=>({zoom:s.zoom,dx:s.dx,dy:s.dy}));}else{adjust=[];selected=0;}
-    stickers=[];$('crop-brand-preview').getContext('2d').clearRect(0,0,1110,960);$('crop-brand-preview-hint').textContent='裁切後顯示預覽。';$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-review').checked=false;$('crop-download').disabled=true;
+    stickers=[];$('crop-brand-preview').getContext('2d').clearRect(0,0,1110,960);$('crop-brand-preview-hint').textContent='裁切後顯示預覽。';$('crop-results').replaceChildren();$('crop-special').replaceChildren();$('crop-qa').replaceChildren();$('crop-qa').hidden=true;$('crop-review').checked=false;$('crop-download').disabled=true;
   }
   // 只有四個角落都不透明才提醒；角色剛好碰到格角時可能誤報，因此僅提示、不阻擋。
   function opaqueCorners(source){const w=source.width,h=source.height,ctx=source.getContext('2d');return [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].every(([x,y])=>ctx.getImageData(x,y,1,1).data[3]>=250);}
@@ -232,7 +232,21 @@
       const lab=el('label'),radio=el('input');radio.type='radio';radio.name='crop-main';radio.checked=i===selected;radio.onchange=()=>{selected=i;mainNote='';special();touched();};lab.append(radio,el('span','選為主要圖片／標籤圖片'));box.append(lab);
       for(const [key,title,min,max] of [['zoom','大小（%）',50,100],['dx','水平位移（px）',-180,180],['dy','垂直位移（px）',-150,150]]){const l=el('label',title),input=el('input');input.type='range';input.min=min;input.max=max;input.step=1;input.value=s[key];input.setAttribute('aria-label','貼圖 '+(i+1)+' '+title);input.oninput=()=>{s[key]=Number(input.value);renderSticker(s,c);updateBrandPreview();touched();};l.append(input);box.append(l);}
       box.append(button('還原大小與位置',()=>{s.zoom=100;s.dx=s.dy=0;renderResults();touched();}));$('crop-results').append(box);
-    });special();updateBrandPreview();
+    });special();updateBrandPreview();renderQA();
+  }
+  // 生成後 QA：結構問題自動判定；文字、Logo、宣傳內容等需人眼逐張比對（網站不讀圖中文字）。
+  function renderQA(){
+    const box=$('crop-qa'),G=window.StickerContentGuard;box.replaceChildren();
+    if(!G||!stickers.length){box.hidden=true;return;}
+    const expected=typeof window.StickerExpectedTexts==='function'?window.StickerExpectedTexts():[];
+    const r=G.checkAfterGeneration({count:plan.count,stickers,expected});
+    const auto=el('ul'),manual=el('ul'),list=el('ol'),more=el('details');
+    r.auto.forEach(x=>auto.append(el('li',(x.ok?'✔ ':'⚠ ')+x.label+'：'+x.detail)));
+    r.manual.forEach(x=>manual.append(el('li','□ '+x)));
+    r.expected.forEach(x=>list.append(el('li',x.text?x.text:'（不印字）')));
+    more.append(el('summary','每張應印的文字（對照用，依第一步目前設定）'),list);
+    box.append(el('h3','生成後檢查'),el('p','網站自動檢查：'),auto,el('p','請你逐張用眼睛確認：'),manual,more,el('p','母圖只是製作中間檔；下載的單張已依 LINE 一般貼圖規格輸出（貼圖 370×320 以內、main 240×240、tab 96×74）。這份清單只能降低可辨識風險，不保證通過 LINE 審核。'));
+    box.hidden=false;
   }
   function updateBrandPreview(){
     const target=$('crop-brand-preview'),ctx=target.getContext('2d'),first=$('crop-results').querySelector('canvas');ctx.clearRect(0,0,target.width,target.height);

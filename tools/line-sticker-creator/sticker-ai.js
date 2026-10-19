@@ -2,6 +2,7 @@
   "use strict";
   const C = typeof module !== "undefined" && module.exports ? require("./sticker-core.js") : root.StickerCore;
   const D = typeof module !== "undefined" && module.exports ? require("./sticker-data.js") : root.StickerData;
+  const G = typeof module !== "undefined" && module.exports ? require("./sticker-guard.js") : root.StickerContentGuard;
   function payload(state) {
     const issues = C.validate(state, 2);
     if (issues.length) throw new Error(issues.map(x => x.message).join(" "));
@@ -30,16 +31,21 @@
     return rows.sort((a, b) => a.id - b.id);
   }
   // 只補真正空白的欄位，並記下每個補入處，讓使用者能一鍵復原。
+  // AI 自由發想的內容若有任何可辨識風險（含需確認項目）就不套用，該欄保持空白，可再請 AI 重新安排。
   function applyDetailed(state, rows) {
     const validated = suggestions({ items: rows }, payload(state));
-    const changes = [];
+    const changes = [], skipped = [];
     validated.forEach(x => {
       const entry = state.items[x.id - 1];
       for (const key of ["text", "emotion", "action"]) {
-        if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) { entry[key] = x[key]; changes.push({ index: x.id - 1, key, value: x[key] }); }
+        if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) {
+          const hits = G ? G.checkText(x[key]) : [];
+          if (hits.length) { skipped.push({ index: x.id - 1, key, label: hits[0].label }); continue; }
+          entry[key] = x[key]; changes.push({ index: x.id - 1, key, value: x[key] });
+        }
       }
     });
-    return { filled: changes.length, changes };
+    return { filled: changes.length, changes, skipped };
   }
   function apply(state, rows) { return applyDetailed(state, rows).filled; }
   // 只復原「仍等於 AI 補入值」的欄位；使用者後來改過的不動。

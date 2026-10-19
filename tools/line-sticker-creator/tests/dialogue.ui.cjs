@@ -64,7 +64,7 @@ let browser,ws,server;
   check('實際選單的手繪風格細節與老師詞彙都進入提示詞',await E("(()=>{const p=document.getElementById('prompt-output').value;return p.includes('自然手繪線條')&&p.includes('課本、作業、黑板、點名、考試、聯絡簿');})()"));
   check('職業詞彙只作發想方向，不預填固定台詞',await E("Array.from(document.querySelectorAll('#items textarea[id$=text]')).every(e=>!e.value)"));
   await set('style','comic');await set('scene','job_temple');await click('generate');
-  check('改成搞怪與宮廟後提示詞換新設定，不殘留老師詞彙',await E("(()=>{const p=document.getElementById('prompt-output').value;return p.includes('誇大眉眼')&&p.includes('參香、求籤、安太歲')&&!p.includes('課本、作業、黑板');})()"));
+  check('改成搞怪與宮廟後提示詞換新設定，不殘留老師詞彙',await E("(()=>{const p=document.getElementById('prompt-output').value;return p.includes('誇大眉眼')&&p.includes('廟會、遶境、祈福')&&!p.includes('課本、作業、黑板');})()"));
   await set('item-0-text','手寫內容保留');await set('scene','job_teacher');
   check('有舊台詞時切職業會提醒重做方式，原文完整保留',await E("document.getElementById('status').textContent.includes('已有台詞會保留')&&document.getElementById('status').textContent.includes('將台詞交給 AI 重新創作')&&document.getElementById('item-0-text').value==='手寫內容保留'"));
   check('改情境的保留台詞提醒留在第二步與摘要',await E("!document.getElementById('content-update-notice').hidden&&document.getElementById('summary').textContent.includes('尚未依新設定重寫')"));

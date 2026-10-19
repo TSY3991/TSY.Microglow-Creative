@@ -131,7 +131,7 @@ test("呈現方式：預設 2D，3D 寫入提示詞，舊設定檔相容、未�
 test("職業情境：全部可補滿 40 張、句子不重複、不超過 14 字，並可搜尋",()=>{
   const jobs=Object.entries(D.scenes).filter(([,x])=>x.job);assert.ok(jobs.length>=40);
   for(const [id,x] of jobs){const p=C.pool(id);assert.ok(p.length>=40,id+" 句庫不足："+p.length);assert.equal(new Set(x.lines).size,x.lines.length,id);assert.ok(x.lines.every(t=>t.length<=14&&!D.common.includes(t)),id);assert.ok(x.group&&x.kw);}
-  for(const need of ["工程師","軟體工程師","AI 工程師","老師","客服","寵物","宮廟","YouTuber","美髮","司機"])assert.ok(jobs.some(([,x])=>x.label===need),need);
+  for(const need of ["工程師","軟體工程師","AI 工程師","老師","客服","寵物","宮廟","影音創作者","美髮","司機"])assert.ok(jobs.some(([,x])=>x.label===need),need);
   const s=ready(40);s.settings.scene="job_engineer";C.fillMissing(s);assert.equal(new Set(s.items.map(x=>x.text)).size,40);
 });
 test("語氣、內容平衡、角色鎖定與職業情境寫入提示詞；舊設定檔相容",()=>{

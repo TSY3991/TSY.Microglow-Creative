@@ -58,6 +58,10 @@
 .line-sticker-tool [aria-invalid=true] { border-color:#a33128; }
 .line-sticker-tool .notice { padding:13px 15px; margin:16px 0; border-radius:10px; background:var(--teal-soft); color:var(--teal-dark); font-size:.8rem; line-height:1.8; overflow-wrap:anywhere; }
 .line-sticker-tool .error-notice { background:#fff0e9; color:#a33128; }
+.line-sticker-tool .guard-result ul,.line-sticker-tool .crop-qa ul,.line-sticker-tool .crop-qa ol { margin:6px 0 10px; padding-left:1.4em; }
+.line-sticker-tool .guard-result li,.line-sticker-tool .crop-qa li { margin:2px 0; }
+.line-sticker-tool .crop-qa h3 { margin:0 0 6px; font-size:.95rem; }
+.line-sticker-tool .crop-qa summary { cursor:pointer; font-weight:700; }
 .line-sticker-tool .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--teal-dark); font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
 .line-sticker-tool .button.primary { background:var(--teal-dark); border-color:var(--teal-dark); color:white; }
 .line-sticker-tool .button.small { padding:7px 11px; min-height:40px; font-size:.75rem; }

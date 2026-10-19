@@ -5,7 +5,7 @@
   const storageKey="microglow:line-sticker-creator:v1";
   let state=C.initial(),step=1,saveEnabled=false,generated=false;
   let referenceUrl="",referenceRevision=0;
-  const AI=window.StickerAI;
+  const AI=window.StickerAI,G=window.StickerContentGuard;
   let aiEndpoint="",aiController=null,aiApplied=null,aiRevision=0;
   function clearReference() {
     referenceRevision++;
@@ -71,6 +71,7 @@
     $("ai-reset-text").hidden=state.settings.mode!=="ai";
     $("ai-reset-text").disabled=state.settings.textMode==="none";
     const scene=$("scene");scene.disabled=state.settings.mode==="manual";
+    $("scene-review-note").hidden=state.settings.scene!=="job_temple";
     if(scene.options.length)scene.options[0].disabled=state.settings.mode==="preset";
     const noText=state.settings.textMode==="none";
     document.querySelector(".text-settings").hidden=noText;
@@ -189,6 +190,8 @@
   }
   function live() {
     window.StickerCropPlan={count:state.settings.count,grids:state.grids.slice()};
+    // 生成後 QA 用：每張應印的文字。另外提供而不放進 StickerCropPlan，避免改台詞就讓已裁切的結果失效。
+    window.StickerExpectedTexts=()=>state.items.slice(0,state.settings.count).map(x=>C.hasText(state,x)?(C.finalText(state,x)||"（未指定，由 AI 發想）"):"");
     window.dispatchEvent(new Event("sticker-crop-plan"));
   }
   function summary() {
@@ -323,8 +326,23 @@
   });
   $("add-item").addEventListener("click",()=>{if(state.items.length>=80)return status("最多保留 80 筆內容，請先刪減。");state.items.push(C.item());renderItems();invalidate();});
   $("add-grid").addEventListener("click",()=>{if(state.grids.length>=5)return status("最多 5 張母圖。");state.grids.push(8);renderGrids();invalidate();});
+  // 內容防護：產生提示詞前檢查使用者內容。明確違規就暫停並請使用者自行修改；需確認的照原文產生並列出提醒。網站不替使用者改字。
+  function renderGuard(result){
+    const box=$("guard-result");box.replaceChildren();
+    if(!G||result.status===G.SAFE){box.hidden=true;return;}
+    const blocked=result.status===G.BLOCKED,seen=new Set(),list=node("ul");
+    [...result.findings].sort((a,b)=>(a.level===G.BLOCKED?0:1)-(b.level===G.BLOCKED?0:1)).forEach(f=>{
+      const key=f.where+"|"+f.label;if(seen.has(key))return;seen.add(key);
+      list.append(node("li",(f.level===G.BLOCKED?"【需修改】":"【請確認】")+f.where+"「"+f.term+"」："+f.label+"（"+f.clause+"）。建議："+f.suggest+(f.source==="preset"?"（這句來自預設句庫）":"")));
+    });
+    box.className="notice guard-result"+(blocked?" error-notice":"");
+    box.append(node("p",blocked?"有內容明顯不符合 LINE 規範，已暫停產生提示詞。請自行修改下列標示「需修改」的內容（網站不會替你改字）：":"下列內容可能涉及 LINE 審核裁量，已照原文產生提示詞；要不要調整由你決定："),list,node("p","此檢查只比對字面，可能漏判或誤判，不保證通過 LINE 審核。"));
+    box.hidden=false;
+  }
+  function guardCheck(){const result=G?G.checkBeforeGeneration(state):{status:"SAFE",findings:[]};renderGuard(result);return result;}
   $("generate").addEventListener("click",()=>{
     if(!errors(C.validate(state)))return;
+    if(guardCheck().status===G?.BLOCKED){$("prompt-area").hidden=true;generated=false;status("有內容需要修改，請看上方紅色清單。");$("guard-result").scrollIntoView({block:"center"});return;}
     $("reference-handoff").hidden=state.settings.source!=="photo";$("prompt-output").value=currentPrompt();$("prompt-area").hidden=false;generated=true;copyLabel();
     status("已產生整組提示詞；請核對內容後複製。");
   });
@@ -334,6 +352,7 @@
     if(D.options.dimension.some(([id])=>id===value)&&value!==state.settings.dimension){
       state.settings.dimension=value;save();if(step===4)summary();
     }
+    if(guardCheck().status===G?.BLOCKED)throw new Error("有內容不符合 LINE 規範，請先依「確認摘要並產生提示詞」上方的紅色清單修改。");
     return C.prompt(state,only);
   }
   function copyLabel(){const info=platformInfo();$("copy").textContent=info.name?"複製提示詞，並打開 "+info.name:"複製整組提示詞";}
@@ -413,7 +432,8 @@
       const row=node("tr");[String(i+1),shown,entry.emotion,entry.action].forEach(value=>row.append(node("td",value)));body.append(row);
     });
     aiApplied={changes:result.changes};$("ai-preview").hidden=false;
-    $("ai-status").textContent="AI 已補入 "+result.filled+" 個空白欄位，原有內容未更動；提示詞會直接使用這些內容。可在下方逐張修改，或按「復原這次補入」。";
+    const skipped=(result.skipped||[]).map(x=>x.index+1).filter((n,i,a)=>a.indexOf(n)===i);
+    $("ai-status").textContent="AI 已補入 "+result.filled+" 個空白欄位，原有內容未更動；提示詞會直接使用這些內容。可在下方逐張修改，或按「復原這次補入」。"+(skipped.length?"第 "+skipped.join("、")+" 張的 AI 建議可能不符合 LINE 規範，已略過並保持空白；可再按一次讓 AI 重新安排，或自行填寫。":"");
     status("已套用 AI 內容；尚未生成圖片。");
   }
   $("ai-consent").addEventListener("change",()=>{if(!$("ai-consent").checked)clearAI("已取消同意，已中止等待。");aiAvailability();});
