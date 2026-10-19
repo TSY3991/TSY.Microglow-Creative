@@ -180,7 +180,7 @@
     }catch(error){incoming.forEach(m=>m.image.close());if(token===uploadRevision)message('未加入圖片，原圖保留：'+error.message);}
     finally{controls();}
   };
-  function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);if(W===370)brand.draw(target);}}
+  function renderSticker(s,target,W=370,H=320,pad=10){const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);if(s.source){const f=C.fit(s.source.width,s.source.height,W,H,W===370?s.zoom:100,W===370?s.dx:0,W===370?s.dy:0,pad);ctx.drawImage(s.source,f.x,f.y,f.width,f.height);if(W===370)return brand.draw(target);}}
   function openEditor(s,i,opener){
     const m=mothers[s.mother];if(!m||!window.StickerEditor||busy)return;
     window.StickerEditor.open({image:m.image,outside:m.outside||null,mw:m.image.width,mh:m.image.height,rect:s.rect,source:s.source,at:s.at,auto:s.auto||null,remove:s.remove,threshold:s.threshold,opener,label:String(i+1).padStart(2,'0')+'.png',
@@ -293,15 +293,15 @@
   $('crop-review').onchange=controls;
   $('crop-clear').onclick=()=>{if(!mothers.length)return;if(!confirm('移除此頁全部母圖與裁切預覽？原始檔案不受影響。'))return;uploadRevision++;mothers.forEach(m=>m.image.close());mothers=[];invalidate();renderMothers();controls();message('已移除母圖；電腦上的原始檔案保留。');};
   $('crop-download').onclick=async()=>{
-    if(busy||brand.loading()||!$('crop-review').checked||stickers.length!==plan.count||stickers.some(s=>!s.source))return;busy=true;controls();const token=revision,entries=[];
+    if(busy||brand.loading()||!$('crop-review').checked||stickers.length!==plan.count||stickers.some(s=>!s.source))return;busy=true;controls();const token=revision,entries=[],weak=[];
     try{
       const jobs=[['main.png',forMain(stickers[selected]),240,240,10],['tab.png',forMain(stickers[selected]),96,74,4],...stickers.map((s,i)=>[String(i+1).padStart(2,'0')+'.png',s,370,320,10])];
-      for(const [name,s,w,h,pad] of jobs){if(token!==revision)throw Error('圖片設定已變更，請重新檢查後下載。');const c=canvas(w,h);renderSticker(s,c,w,h,pad);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('圖片編碼失敗。');entries.push({name,data:C.png72(new Uint8Array(await blob.arrayBuffer()))});c.width=c.height=1;}
+      for(const [name,s,w,h,pad] of jobs){if(token!==revision)throw Error('圖片設定已變更，請重新檢查後下載。');const c=canvas(w,h);const mark=renderSticker(s,c,w,h,pad);if(mark&&mark.marked&&!mark.placed)weak.push(name.replace('.png',''));const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('圖片編碼失敗。');entries.push({name,data:C.png72(new Uint8Array(await blob.arrayBuffer()))});c.width=c.height=1;}
       const data=C.zip(entries);if(token!==revision||!$('crop-review').checked)throw Error('設定已變更，請重新確認。');
       const file=new File([data],'line-stickers-'+plan.count+'.zip',{type:'application/zip'}),pngFiles=entries.map(e=>new File([e.data],e.name,{type:'image/png'}));
       const shareFiles=canShare([file])?[file]:canShare(pngFiles)?pngFiles:null;
       const opaque=opaqueList();
-      prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。'+(opaque.length?'提醒：第 '+names(opaque)+' 張四個角落都不透明，LINE 要求透明背景。':'');$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
+      prepared={file,shareFiles,revision:token};$('crop-ready').hidden=false;$('crop-ready-info').textContent='已準備 '+entries.length+' 個 PNG（含 main.png、tab.png），ZIP '+Math.ceil(data.length/1024)+' KB。打包完成不代表已保存至裝置。'+(weak.length?'提醒：第 '+weak.join('、')+' 張圖案太小，只有斜向淡色小字、沒有主標記。':'')+(opaque.length?'提醒：第 '+names(opaque)+' 張四個角落都不透明，LINE 要求透明背景。':'');$('crop-share').hidden=!shareFiles;$('crop-share').textContent=shareFiles?.length===1?'系統分享 ZIP 檔案':'系統分享全部 PNG（未打包）';
       if(inApp)message('偵測到 App 內建瀏覽器，未自動下載。可嘗試下方系統分享；若沒有分享功能或無法保存，只能改用 Chrome／Safari 從頭做一次（目前進度不會帶過去）。');else downloadPrepared();
     }catch(error){message('下載未完成：'+error.message);}finally{busy=false;controls();}
   };
