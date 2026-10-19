@@ -281,9 +281,12 @@
         }
       }
       if(token!==revision)throw Error('設定已變更，請重新裁切。');
-      stickers=results;if(selected>=results.length)selected=0;$('crop-review').checked=false;renderResults();
+      stickers=results;if(selected>=results.length)selected=0;
+      // 全新裁切才重新抽 main／tab；只因去白底設定重裁（保留調整）時沿用原選擇。
+      if(!adjust.length){selected=C.pickMain(results.map(x=>{if(!x.source)return null;const d=x.source.getContext('2d').getImageData(0,0,x.source.width,x.source.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>=128)n++;return {area:n,ok:!x.joined&&!x.clipped&&!x.opaque};}));}
+      $('crop-review').checked=false;renderResults();
       const kept=adjust.some(a=>a.zoom!==100||a.dx||a.dy),opaque=opaqueList(),joined=results.map((x,n)=>x.joined?n+1:0).filter(Boolean),clippedList=results.map((x,n)=>x.clipped&&x.source?n+1:0).filter(Boolean);
-      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，已順著圖案形狀分開，請檢查，必要時用「修圖」調整；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(clippedList.length?'第 '+names(clippedList)+' 張的圖案貼著格子邊緣，母圖可能已被切掉；':'')+(notes.length?notes.join('；')+'；':'')+'請用深淺預覽逐張檢查，確認後下載。');
+      message('已裁切 '+stickers.length+' 張。'+(smart?'已依圖案歸格並去除外圍背景色；':(remove?'已移除邊緣相連的近白色；':'保留原圖背景；'))+(kept?'已保留先前的大小與位置調整；':'')+(joined.length?'第 '+names(joined)+' 張的圖案和相鄰貼圖相連，已順著圖案形狀分開，請檢查，必要時用「修圖」調整；':'')+(opaque.length?'第 '+names(opaque)+' 張四個角落都不透明，背景可能未去除；':'')+(clippedList.length?'第 '+names(clippedList)+' 張的圖案貼著格子邊緣，母圖可能已被切掉；':'')+(notes.length?notes.join('；')+'；':'')+(adjust.length?'':'main.png／tab.png 已從角色較大的前幾張隨機選了第 '+String(selected+1).padStart(2,'0')+' 張，可在該張卡片下方改選；')+'請用深淺預覽逐張檢查，確認後下載。');
     }catch(error){message(error.message);}finally{busy=false;controls();}
   };
   $('crop-mode').onchange=()=>{modeChosen=true;adviceButtons();controls();if(stickers.length){invalidate(true);controls();message('裁切方式已變更，請重新裁切；原圖與先前的大小位置調整會保留。');}};

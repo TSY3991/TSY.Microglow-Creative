@@ -313,5 +313,11 @@
     entries.forEach(({name,data})=>{if(data.length>1024*1024)throw Error(name+' 超過 1 MB，請調整圖片。');const filename=new TextEncoder().encode(name),sum=crc(data),a=new Uint8Array(30+filename.length),av=new DataView(a.buffer);av.setUint32(0,0x04034b50,true);av.setUint16(4,20,true);av.setUint16(12,33,true);av.setUint32(14,sum,true);av.setUint32(18,data.length,true);av.setUint32(22,data.length,true);av.setUint16(26,filename.length,true);a.set(filename,30);local.push(a,data);const b=new Uint8Array(46+filename.length),bv=new DataView(b.buffer);bv.setUint32(0,0x02014b50,true);bv.setUint16(4,20,true);bv.setUint16(6,20,true);bv.setUint16(14,33,true);bv.setUint32(16,sum,true);bv.setUint32(20,data.length,true);bv.setUint32(24,data.length,true);bv.setUint16(28,filename.length,true);bv.setUint32(42,offset,true);b.set(filename,46);central.push(b);offset+=a.length+data.length;});
     const directory=join(central),end=new Uint8Array(22),v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,entries.length,true);v.setUint16(10,entries.length,true);v.setUint32(12,directory.length,true);v.setUint32(16,offset,true);const result=join([...local,directory,end]);if(result.length>=60*1024*1024)throw Error('ZIP 必須小於 60 MB。');return result;
   }
-  return {counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,partitionArt,guessTextRegions,inpaint,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  // main／tab 預設：在「角色佔比最大的前三分之一」裡隨機挑一張；排除被切到、相連或背景未去的格子（都排除就退回全部有圖的格子）。
+  function pickMain(items,rnd=Math.random){
+    const has=items.map((x,i)=>x&&x.area>0?i:-1).filter(i=>i>=0);if(!has.length)return 0;
+    const good=has.filter(i=>items[i].ok),pool=(good.length?good:has).sort((a,b)=>items[b].area-items[a].area||a-b);
+    const top=pool.slice(0,Math.max(1,Math.ceil(pool.length/3)));return top[Math.min(top.length-1,Math.floor(rnd()*top.length))];
+  }
+  return {pickMain,counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,partitionArt,guessTextRegions,inpaint,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

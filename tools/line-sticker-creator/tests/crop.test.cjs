@@ -167,3 +167,12 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   }
   console.log('PASS every significant cell gets a marker, including thin joined art; empty cells stay empty');
 }
+
+{ // pickMain：只在面積最大的前三分之一隨機，排除空格與有問題的格子
+  const items=[{area:10,ok:true},{area:90,ok:true},null,{area:80,ok:true},{area:99,ok:false},{area:70,ok:true},{area:50,ok:true},{area:20,ok:true}];
+  const seen=new Set();for(const r of [0,.2,.4,.6,.8,.999])seen.add(C.pickMain(items,()=>r));
+  assert.deepEqual([...seen].sort(),[1,3]);                                    // 有效且 ok 的 6 張取前 2：面積 90（#1）、80（#3）；#4 面積最大但 ok=false 被排除
+  assert.equal(C.pickMain([null,null]),0);assert.equal(C.pickMain([{area:5,ok:false},{area:9,ok:false}],()=>0),1); // 全有問題時退回全部有圖的格子
+  assert.equal(C.pickMain([{area:7,ok:true}],()=>.99),0);
+  console.log('PASS pickMain picks among the largest third, skips empty/clipped cells');
+}
