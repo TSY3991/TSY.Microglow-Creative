@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261016f"></script>
   <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
-  <script defer src="./sticker-brand.js?v=20261019a"></script>
+  <script defer src="./sticker-brand.js?v=20261019b"></script>
   <script defer src="./sticker-crop-app.js?v=20261019a"></script>
   <script defer src="./sticker-tabs.js?v=20261016a"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
@@ -192,7 +192,7 @@
         <p class="field-hint">輸入品牌名稱或加入商標，也可以兩者並用。網站會自動找下方較平整的位置放一個清楚的標記，再以低透明度合成到每張編號貼圖，並在圖案上疊一層斜向重複的淡色小字，每張都會有標記；main.png、tab.png 保留原樣。標記只在本機處理，不會上傳。</p>
         <label class="field" for="crop-brand-text"><span>品牌名稱（最多 24 字）</span><input id="crop-brand-text" type="text" maxlength="24" placeholder="例如：微光創作室" autocomplete="off"></label>
         <label class="field" for="crop-brand-file"><span>商標圖片</span><input id="crop-brand-file" type="file" accept="image/png,image/webp,image/jpeg"><span class="field-hint">建議透明 PNG；最多 5 MB／400 萬像素。</span></label>
-        <label class="field" for="crop-brand-opacity"><span>標記明顯程度 <output id="crop-brand-level" for="crop-brand-opacity">30%</output></span><input id="crop-brand-opacity" type="range" min="15" max="50" value="30"></label>
+        <label class="field" for="crop-brand-opacity"><span>標記明顯程度 <output id="crop-brand-level" for="crop-brand-opacity">12%</output></span><input id="crop-brand-opacity" type="range" min="4" max="30" value="12"></label>
         <button id="crop-brand-clear" class="button small" type="button">移除品牌標記</button><p id="crop-brand-status" role="status" class="field-hint"></p>
         <p class="field-hint">請展開下方放大預覽確認；下載後放大可能有助辨識，但不保證平常看不到或放大一定能辨認，也不能防止移除或盜用。品牌設定與圖片不會存入設定檔。</p>
         <details><summary>放大檢查第一張貼圖（3 倍）</summary><canvas id="crop-brand-preview" width="1110" height="960" aria-label="第一張貼圖三倍放大預覽"></canvas><p id="crop-brand-preview-hint" class="field-hint">裁切後顯示預覽。</p></details>

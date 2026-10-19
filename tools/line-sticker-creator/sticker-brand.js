@@ -14,7 +14,7 @@
         const n=area(cnt,x,y,w,h);if(!n)continue;const cov=n/(w*h),mean=area(sum,x,y,w,h)/n,variance=area(sq,x,y,w,h)/n-mean*mean;
         if(!fallback||cov>fallback.cov+1e-9)fallback={x,y,w,h,cov,mean};
         if(cov<.95)continue;
-        const score=-variance*.015+y/H*10+(y>=H*.55?200:0)+scale*60;
+        const score=-variance*.015+y/H*400+scale*60;
         if(!best||score>best.score)best={x,y,w,h,cov,mean,score};
       }
       if(best)break;
@@ -53,23 +53,23 @@
       if(logo){const k=Math.min(30/logo.width,14/logo.height);const w=Math.max(1,Math.round(logo.width*k)),h=Math.max(1,Math.round(logo.height*k));ink.drawImage(logo,0,(16-h)/2,w,h);offset=w+3;}
       const width=text?74:Math.max(1,offset-3),height=16;
       const spot=place(ctx.getImageData(0,0,W,H).data,W,H,width,height);
-      // 主標記：蓋在有實體內容的位置；文字加反色描邊，深淺底都看得到。
+      // 主標記：蓋在有實體內容、最靠下緣的平整位置（避開臉部）；文字加反色描邊，深淺底都看得到。
       if(spot){
         if(text){ink.font='9px sans-serif';ink.textBaseline='middle';ink.lineJoin='round';ink.lineWidth=2.5;ink.strokeStyle=spot.mean>130?'#ffffff':'#181818';ink.strokeText(text,offset,8,74-offset);ink.fillStyle=spot.mean>130?'#181818':'#ffffff';ink.fillText(text,offset,8,74-offset);}
-        ctx.save();ctx.globalAlpha=Math.min(1,alpha*1.6);
+        ctx.save();ctx.globalAlpha=alpha;
         // 只覆蓋既有像素，透明邊距及半透明邊緣的 alpha 保持不變。
         ctx.globalCompositeOperation='source-atop';ctx.drawImage(stamp,0,0,width,height,spot.x,spot.y,spot.w,spot.h);ctx.restore();
       }
       // 副標記：整張斜向重複的淡色小字，只落在圖案上；即使主標記被修掉或找不到位置，每張仍有標記。
       const tile=makeTile(text,logo);
-      if(tile){ctx.save();ctx.globalAlpha=alpha*.6;ctx.globalCompositeOperation='source-atop';ctx.fillStyle=ctx.createPattern(tile,'repeat');ctx.fillRect(0,0,W,H);ctx.restore();}
+      if(tile){ctx.save();ctx.globalAlpha=alpha*.35;ctx.globalCompositeOperation='source-atop';ctx.fillStyle=ctx.createPattern(tile,'repeat');ctx.fillRect(0,0,W,H);ctx.restore();}
       return {marked:true,placed:!!spot};
     }
     function makeTile(text,mark){
       const c=document.createElement('canvas'),probe=c.getContext('2d');probe.font='8px sans-serif';
       const tw=text?Math.ceil(probe.measureText(text).width):(mark?Math.round(mark.width*Math.min(1,10/mark.height)):0);
       if(!tw)return null;
-      c.width=tw+30;c.height=Math.ceil(tw*.36)+34;const g=c.getContext('2d');
+      c.width=tw+90;c.height=Math.ceil(tw*.36)+80;const g=c.getContext('2d');
       g.translate(c.width/2,c.height/2);g.rotate(-.35);g.lineJoin='round';
       if(text){g.font='8px sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineWidth=2;g.strokeStyle='#ffffff';g.strokeText(text,0,0);g.fillStyle='#181818';g.fillText(text,0,0);}
       else{const k=Math.min(1,10/mark.height);g.drawImage(mark,-mark.width*k/2,-mark.height*k/2,mark.width*k,mark.height*k);}
