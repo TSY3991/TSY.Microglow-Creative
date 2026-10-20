@@ -91,3 +91,26 @@ test('角色、情境與語氣搭配規則進入整組與逐張母圖及既有 W
   const one=(()=>{const s=ready(8);s.settings.background='transparent';return C.prompt(s,1);})();assert.match(one,/最重要.*嚴禁用棋盤格/);assert.match(one,/完成前檢查：背景必須是真正透明/);
   console.log('PASS transparent background emphasis');
 }
+
+test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響關閉描邊與其他背景',()=>{
+  for(const count of D.counts)for(const platform of ['chatgpt','gemini','generic']){
+    for(const background of ['transparent','white','color'])for(const stroke of ['thick','none']){
+      for(const [strokeColor,strokeCustom,colorLabel] of [['white','#ffffff','白'],['custom','#727978','#727978']]){
+        const s=ready(count);Object.assign(s.settings,{platform,background,stroke,strokeColor,strokeCustom});
+        s.items[0].text='保留我的台詞';const before=C.clone(s);
+        for(const only of [undefined,...s.grids.map((_,i)=>i+1)]){
+          const p=C.prompt(s,only);
+          assert.doesNotMatch(p,/外框不要帶白邊或灰邊/);
+          if(background==='transparent'){
+            assert.match(p,/只去除背景殘留的白邊、灰邊與不應出現的底色/);
+            assert.match(p,/描邊依下方設定，指定的白色或灰色描邊須保留/);
+            assert.match(p,/嚴禁用棋盤格/);
+          }else assert.doesNotMatch(p,/只去除背景殘留/);
+          assert.ok(p.includes(stroke==='none'?'描邊：關閉描邊。':'描邊：粗；顏色：'+colorLabel+'。'));
+          if(!only||only===1)assert.ok(p.includes('要印的文字 "保留我的台詞"'));
+        }
+        assert.deepEqual(s,before);
+      }
+    }
+  }
+});
