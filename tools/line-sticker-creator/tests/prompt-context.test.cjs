@@ -114,3 +114,21 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
     }
   }
 });
+{ // 多張母圖逐張複製：每張不同發想重點（依母圖序號、可重現）、母圖 2 起附前面母圖並不可重複其台詞
+  const make=(count,grids,mode='ai',fill='')=>{const s=ready(8);s.settings.count=count;s.settings.mode=mode;s.settings.scene='job_temple';s.grids=grids;s.items=Array.from({length:count},(_,i)=>C.item(typeof fill==='function'?fill(i):fill));return s;};
+  const s=make(40,[16,16,8]),p=[1,2,3].map(n=>C.prompt(s,n));
+  const focus=p.map(x=>(x.split('\n').find(l=>l.startsWith('【本張發想重點】'))||''));
+  assert.ok(focus.every(Boolean));assert.equal(new Set(focus).size,3);
+  assert.ok(focus.every(l=>l.includes('不是要印的文字')));
+  assert.equal(C.prompt(make(40,[16,16,8]),2),p[1]);
+  assert.doesNotMatch(p[0],/不可重複前面母圖的台詞/);assert.match(p[1],/不可重複前面母圖的台詞/);assert.match(p[2],/母圖 1～2（可能合併在同一張圖裡）/);
+  assert.match(p[1],/附上已完成的母圖 1 當參考圖/);
+  // 每張的重點不得出現在「要印的文字」
+  for(const x of p)assert.ok(!x.split('\n').some(l=>/^第 \d+ 格/.test(l)&&/發想重點|台詞用途/.test(l)));
+  // 台詞全部由使用者填好（手動）時，不加發想重點與不重複指示，原文照印
+  const m=make(32,[16,16],'manual',i=>'字'+(i+1)),q=C.prompt(m,2);
+  assert.doesNotMatch(q,/本張發想重點|不可重複前面母圖的台詞/);assert.match(q,/要印的文字 "字17"/);
+  // 單張母圖與整組一次複製不受影響
+  assert.doesNotMatch(C.prompt(make(16,[16])),/本張發想重點/);assert.doesNotMatch(C.prompt(s),/本張發想重點/);
+  console.log('PASS multi-mother focus and no-repeat');
+}

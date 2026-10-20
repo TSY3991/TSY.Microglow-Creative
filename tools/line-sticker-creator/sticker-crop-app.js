@@ -345,10 +345,23 @@
     const blob=new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('編碼失敗')),'image/png'));
     await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
   }
+  // 多張母圖：把前面 n 張母圖合併成一張參考圖（每張上方標「母圖 k」），一次複製；只有 1 張時就是原圖。
+  async function copyImages(n){
+    if(n<=1)return copyImage(0);
+    const list=mothers.slice(0,n);if(list.length<n)throw Error('前面的母圖還沒到齊。');
+    if(!navigator.clipboard||typeof navigator.clipboard.write!=='function'||typeof ClipboardItem!=='function')throw Error('不支援');
+    const W=Math.min(1600,Math.max(...list.map(m=>m.image.width))),bar=56,sizes=list.map(m=>Math.round(m.image.height*W/m.image.width));
+    const c=canvas(W,sizes.reduce((a,h)=>a+h+bar,0)),g=c.getContext('2d');let y=0;
+    g.fillStyle='#ffffff';g.fillRect(0,0,c.width,c.height);
+    list.forEach((m,k)=>{g.fillStyle='#e9eef0';g.fillRect(0,y,W,bar);g.fillStyle='#1f2a30';g.font='bold 32px sans-serif';g.textBaseline='middle';g.fillText('母圖 '+(k+1),20,y+bar/2);y+=bar;g.drawImage(m.image,0,y,W,sizes[k]);y+=sizes[k];});
+    const blob=new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('編碼失敗')),'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);c.width=c.height=1;
+  }
   window.StickerCrop={
     count:()=>mothers.length,
     info:i=>mothers[i]?{name:mothers[i].file.name,width:mothers[i].image.width,height:mothers[i].image.height}:null,
-    thumb,set:setMother,copyImage,
+    thumb,set:setMother,copyImage,copyImages,
+    sig:n=>mothers.length>=n?mothers.slice(0,n).map(m=>m.file.name+':'+m.file.size+':'+m.file.lastModified+':'+m.image.width+'x'+m.image.height).join('|'):'',
     ready:()=>mothers.length>0&&mothers.reduce((n,m)=>n+m.rows*4,0)===plan.count,
     run:()=>{if(!busy&&window.StickerCrop.ready())$('crop-run').click();}
   };

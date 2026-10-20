@@ -472,18 +472,25 @@
   const crop=()=>window.StickerCrop;
   function platformInfo() {const p=state.settings.platform;return p==="chatgpt"?{name:"ChatGPT",url:"https://chatgpt.com/"}:p==="gemini"?{name:"Gemini",url:"https://gemini.google.com/app"}:{name:"",url:""};}
   const pasteHint="點一下訊息輸入框，按 Ctrl+V 貼上（Mac 按 Command+V；手機長按輸入框再選「貼上」）。";
+  // 防呆：母圖 2 起，要先附上前面所有母圖（同一份圖片才算數；前面的母圖換圖後要重新附上），提示詞才可以複製。
+  const attached=new Map(),notes=new Map();
+  const prevSig=n=>n>1&&crop()&&crop().count()>=n-1?crop().sig(n-1):"";
+  const prevAttached=n=>n<=1||(!!prevSig(n)&&attached.get(n)===prevSig(n));
+  const prevNames=n=>n>2?"母圖 1～"+(n-1):"母圖 1";
   async function copyAndOpen(n,box) {
     const info=platformInfo(),note=box.querySelector(".copy-note");let text;
+    if(!prevAttached(n)){note.textContent="請先完成上一步：附上"+prevNames(n)+" 的圖片，再複製這張的提示詞。";return;}
     try{text=currentPrompt(n);}catch(error){note.textContent=error.message;return;}
     const copying=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):Promise.reject(new Error("no clipboard"));
     if(info.url)window.open(info.url,"_blank","noopener");
     try{await copying;note.textContent="✔ 已複製母圖 "+n+" 的提示詞。"+(info.url?"已幫你打開 "+info.name+"。請到那個網頁，":"請到你的生圖網站，")+pasteHint;}
     catch{const area=box.querySelector(".manual-prompt");area.value=text;area.hidden=false;area.focus();area.select();note.textContent="這個瀏覽器不讓我自動複製。下面的框已選好全部文字，請按 Ctrl+C 複製，再到生圖網站貼上。";}
   }
-  async function copyReference(box) {
-    const note=box.querySelector(".copy-note");
-    try{await crop().copyImage(0);note.textContent="✔ 已複製「母圖 1」的圖片。回到生圖網站同一個輸入框，再貼上一次（Ctrl+V，Mac 按 Command+V），圖片就會出現。照片角色的原始照片也要一起附上。";}
-    catch{note.textContent="這個瀏覽器不能一鍵複製圖片。請在生圖網站按「＋」或迴紋針，選你剛存下來的母圖 1 檔案。";}
+  async function copyReference(n) {
+    const sig=prevSig(n),names=prevNames(n);if(!sig)return;
+    try{await crop().copyImages(n-1);attached.set(n,sig);notes.set(n,"✔ 已複製"+names+" 的圖片"+(n>2?"（合併成一張）":"")+"。到生圖網站的輸入框貼上（Ctrl+V，Mac 按 Command+V），圖片出現後再做下一步。照片角色的原始照片也要一起附上。");}
+    catch{notes.set(n,"這個瀏覽器不能一鍵複製圖片。請到生圖網站按「＋」或迴紋針，選你存好的"+names+" 檔案，附上後勾選下面的「我已附上」。");}
+    renderMulti();
   }
   async function aiFromStep4(fixDuplicates) {
     if(!aiEndpoint)return;
@@ -525,10 +532,16 @@
       let n=1;
       const step=(title,text,button)=>{const d=node("div",undefined,"step");d.append(node("b","第 "+(n++)+" 步："+title));if(text)d.append(node("span",text));if(button)d.append(button);li.append(d);};
       const copy=node("button","複製提示詞"+(info.name?"，並打開 "+info.name:""),"button primary");copy.type="button";copy.addEventListener("click",()=>copyAndOpen(p.number,li));
-      step("複製這張的提示詞",(info.name?"按下去會自動複製，並打開 "+info.name+" 的網頁。":"按下去會自動複製，請到你的生圖網站貼上。")+(i===0&&state.settings.source==="photo"?" 你的角色照片也要在那個網頁一起附上。":""),copy);
-      if(i>0){
-        const ref=node("button","複製「母圖 1」的圖片","button");ref.type="button";ref.disabled=loaded<1;ref.addEventListener("click",()=>copyReference(li));
-        step("貼上母圖 1 當參考",loaded<1?"請先完成母圖 1，這樣 AI 才能照著畫同一個角色。":"在同一個輸入框，把母圖 1 的圖片也貼上，AI 才會畫出同一個角色。",ref);
+      if(i===0)step("複製這張的提示詞",(info.name?"按下去會自動複製，並打開 "+info.name+" 的網頁。":"按下去會自動複製，請到你的生圖網站貼上。")+(state.settings.source==="photo"?" 你的角色照片也要在那個網頁一起附上。":""),copy);
+      else{
+        const names=prevNames(p.number),ready=!!prevSig(p.number),ok=prevAttached(p.number);
+        const ref=node("button","複製"+names+" 的圖片"+(p.number>2?"（合併成一張）":""),"button");ref.type="button";ref.disabled=!ready;ref.addEventListener("click",()=>copyReference(p.number));
+        step("先附上"+names,ready?"按下面的按鈕複製圖片，到生圖網站的輸入框貼上。AI 會照著畫同一個角色，並避開前面已經用過的台詞。":"請先把"+(p.number>2?"母圖 "+(p.number-1):"母圖 1")+" 做好，並放進它的「把圖放進來」，才能繼續。",ref);
+        const lab=node("label",undefined,"check-field"),box=node("input");box.type="checkbox";box.disabled=!ready;box.checked=ok;
+        box.addEventListener("change",()=>{if(box.checked&&ready)attached.set(p.number,prevSig(p.number));else attached.delete(p.number);notes.delete(p.number);renderMulti();});
+        lab.append(box,node("span","我已在生圖網站的輸入框附上"+names+" 的圖片"));li.lastChild.append(lab);
+        copy.disabled=!ok;
+        step("再複製這張的提示詞",ok?(info.name?"按下去會自動複製，並打開 "+info.name+" 的網頁；貼在同一個輸入框（圖片後面），一起送出。":"按下去會自動複製；貼在同一個輸入框（圖片後面），一起送出。"):"要先完成上一步（附上"+names+" 的圖片），這個按鈕才會打開。",copy);
       }
       step("送出，等圖做好","做好後把圖存到電腦（點圖片再按下載，或右鍵另存）。");
       const zone=node("label",undefined,"drop-zone"+(got?" done":"")+(i>loaded?" locked":"")),input=node("input");
@@ -542,7 +555,7 @@
       zone.addEventListener("dragleave",()=>zone.classList.remove("over"));
       zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("over");if(!input.disabled)take(e.dataTransfer.files[0]);});
       step("把圖放進來","");li.lastChild.append(zone,msg);
-      li.append(node("p",undefined,"copy-note field-hint"));const area=node("textarea",undefined,"manual-prompt");area.readOnly=true;area.rows=6;area.hidden=true;area.setAttribute("aria-label","提示詞，供手動複製");li.append(area);
+      li.append(node("p",notes.get(p.number)||"","copy-note field-hint"));const area=node("textarea",undefined,"manual-prompt");area.readOnly=true;area.rows=6;area.hidden=true;area.setAttribute("aria-label","提示詞，供手動複製");li.append(area);
       list.append(li);
     });
     const ready=crop().ready();$("to-crop").disabled=!ready;

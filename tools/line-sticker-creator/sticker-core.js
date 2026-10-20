@@ -44,6 +44,14 @@
         "需要新創作的台詞、動作與道具約 5～7 成要能直接辨識此情境，其餘可為一般互動；不要整組只用通用問候。已有內容逐字保留，詞彙不是必須逐條照抄的台詞清單。")+
       (settings.tone&&settings.tone!=="auto"?"語氣："+label("tone",settings.tone)+"。":"");
   }
+  // 多張母圖逐張複製時，依母圖序號把情境詞彙與台詞用途輪流分給各張，讓外部 AI 每張往不同方向發想；同設定結果固定、可重現。
+  const PURPOSES=["招呼","回覆","忙碌","感謝","道歉","情緒","鼓勵","搞笑","休息與收尾"];
+  function focusBrief(settings,number,total){
+    const scene=D.scenes[settings.scene],raw=settings.scene!=="auto"&&scene?(scene.terms||scene.kw||""):"";
+    const terms=String(raw).split(/[、，,\s]+/).filter(Boolean),pick=list=>list.filter((_,i)=>i%total===number-1);
+    const t=pick(terms),p=pick(PURPOSES);
+    return "【本張發想重點】（只作發想方向，不是要印的文字，也不要畫成標籤或註解）"+(t.length?"情境方向以「"+t.join("、")+"」為主；":"")+"台詞用途以「"+p.join("、")+"」為主；其餘格子可自由搭配，但不要沿用其他母圖常見的說法。句型要交錯變化（問句、感嘆、短回應、狀聲詞、帶動作的短句），字數有長有短，仍遵守字數上限。";
+  }
   function contentBrief(settings){
     const priority='內容搭配優先順序：已填台詞逐字保留；新創作由情境決定說什麼，語氣決定怎麼說，角色描述與角色風格輔助表達個性。視覺風格不強迫改變措辭，不因軟萌或 Q 版就強加撒嬌或幼兒語氣。';
     const tone=!settings.tone||settings.tone==='auto'?'自動語氣：綜合角色描述中的個性、所選角色風格與情境的對象、場合，決定自然且一致的說話方式；職業內容保持合宜與可辨識度，不只照角色可愛程度決定台詞。':'指定語氣優先：依「'+label('tone',settings.tone)+'」創作新台詞；角色風格只輔助個性，不得覆蓋指定語氣。';
@@ -150,7 +158,7 @@
       s.dimension==="3d"?"維持同一角色的五官、髮型、主色與可辨識特徵；保持立體造型、材質與光線一致，輪廓清楚，表情與手勢可讀。台詞另用清楚的平面字體排版，文字不要做立體擠出或厚重投影，以免字相疊。":"維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "角色鎖定（整組每一張都必須相同）：臉型與五官比例、髮型與髮色、膚色／毛色與花紋、身材比例、服裝與配件（眼鏡、手錶、飾品）、角色主色與可辨識特徵。可以變動的只有表情、姿勢、動作、情緒、道具與情境；動作可以變，角色不能變。不要把不同特徵混合，不要新增人物、Logo 或水印。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
-      single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的母圖 1 當參考圖：請沿用同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫母圖 1。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
+      single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的"+(only>2?"母圖 1～"+(only-1)+"（可能合併在同一張圖裡）":"母圖 1")+" 當參考圖：請沿用母圖 1 的同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫前面的母圖。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
       "",
       "【母圖結構】",
       single?"每格是一張獨立貼圖；從左到右、由上到下排列；這一張母圖對應整組的第 "+target.start+"～"+target.end+" 張貼圖。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。":"每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
@@ -177,6 +185,8 @@
       s.textMode!=="none"&&s.mode!=="manual"?"台詞要平均涵蓋：招呼、回覆、忙碌、感謝、道歉、情緒、鼓勵、搞笑、休息與收尾"+(s.scene==="auto"?"":"，以及所選情境的專業用語（情境相關約占 5～7 成、一般聊天約 3～5 成）")+"；避免大量意思重複的句子（例如一堆早安、哈囉、你好），每句都要有不同用途。"+(s.tone!=="auto"?"語氣統一為「"+label("tone",s.tone)+"」。":""):null,
       s.textMode==="none"?"整組不放任何文字，仍依各格描述表達不同情緒與動作。":"只印明細中「要印的文字」的完整內容，維持原字與繁體中文；標示「台詞未填」時，依情境設計簡短繁體中文台詞。標示「無文字」的格子不得產生文字。不要添加道具文字、標題、水印或 Logo。",
       single&&total>1&&blankHere&&elsewhere.length?"本組其他母圖已使用這些台詞，本張請不要重複："+elsewhere.map(quote).join("、")+"。":null,
+      single&&total>1&&only>1&&blankHere?"【不可重複前面母圖的台詞】先讀出附圖（前面母圖）中已經印出的每一句台詞；本張新創作的台詞一律不得與它們相同，也不要只改一兩個字，或換成同樣意思、同樣句型的說法。附圖中的台詞只用來避開，不要畫進本張。":null,
+      single&&total>1&&blankHere?focusBrief(s,only,total):null,
       s.textMode!=="none"?'文字排版檢查：每格的完整台詞只印一次，不額外重複字句當裝飾。文字使用正確台灣繁體字形，逐字比對要印的原文，不能自行換成形近字、簡體字或錯字。每個字與描邊的外輪廓都須清楚分開，字與字保留至少一個筆畫寬的空隙，不重疊、不黏在一起；陰影不得形成第二層字。文字區與角色分開，整段文字寬度不超過該格安全區的八成；空間不夠時縮小文字或分行，禁止壓扁字形、壓縮字距或跨格。未指定換行的短句優先單行，較長內容自然分成兩行；使用者指定的換行則照原文。生成前檢查文字長度，生成後自查有無錯字、漏字、擠字與重影。':null,
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
@@ -230,6 +240,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);
