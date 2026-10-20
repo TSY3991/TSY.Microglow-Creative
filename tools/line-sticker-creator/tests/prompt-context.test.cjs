@@ -81,3 +81,13 @@ test('角色、情境與語氣搭配規則進入整組與逐張母圖及既有 W
   const s=ready(8);s.settings.textMode='none';assert.match(C.contentBrief(s.settings),/不新增台詞/);assert.doesNotMatch(C.contentBrief(s.settings),/創作新台詞/);
 });
 {const s2=ready(8);s2.settings.scene='greeting';const p2=C.prompt(s2);assert.match(p2,/不寫勸人信教/);assert.match(p2,/商標、品牌 logo/);assert.match(p2,/逐字照印/);assert.doesNotMatch(p2,/不畫成神明/);console.log('PASS LINE review rules in prompt');}
+{ // 透明背景要特別強調禁用棋盤格；其他背景選項不出現
+  const make=bg=>{const s=ready(8);s.settings.background=bg;return C.prompt(s);};
+  const clear=make('transparent'),lines=clear.split('\n');
+  assert.match(lines[0],/最重要.*真正透明的 PNG.*嚴禁用棋盤格/);
+  assert.match(clear,/不要畫出棋盤格、灰白方格、馬賽克/);assert.match(clear,/不要用白色、灰色或其他顏色填滿背景代替透明/);
+  assert.match(lines[lines.length-1],/完成前檢查：背景必須是真正透明/);assert.doesNotMatch(clear,/不保證透明效果/);
+  for(const bg of ['white','color']){const p=make(bg);assert.doesNotMatch(p,/最重要：每張母圖的背景/);assert.doesNotMatch(p,/棋盤格/);assert.doesNotMatch(p,/完成前檢查：背景/);}
+  const one=(()=>{const s=ready(8);s.settings.background='transparent';return C.prompt(s,1);})();assert.match(one,/最重要.*嚴禁用棋盤格/);assert.match(one,/完成前檢查：背景必須是真正透明/);
+  console.log('PASS transparent background emphasis');
+}

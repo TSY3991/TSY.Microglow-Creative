@@ -134,7 +134,9 @@
     if(single&&!target) throw new Error("沒有這張母圖。");
     const here=target?state.items.slice(target.start-1,target.end):[],blankHere=here.some(x=>hasText(state,x)&&!x.text.trim());
     const elsewhere=single?[...new Set(state.items.slice(0,s.count).filter((x,i)=>(i<target.start-1||i>=target.end)&&hasText(state,x)&&x.text.trim()).map(x=>x.text.trim()))].slice(0,60):[];
+    const clear=s.background==="transparent";
     const lines=[
+      clear?"最重要：每張母圖的背景必須是真正透明的 PNG（有 alpha 通道）。嚴禁用棋盤格（灰白方格）、白底、灰底或任何圖案假裝成透明背景。":null,
       single?"製作一組原創的一般靜態 LINE 貼圖中的「母圖 "+only+"」。這一組共 "+s.count+" 張貼圖、"+total+" 張母圖，本次只做這一張（貼圖 "+target.start+"～"+target.end+"）；不要把其他母圖的內容畫進來。":"製作一組原創的一般靜態 LINE 貼圖，共 "+s.count+" 張，分成 "+state.grids.length+" 張獨立母圖。這是一份整組製作指令，不是要把不同母圖合成一張。",
       single?(s.platform==="chatgpt"?"請使用圖片生成功能，只輸出這一張母圖；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式，只輸出這一張母圖。":"請在支援生圖的平台只輸出這一張母圖。"):s.platform==="chatgpt"?"請使用圖片生成功能依序製作下列母圖。若單次只能輸出一張，先生成母圖 1，等我說「繼續」後依同一份指令生成下一張；不要只回覆文字企劃。":s.platform==="gemini"?"請使用圖片生成模式。以下共用要求適用每張母圖，各母圖內容依後面的明細。若單次只能生成一張，先生成母圖 1，後續在同一對話說「繼續」即可依序製作。":"請在支援生圖的平台依序製作每張母圖；若平台一次只能生成一張，先做母圖 1，再沿用本指令繼續。不得把所有母圖拼進同一張。",
       "",
@@ -156,7 +158,7 @@
       "安全區：每格中央 "+SAFE.width+"×"+SAFE.height+" px 是角色、台詞、道具、描邊、陰影與裝飾必須完整放入的範圍（generous negative space）；每格左右各留約 "+Math.floor((cell.width-SAFE.width)/2)+" px、上下各留約 "+Math.floor((cell.height-SAFE.height)/2)+" px（約 "+Math.round(pct/2)+"%）的空白，相鄰格的可見內容之間因此至少有約 "+(cell.width-SAFE.width)+" px（左右）／"+(cell.height-SAFE.height)+" px（上下）的乾淨分隔帶（以理想尺寸計；實際尺寸不同時，請依相同比例，在各格四周保留約 "+Math.floor(pct/2/(100+pct)*100)+"% 的空白），方便沿平均網格切割。分隔帶只呈現指定背景，不畫格線、外框、分割標記或編號。這是母圖裁切用的生成目標，不是 LINE 官方尺寸規定。",
       "網格限制的是容納區與順序，不固定每格藝術構圖。角色與文字不得跨格、重疊、貼邊或被裁切；空間不足時縮小整組角色與文字。",
       "完整性檢查（重要）：頭髮、耳朵、手腳、尾巴、道具、台詞文字與陰影，每一個部分的最外緣都要距離所屬格子的邊緣至少 "+Math.floor((cell.width-SAFE.width)/2)+" px（左右）／"+Math.floor((cell.height-SAFE.height)/2)+" px（上下）；任何部分碰到或超出安全區，就把整個角色縮小一點，寧可畫小，也不要讓任何一格的圖被切掉或貼著格線。生成後逐格自查，有被切到的格子請重畫。",
-      s.background==="transparent"?"背景要求：真正透明背景（alpha transparency），不是白底、不是畫出棋盤格。不要把透明區的示意棋盤畫進圖片；若生成工具不支援真透明，先說明限制，不用白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
+      s.background==="transparent"?"背景要求：真正透明背景（alpha transparency）。不要畫出棋盤格、灰白方格、馬賽克或任何「透明示意」圖案；不要用白色、灰色或其他顏色填滿背景代替透明；角色與文字的外框不要帶白邊或灰邊。若生成工具不支援真透明，先明確說明限制，不要用棋盤格或白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【內容守則（LINE 審核）】",
       "角色照本次設定繪製，不替換成其他角色；不要畫或模仿任何既有卡通、動漫、遊戲角色、吉祥物或名人。",
@@ -190,7 +192,8 @@
       }
       lines.push("");
     }
-    lines.push(single?"只輸出母圖 "+only+" 這一張完整圖片，不製作其他母圖、宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。":"只輸出各張完整母圖，不製作宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證透明效果或審核通過。");
+    lines.push(single?"只輸出母圖 "+only+" 這一張完整圖片，不製作其他母圖、宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證審核通過。":"只輸出各張完整母圖，不製作宣傳海報、漫畫分鏡、主圖或聊天標籤圖。生成後需人工核對文字、身份、表情動作、格數與背景；本指令不保證審核通過。");
+    if(clear)lines.push("完成前檢查：背景必須是真正透明，不是棋盤格或白底；若畫面中看到棋盤格、灰白方格或單色底，請重新生成。");
     return lines.filter(x=>x!==null).join("\n");
   }
   function serialize(state) { return {tool:D.tool,version:D.version,state:clone(state)}; }
