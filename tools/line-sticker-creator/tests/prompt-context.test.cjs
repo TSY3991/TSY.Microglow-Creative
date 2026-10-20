@@ -39,7 +39,7 @@ test('全部職業／主題帶入領域詞彙，AI、預設與手動以及多張
 
 test('無文字與手寫內容保留，切換職業不偷改台詞，不把情境詞彙當要印的字',()=>{
   const s=ready(8);s.settings.scene='job_temple';s.settings.textMode='none';
-  const p=C.prompt(s);assert.match(p,/廟會、遶境、祈福/);assert.match(p,/內容守則（LINE 審核）/);assert.match(p,/依原設定保留，不刪除也不替換/);assert.doesNotMatch(p,/不畫成神明/);assert.doesNotMatch(p,/安太歲|供桌/);assert.match(p,/不產生任何文字/);assert.doesNotMatch(p,/要印的文字/);
+  const p=C.prompt(s);assert.match(p,/廟會、祈福、平安/);assert.match(p,/內容守則（LINE 審核）/);assert.match(p,/依原設定保留，不刪除也不替換/);assert.doesNotMatch(p,/不畫成神明/);assert.doesNotMatch(p,/安太歲|供桌/);assert.match(p,/不產生任何文字/);assert.doesNotMatch(p,/要印的文字/);
   s.settings.textMode='all';s.settings.mode='manual';s.items[0].text='保留我的原文';
   const before=C.clone(s.items),q=C.prompt(s);assert.match(q,/要印的文字 "保留我的原文"/);assert.match(q,/不因情境換字/);assert.deepEqual(s.items,before);
   s.settings.scene='job_photographer';assert.match(C.prompt(s),/快門、光圈、對焦/);assert.deepEqual(s.items,before);
