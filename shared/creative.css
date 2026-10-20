@@ -58,3 +58,16 @@
 .detail-copy-status { color: var(--teal-dark); font-size: .9rem; }
 @media (max-width: 960px) { .image-tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .image-tool-grid, .detail-lists { grid-template-columns: 1fr; } .image-card-copy { padding: 18px; } .detail-lists { gap: 14px; } }
+
+/* 固定版型的資料填寫介面，只套用於 AI 圖片工具。 */
+.image-toolbox .dialog-heading { position: sticky; top: -18px; z-index: 2; background: var(--panel); padding: 8px 0; }
+.image-toolbox .builder-layout { padding: 12px; border-radius: var(--radius); background: var(--teal-soft); color: var(--teal-dark); line-height: 1.7; }
+.image-toolbox .builder-hint { color: var(--ink-soft); font-size: .88rem; line-height: 1.7; }
+.image-toolbox .builder-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 20px 0; }
+.image-toolbox .builder-field { display: grid; gap: 7px; min-width: 0; color: var(--ink); font-size: .9rem; font-weight: 700; }
+.image-toolbox .builder-field:has(textarea) { grid-column: 1 / -1; }
+.image-toolbox .builder-field input, .image-toolbox .builder-field select, .image-toolbox .builder-field textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
+.image-toolbox .builder-field textarea { resize: vertical; }
+.image-toolbox .preparation-details { margin-top: 18px; }
+.image-toolbox .preparation-details summary { min-height: 44px; cursor: pointer; color: var(--teal-dark); }
+@media(max-width:600px) { .image-toolbox .builder-fields { grid-template-columns: 1fr; } }
