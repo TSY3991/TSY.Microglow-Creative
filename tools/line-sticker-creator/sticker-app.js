@@ -244,10 +244,13 @@
     if(list.length){$("validation").scrollIntoView({block:"center"});const first=$(list[0].field);if(first&&!first.closest("[hidden]"))first.focus();}
     return !list.length;
   }
+  // 職業／主題情境預設只有 16 句：超過的格子留白，由 AI 依情境發想（不再用通用句補滿）。
+  const shortNote=()=>{const n=C.presetShortfall(state);return n?"這個情境預設只有 "+D.scenes[state.settings.scene].lines.length+" 句，另外 "+n+" 格留白，會由 AI 依「"+D.scenes[state.settings.scene].label+"」情境設計台詞；也可以按第四步的「讓 AI 幫我補齊台詞」先排好。":"";};
   function go(target) {
     if(target>step){
       if(state.settings.mode==="preset"){C.fillMissing(state);renderItems();}
       if(!errors(C.validate(state,target-1)))return;
+      if(target>=4&&shortNote())status(shortNote());
     }
     step=target;
     document.querySelectorAll("[data-panel]").forEach(el=>el.hidden=Number(el.dataset.panel)!==step);
@@ -291,7 +294,7 @@
     }
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
-    if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled)status("已補入 "+filled+" 句；原有台詞未改動。");}
+    if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled||shortNote())status((filled?"已補入 "+filled+" 句；原有台詞未改動。":"")+shortNote());}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
     if(key==='mode'&&!$('content-update-notice').hidden)refreshContentNotice($('content-update-notice').dataset.subject||'設定');
@@ -311,7 +314,7 @@
     if(targets.some(x=>x.text.trim())&&!confirm("將所有有文字貼圖的台詞清空，交給 AI 重新創作？包含自行輸入或先前 AI 台詞。角色、表情、動作、無文字格的情境與共用名稱設定保留。"))return;
     targets.forEach(x=>{x.text="";delete x.presetText;});renderItems();invalidate();status("台詞已改為 AI 發揮。可用網站 AI 先安排，或直接產生提示詞交給生圖平台；不會自動送出 AI 請求。");
   });
-  $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state);renderItems();invalidate();status(n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。");});
+  $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state);renderItems();invalidate();status((n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。")+shortNote());});
   $("apply-bulk").addEventListener("click",()=>{
     const lines=$("bulk").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     if(!lines.length)return status("請先貼上台詞。");

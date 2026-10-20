@@ -72,7 +72,8 @@
   function fillMissing(state) {
     if(state.settings.mode==="ai")return 0;
     const used=new Set(state.items.map(x=>x.text.trim()).filter(Boolean));
-    const candidates=pool(state.settings.scene).filter(x=>!used.has(x));
+    // 職業／主題情境只有自己的 16 句：用完就留白，交給 AI 依該情境發想，不再接通用句庫（好的、收到…）而讓後面的母圖離題。
+    const own=D.scenes[state.settings.scene],candidates=(own&&own.job?own.lines:pool(state.settings.scene)).filter(x=>!used.has(x));
     let filled=0;
     while(state.items.length<state.settings.count) state.items.push(item());
     for(let i=0;i<state.settings.count;i++){
@@ -80,6 +81,12 @@
       if(hasText(state,entry) && !entry.text.trim() && candidates.length){entry.text=candidates.shift();entry.presetText=entry.text;filled++;}
     }
     return filled;
+  }
+  // 預設台詞模式下，職業／主題情境句庫用完後仍留白的格數（交給 AI 依情境發想）。
+  function presetShortfall(state) {
+    const s=state.settings,own=D.scenes[s.scene];
+    if(s.mode!=="preset"||!own||!own.job) return 0;
+    return state.items.slice(0,s.count).filter(x=>hasText(state,x)&&!x.text.trim()).length;
   }
   const blank = x => !x.text.trim() && !x.emotion.trim() && !x.action.trim();
   // 只移除超出張數、且完全空白的尾端項目；有內容的一律保留，不自動截斷。
@@ -240,6 +247,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

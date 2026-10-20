@@ -7,7 +7,10 @@ test("五種官方張數的母圖分配與連續順序",()=>{
   for(const n of D.counts){const s=ready(n);assert.deepEqual(s.grids,expected[n]);assert.deepEqual(C.validate(s),[]);const plans=C.plans(s);assert.equal(plans.at(-1).end,n);assert.equal(plans[0].start,1);}
 });
 test("七種情境均可補足 40 句且保留已編輯台詞",()=>{
-  for(const scene of Object.keys(D.scenes).filter(k=>k!=="auto")){const s=ready(40);s.settings.scene=scene;s.items=Array.from({length:40},()=>C.item());s.items[0].text="我的自訂台詞";assert.equal(C.fillMissing(s),39);assert.equal(s.items[0].text,"我的自訂台詞");assert.equal(new Set(s.items.map(x=>x.text)).size,40);assert.deepEqual(C.validate(s),[]);}
+  for(const scene of Object.keys(D.scenes).filter(k=>k!=="auto")){const s=ready(40);s.settings.scene=scene;s.items=Array.from({length:40},()=>C.item());s.items[0].text="我的自訂台詞";const own=D.scenes[scene],job=!!own.job;assert.equal(C.fillMissing(s),job?own.lines.length:39);assert.equal(s.items[0].text,"我的自訂台詞");
+    if(job){const filled=s.items.filter(x=>x.text.trim());assert.equal(filled.length,own.lines.length+1);assert.ok(filled.slice(1).every(x=>own.lines.includes(x.text)),scene);assert.equal(C.presetShortfall(s),40-own.lines.length-1);assert.equal(new Set(filled.map(x=>x.text)).size,filled.length);}
+    else{assert.equal(new Set(s.items.map(x=>x.text)).size,40);assert.equal(C.presetShortfall(s),0);}
+    assert.deepEqual(C.validate(s),[]);}
 });
 test("減少張數保留全部內容、阻擋生成",()=>{
   const s=ready(40);s.items[39].text="必須保留";C.resize(s,8);assert.equal(s.items.length,40);assert.equal(s.items[39].text,"必須保留");assert.ok(C.validate(s).some(e=>e.field==="items"));assert.throws(()=>C.prompt(s));s.items=s.items.slice(0,8);assert.deepEqual(C.validate(s),[]);
@@ -132,7 +135,9 @@ test("職業情境：全部可補滿 40 張、句子不重複、不超過 14 字
   const jobs=Object.entries(D.scenes).filter(([,x])=>x.job);assert.ok(jobs.length>=40);
   for(const [id,x] of jobs){const p=C.pool(id);assert.ok(p.length>=40,id+" 句庫不足："+p.length);assert.equal(new Set(x.lines).size,x.lines.length,id);assert.ok(x.lines.every(t=>t.length<=14&&!D.common.includes(t)),id);assert.ok(x.group&&x.kw);}
   for(const need of ["工程師","軟體工程師","AI 工程師","老師","客服","寵物","宮廟","影音創作者","美髮","司機"])assert.ok(jobs.some(([,x])=>x.label===need),need);
-  const s=ready(40);s.settings.scene="job_engineer";C.fillMissing(s);assert.equal(new Set(s.items.map(x=>x.text)).size,40);
+  const s=ready(40);s.settings.scene="job_engineer";s.items=Array.from({length:40},()=>C.item());C.fillMissing(s);const got=s.items.filter(x=>x.text.trim());assert.equal(got.length,16);assert.equal(new Set(got.map(x=>x.text)).size,16);assert.ok(got.every(x=>D.scenes.job_engineer.lines.includes(x.text)),"職業情境不混入通用句");assert.equal(C.presetShortfall(s),24);
+  assert.match(C.prompt(s,3),/台詞未填：由 AI 依情境設計/);
+  {const g=ready(40);g.settings.scene="greeting";g.items=Array.from({length:40},()=>C.item());C.fillMissing(g);assert.equal(g.items.filter(x=>x.text.trim()).length,40);assert.equal(C.presetShortfall(g),0);}
 });
 test("語氣、內容平衡、角色鎖定與職業情境寫入提示詞；舊設定檔相容",()=>{
   const s=ready(16);s.settings.mode="ai";s.settings.scene="job_teacher";s.settings.tone="funny";
