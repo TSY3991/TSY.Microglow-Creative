@@ -132,3 +132,14 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   assert.doesNotMatch(C.prompt(make(16,[16])),/本張發想重點/);assert.doesNotMatch(C.prompt(s),/本張發想重點/);
   console.log('PASS multi-mother focus and no-repeat');
 }
+{ // 取景限制、附圖分工（照片／前面母圖各管一件事、標籤條不畫進圖）
+  const mk=(source,count,grids)=>{const s=ready(8);s.settings.source=source;s.settings.count=count;s.settings.mode='ai';s.grids=grids;s.items=Array.from({length:count},()=>C.item(''));return s;};
+  const photo=mk('photo',40,[16,16,8]),orig=mk('original',32,[16,16]);
+  for(const s of [photo,orig]){const p=C.prompt(s,1);assert.match(p,/取景與畫面限制：每格以角色的頭部與上半身為主/);assert.match(p,/手部與人物比例自然/);assert.doesNotMatch(p,/【附圖分工】/);}
+  const p2=C.prompt(photo,2),p3=C.prompt(photo,3),q2=C.prompt(orig,2);
+  assert.match(p2,/【附圖分工】附圖中的原始照片：只用來決定角色外觀/);assert.match(p2,/附圖中的前面母圖：只用來保持同一角色的畫風、線條與格子排法，並避開已用過的台詞/);assert.doesNotMatch(p2,/灰色條/);
+  assert.match(p3,/灰色條與「母圖 N」字樣只是標記/);
+  assert.doesNotMatch(q2,/原始照片：只用來決定角色外觀/);assert.match(q2,/附圖中的前面母圖：只用來保持/);
+  assert.doesNotMatch(C.prompt(photo),/【附圖分工】/);
+  console.log('PASS framing limits and attachment roles');
+}

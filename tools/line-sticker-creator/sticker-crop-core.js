@@ -319,5 +319,19 @@
     const good=has.filter(i=>items[i].ok),pool=(good.length?good:has).sort((a,b)=>items[b].area-items[a].area||a-b);
     const top=pool.slice(0,Math.max(1,Math.ceil(pool.length/3)));return top[Math.min(top.length-1,Math.floor(rnd()*top.length))];
   }
-  return {pickMain,counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,partitionArt,guessTextRegions,inpaint,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
+  // 單格修正（改圖不走樣）：由整組第 index 張貼圖（0 起算）推得所在母圖、格號、列欄；grids 為各母圖格數（8 或 16）。
+  function locateCell(grids,index){
+    let rest=index;
+    for(let m=0;m<grids.length;m++){if(rest<grids[m])return {mother:m+1,cell:rest+1,row:Math.floor(rest/4)+1,col:rest%4+1,sticker:index+1};rest-=grids[m];}
+    return null;
+  }
+  // 只改一格的文字：要改與要保留分開寫，並以 Do not change anything else 收尾。text 空白時改成讓使用者自己描述要改的地方。
+  function cellFixPrompt(loc,text){
+    const t=String(text||'').trim(),where='母圖 '+loc.mother+' 的第 '+loc.cell+' 格（第 '+loc.row+' 列第 '+loc.col+' 欄，整組第 '+loc.sticker+' 張貼圖）';
+    const change=t?'把這一格裡的文字改成「'+t+'」：繁體中文、清楚易讀、不缺字不亂碼，文字不遮住角色的五官與手勢；不要在這一格出現其他文字。':'修改這一格的【請在此填入要修改的地方】。';
+    return ['請只修改我附上的'+where+'：',change,'',
+      '必須保留：','- 角色的臉型、五官、髮型與服裝配色','- 這一格的動作、構圖與大小','- 其他所有格子的內容與位置','- 真正透明的背景（不要畫棋盤格或白底）與原本的格子排法','',
+      '請輸出修改後完整的這一張母圖（含所有格子）。不要改變其他任何細節。Do not change anything else.'].join('\n');
+  }
+  return {locateCell,cellFixPrompt,pickMain,counts,cell,expectedSize,ratioGap,estimateBackground,splitByContent,advise,alphaComponents,partitionArt,guessTextRegions,inpaint,textBlobs,cleanSpecks,cuts,rectangles,eraseWhite,bounds,fit,crc,png72,zip};
 });

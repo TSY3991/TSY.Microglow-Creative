@@ -176,3 +176,17 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.equal(C.pickMain([{area:7,ok:true}],()=>.99),0);
   console.log('PASS pickMain picks among the largest third, skips empty/clipped cells');
 }
+
+{ // 單格修正：整組貼圖序號 → 所在母圖、格號、列欄；修正提示詞要改與要保留分開，並以 Do not change anything else 收尾
+  const g=[16,16,8];
+  assert.deepEqual(C.locateCell(g,0),{mother:1,cell:1,row:1,col:1,sticker:1});
+  assert.deepEqual(C.locateCell(g,15),{mother:1,cell:16,row:4,col:4,sticker:16});
+  assert.deepEqual(C.locateCell(g,16),{mother:2,cell:1,row:1,col:1,sticker:17});
+  assert.deepEqual(C.locateCell(g,39),{mother:3,cell:8,row:2,col:4,sticker:40});
+  assert.equal(C.locateCell(g,40),null);
+  const p=C.cellFixPrompt(C.locateCell(g,17),' 收到 ');
+  assert.match(p,/母圖 2 的第 2 格（第 1 列第 2 欄，整組第 18 張貼圖）/);assert.match(p,/改成「收到」/);assert.match(p,/必須保留：/);assert.match(p,/其他所有格子的內容與位置/);assert.match(p,/Do not change anything else\.$/);
+  assert.doesNotMatch(p,/【請在此填入/);
+  assert.match(C.cellFixPrompt(C.locateCell(g,0),''),/【請在此填入要修改的地方】/);
+  console.log('PASS cell fix prompt');
+}

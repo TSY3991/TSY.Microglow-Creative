@@ -52,6 +52,11 @@
     const t=pick(terms),p=pick(PURPOSES);
     return "【本張發想重點】（只作發想方向，不是要印的文字，也不要畫成標籤或註解）"+(t.length?"情境方向以「"+t.join("、")+"」為主；":"")+"台詞用途以「"+p.join("、")+"」為主；其餘格子可自由搭配，但不要沿用其他母圖常見的說法。句型要交錯變化（問句、感嘆、短回應、狀聲詞、帶動作的短句），字數有長有短，仍遵守字數上限。";
   }
+  // 附圖分工：每張附圖只負責一件事（照片管外觀、前面的母圖管畫風與避開已用台詞），並說明合併圖的標籤條不是畫面內容。
+  function attachRoles(settings,number){
+    const photo=settings.source==="photo",merged=number>2;
+    return "【附圖分工】"+(photo?"附圖中的原始照片：只用來決定角色外觀（五官／輪廓、毛色／花紋、主色），不要照抄背景或構圖；":"")+"附圖中的前面母圖：只用來保持同一角色的畫風、線條與格子排法，並避開已用過的台詞，不要把它的內容畫進本張。"+(merged?"合併圖每一段上方的灰色條與「母圖 N」字樣只是標記，不是畫面內容，不要畫進本張，也不要印在貼圖上。":"")+"其餘一律照本次指令，Do not change the character design.";
+  }
   function contentBrief(settings){
     const priority='內容搭配優先順序：已填台詞逐字保留；新創作由情境決定說什麼，語氣決定怎麼說，角色描述與角色風格輔助表達個性。視覺風格不強迫改變措辭，不因軟萌或 Q 版就強加撒嬌或幼兒語氣。';
     const tone=!settings.tone||settings.tone==='auto'?'自動語氣：綜合角色描述中的個性、所選角色風格與情境的對象、場合，決定自然且一致的說話方式；職業內容保持合宜與可辨識度，不只照角色可愛程度決定台詞。':'指定語氣優先：依「'+label('tone',settings.tone)+'」創作新台詞；角色風格只輔助個性，不得覆蓋指定語氣。';
@@ -165,7 +170,9 @@
       s.dimension==="3d"?"維持同一角色的五官、髮型、主色與可辨識特徵；保持立體造型、材質與光線一致，輪廓清楚，表情與手勢可讀。台詞另用清楚的平面字體排版，文字不要做立體擠出或厚重投影，以免字相疊。":"維持同一角色的五官、髮型／輪廓、主色與可辨識特徵；服裝、表情、姿勢與道具可依各格情境變化。使用清晰輪廓（clean silhouette）、一致線條（consistent linework）、可讀表情（readable expressions）、完整手勢（clear gestures）、分離圖文（separated typography）、有限且一致色盤（cohesive palette）。",
       "角色鎖定（整組每一張都必須相同）：臉型與五官比例、髮型與髮色、膚色／毛色與花紋、身材比例、服裝與配件（眼鏡、手錶、飾品）、角色主色與可辨識特徵。可以變動的只有表情、姿勢、動作、情緒、道具與情境；動作可以變，角色不能變。不要把不同特徵混合，不要新增人物、Logo 或水印。",
       "未指定表情或動作的格子，依台詞或上下文創作具體可見的表情、姿勢與適量道具。各格需有不同情緒與動作，不要只複製同一姿勢換字；已指定的表情／動作優先。",
+      "取景與畫面限制：每格以角色的頭部與上半身為主（動物或物件取最有辨識度的部位），表情與手勢清楚，不畫全身遠景；視線看向鏡頭或動作方向。手部與人物比例自然。",
       single&&total>1?(only>1?"【與前面母圖保持一致】我會附上已完成的"+(only>2?"母圖 1～"+(only-1)+"（可能合併在同一張圖裡）":"母圖 1")+" 當參考圖：請沿用母圖 1 的同一個角色（五官、髮型、主色、線條與上色風格）與相同的格子排法，只畫母圖 "+only+" 的內容，不要重畫前面的母圖。若沒看到附圖，請先請我附上，不要自行改變角色外觀。":"【後續母圖】這一張完成後，我會把它當角色參考圖用在其他母圖，請把角色外觀畫得清楚、前後一致。"):null,
+      single&&total>1&&only>1?attachRoles(s,only):null,
       "",
       "【母圖結構】",
       single?"每格是一張獨立貼圖；從左到右、由上到下排列；這一張母圖對應整組的第 "+target.start+"～"+target.end+" 張貼圖。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。":"每格是一張獨立貼圖；從左到右、由上到下排列，母圖之間接續同一份清單。4×2 表示 4 欄 2 列，4×4 表示 4 欄 4 列。",
@@ -247,6 +254,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

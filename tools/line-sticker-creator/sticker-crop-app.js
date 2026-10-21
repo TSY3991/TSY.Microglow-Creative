@@ -246,7 +246,32 @@
     r.expected.forEach(x=>list.append(el('li',x.text?x.text:'（不印字）')));
     more.append(el('summary','每張應印的文字（對照用，依第一步目前設定）'),list);
     box.append(el('h3','生成後檢查'),el('p','網站自動檢查：'),auto,el('p','請你逐張用眼睛確認：'),manual,more,el('p','母圖只是製作中間檔；下載的單張已依 LINE 一般貼圖規格輸出（貼圖 370×320 以內、main 240×240、tab 96×74）。這份清單只能降低可辨識風險，不保證通過 LINE 審核。'));
+    renderFix(box,expected);
     box.hidden=false;
+  }
+  // 單格修正：某一格文字寫錯時，複製「只改這一格、其餘不要動」的提示詞（並可複製該母圖圖片）去生圖網站修改。
+  let fixIndex=0,fixText='',fixEdited=false;
+  function renderFix(box,expected){
+    const G=window.StickerContentGuard;if(fixIndex>=stickers.length)fixIndex=0;if(!fixEdited)fixText=expected[fixIndex]&&!expected[fixIndex].startsWith('（')?expected[fixIndex]:'';
+    const d=el('details'),sel=el('select'),input=el('input'),note=el('p'),area=el('textarea');
+    d.append(el('summary','某一格的文字寫錯了？（單格修正，不必整張重做）'));
+    d.append(el('p','先複製母圖圖片，貼到生圖網站的對話；再複製下面的修正提示詞貼在圖片後面。這一格以外的內容會被要求保留。'));
+    sel.setAttribute('aria-label','要修正的貼圖');stickers.forEach((x,i)=>{const o=el('option','第 '+(i+1)+' 張');o.value=String(i);sel.append(o);});sel.value=String(fixIndex);
+    input.type='text';input.maxLength=40;input.value=fixText;input.setAttribute('aria-label','這一格要改成的文字');input.placeholder='這一格要改成的文字（留白＝自己描述要改的地方）';
+    area.readOnly=true;area.rows=8;area.hidden=true;area.setAttribute('aria-label','修正提示詞，供手動複製');note.setAttribute('role','status');note.className='field-hint';
+    sel.onchange=()=>{fixIndex=Number(sel.value);fixEdited=false;renderQA();};
+    input.oninput=()=>{fixText=input.value;fixEdited=true;};
+    const imgBtn=el('button','複製這格所在母圖的圖片'),txtBtn=el('button','複製修正提示詞');imgBtn.type=txtBtn.type='button';imgBtn.className=txtBtn.className='button small';
+    const loc=()=>C.locateCell(plan.grids,fixIndex);
+    imgBtn.onclick=async()=>{const l=loc();try{await copyImage(l.mother-1);note.textContent='✔ 已複製母圖 '+l.mother+' 的圖片。到生圖網站貼上（Ctrl+V，Mac 按 Command+V）。';}catch{note.textContent='這個瀏覽器不能一鍵複製圖片，請到生圖網站自己附上母圖 '+l.mother+' 的檔案。';}};
+    txtBtn.onclick=async()=>{
+      const l=loc(),hits=G?G.checkText(input.value):[];
+      if(hits.some(h=>h.level===G.BLOCKED)){note.textContent='這句不符合 LINE 規範（'+hits[0].label+'），請修改後再複製。';return;}
+      const text=C.cellFixPrompt(l,input.value);area.value=text;
+      try{await navigator.clipboard.writeText(text);area.hidden=true;note.textContent='✔ 已複製母圖 '+l.mother+' 第 '+l.cell+' 格的修正提示詞。'+(hits.length?'提醒：'+hits[0].label+'，可能涉及 LINE 審核裁量。':'');}
+      catch{area.hidden=false;area.focus();area.select();note.textContent='瀏覽器不讓我自動複製，下面的框已選好全部文字，請按 Ctrl+C 複製。';}
+    };
+    d.append(el('label','貼圖：'),sel,input,imgBtn,txtBtn,note,area);box.append(d);
   }
   function updateBrandPreview(){
     const target=$('crop-brand-preview'),ctx=target.getContext('2d'),first=$('crop-results').querySelector('canvas');ctx.clearRect(0,0,target.width,target.height);
