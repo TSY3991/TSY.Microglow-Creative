@@ -132,6 +132,28 @@ window.creativeImageTools = [
           "placeholder": "例如：9月9日"
         },
         {
+          "id": "framing",
+          "label": "人物呈現（選填）",
+          "required": false,
+          "placeholder": "",
+          "type": "select",
+          "options": [
+            [
+              "original",
+              "維持原照姿勢與取景"
+            ],
+            [
+              "full",
+              "全身入鏡（含雙腳）"
+            ],
+            [
+              "half",
+              "半身入鏡"
+            ]
+          ],
+          "default": "original"
+        },
+        {
           "id": "requirements",
           "label": "其他創作需求",
           "required": false,
@@ -301,6 +323,28 @@ window.creativeImageTools = [
           "placeholder": "例如：月餅、玉兔"
         },
         {
+          "id": "framing",
+          "label": "人物呈現（選填）",
+          "required": false,
+          "placeholder": "",
+          "type": "select",
+          "options": [
+            [
+              "original",
+              "維持原照姿勢與取景"
+            ],
+            [
+              "full",
+              "全身入鏡（含雙腳）"
+            ],
+            [
+              "half",
+              "半身入鏡"
+            ]
+          ],
+          "default": "original"
+        },
+        {
           "id": "requirements",
           "label": "其他創作需求",
           "required": false,
@@ -438,6 +482,28 @@ window.creativeImageTools = [
           "label": "祝福語／結語（選填）",
           "required": false,
           "placeholder": "例如：與您有緣，願有善緣"
+        },
+        {
+          "id": "framing",
+          "label": "人物呈現（選填）",
+          "required": false,
+          "placeholder": "",
+          "type": "select",
+          "options": [
+            [
+              "original",
+              "維持原照姿勢與取景"
+            ],
+            [
+              "full",
+              "全身入鏡（含雙腳）"
+            ],
+            [
+              "half",
+              "半身入鏡"
+            ]
+          ],
+          "default": "original"
         },
         {
           "id": "requirements",

@@ -9,7 +9,7 @@
     const names = rows(values.subject);
     const lines = [
       '以另外上傳的主體照片提供身份參考，製作' + (values.ratio || '2:3') + '繁體中文圖片。沒有照片時先請使用者提供，不猜測主體外貌。',
-      '保留可辨識的五官、姿勢、服飾、頭冠、法器與重要特徵；可去除生活背景並等比例移動主體。生成可能重繪主體與文字，成品需人工核對。',
+      '可以改：去除生活背景、等比例移動主體、重新設計背景與裝飾。必須保留：可辨識的五官、姿勢、服飾、頭冠、法器與重要特徵；其他主體細節不要改變，Do not change anything else about the subject。生成可能重繪主體與文字，成品需人工核對。',
       '自主安排構圖、文字方向、區域比例、字體、配色與裝飾。建立主標與主體焦點、清楚閱讀順序、疏密節奏、自然材質、方向光與遠近層次；不預設左右排列、牌匾、框飾或資訊卡。'
     ];
     if (tool.category === 'temple') lines.push('用途為宮廟祝賀；依照片與使用者需求建立莊嚴吉慶氣氛，裝飾種類與位置自主設計。');
@@ -23,6 +23,8 @@
     if (names.length) lines.push('若提供多張原照，請確認照片順序與下列主體名稱對應；此身份對應說明不印在圖片上：\n' + names.map((n,i) => '第' + (i+1) + '張原照對應：' + n).join('\n'));
     if (printed.length) lines.push('唯一可印文字如下，每項一次；不印清單符號、引號、欄位名或製作說明：\n' + [...new Set(printed)].map(s => '「' + s + '」').join('\n'));
     else lines.push('這是待填寫的提示詞流程。先收集主體照片與使用者確認的文字，再生成；不自行補預設標題，不把範例或佔位符印在圖片上。');
+    const framings = {full:'全身入鏡（含雙腳），不裁切手部；視線與姿勢依原照。', half:'半身入鏡，不裁切臉部與手部；視線與姿勢依原照。'};
+    if (framings[values.framing]) lines.push('人物呈現：' + framings[values.framing]);
     if (String(values.elements || '').trim()) lines.push('使用者指定裝飾：' + values.elements.trim() + '。自行安排，避免遮住五官或文字。');
     if (String(values.requirements || '').trim()) lines.push('使用者明確需求：' + values.requirements.trim());
     lines.push('選填空白直接省略，不寫「無」，不留空標籤。日期逐字照輸入，不換算、不補年份，也不重複添加國曆／農曆前綴。', '參考圖引導美感、材質與完成度，不沿用人物、宮名或日期；只有使用者明確要求原版布局時才固定構圖。輸出完整圖片，文字筆畫清楚，不添加製作說明、檔名、照片編號、水印或額外 Logo。');
