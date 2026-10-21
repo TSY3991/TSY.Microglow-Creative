@@ -7,9 +7,12 @@
     const issues = C.validate(state, 2);
     if (issues.length) throw new Error(issues.map(x => x.message).join(" "));
     const s = state.settings;
+    // 角色設計器的選擇以精簡文字併入角色描述（上限 1000 字；超過就不併入，不截斷使用者原文）。
+    const design = C.characterDesign(s, true), joined = design ? (s.character.trim() ? s.character.trim() + "｜" : "") + "角色設計：" + design : "";
+    const character = joined && joined.length <= 1000 ? joined : s.character;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character: s.character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule },
+      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }

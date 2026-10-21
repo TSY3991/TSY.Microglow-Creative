@@ -144,3 +144,5 @@
 .line-sticker-tool .mother-thumb { max-width:160px; height:auto; border:1px solid var(--line); border-radius:8px; background:#fff; }
 .line-sticker-tool .mini-alert { margin:10px 0; display:grid; justify-items:start; gap:8px; }
 .line-sticker-tool .manual-prompt { width:100%; }
+.line-sticker-tool .designer > summary { cursor:pointer; font-weight:700; margin:4px 0 8px; }
+.line-sticker-tool .designer .inline-actions { margin:8px 0; }

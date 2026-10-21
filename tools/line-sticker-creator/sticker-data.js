@@ -114,6 +114,18 @@
     tone: [["auto","由 AI 配合角色與情境"],["normal","正常"],["polite","禮貌"],["cute","可愛"],["healing","療癒"],["funny","搞笑"],["exaggerated","浮誇"],["gloomy","厭世"],["workplace","職場"],["professional","專業"],["warm","溫暖"]],
     platform: [["chatgpt","ChatGPT"],["gemini","Gemini"],["generic","通用版本"]]
   };
+  // 角色設計器（選填）：原創角色用選單固定外觀，整組每一張母圖共用；未選的項目由生圖 AI 決定。
+  const design = [["dgGender","性別","human"],["dgAge","年齡層","human"],["dgPersona","性格","all"],["dgFace","臉型與五官","human"],["dgHair","髮型與髮色","human"],["dgOutfit","服裝","human"],["dgAccessory","配件","all"],["dgPalette","主色系","all"],["dgRatio","頭身比例","all"]];
+  const auto = ["", "不指定（由 AI 決定）"];
+  options.dgGender = [auto,["female","女性"],["male","男性"],["neutral","中性"]];
+  options.dgAge = [auto,["child","兒童（約 7～12 歲）"],["teen","青少年（約 13～17 歲）"],["young","年輕成人（約 18～30 歲）"],["adult","成年（約 31～55 歲）"],["senior","熟齡（約 56～70 歲）"],["elder","長者（70 歲以上）"]];
+  options.dgPersona = [auto,["lively","活潑開朗"],["gentle","溫柔療癒"],["steady","沉穩可靠"],["funny","幽默調皮"],["warm","親切熱情"],["elegant","知性優雅"],["sharp","自信俐落"],["shy","害羞內向"],["curious","天真好奇"],["cool","酷帥冷靜"]];
+  options.dgFace = [auto,["round","圓臉與彎彎的笑眼"],["oval","鵝蛋臉與大眼睛"],["square","方圓臉與粗眉"],["slim","瓜子臉與細長的眼睛"],["freckle","小雀斑與小巧的鼻子"],["dimple","酒窩與圓圓的眼睛"],["soft","下垂眼與柔和的嘴角"]];
+  options.dgHair = [auto,["blackshort","黑色短髮與側分瀏海"],["brownbob","棕色鮑伯頭"],["blacklong","黑色長直髮"],["twin","栗棕色雙辮子"],["curly","深棕色捲髮"],["silver","銀白色短髮"],["goldmid","金棕色中長髮"],["ponytail","黑色高馬尾"],["slick","俐落的深灰棕色油頭"]];
+  options.dgOutfit = [auto,["tee","白 T 恤搭牛仔外套"],["hoodie","連帽上衣"],["shirtvest","襯衫搭針織背心"],["knit","針織衫與長褲"],["apron","圍裙"],["sport","運動外套"],["blazer","西裝外套搭襯衫"],["dress","簡單的洋裝"]];
+  options.dgAccessory = [auto,["glasses","圓框眼鏡"],["clip","髮夾"],["scarf","小圍巾"],["cap","鴨舌帽"],["headphone","耳機"],["bag","小側背包"],["bow","蝴蝶結"],["none","無配件（靠五官辨識）"]];
+  options.dgPalette = [auto,["coral","珊瑚粉與米白"],["mist","霧藍與暖杏色"],["mint","薄荷綠與奶油黃"],["wine","酒紅與淺卡其"],["lavender","薰衣草紫與珍珠白"],["forest","森林綠與橘色"],["sunny","暖橘與咖啡色"]];
+  options.dgRatio = [auto,["r2","2 頭身（超大頭娃娃）"],["r25","2.5 頭身（圓潤短手腳）"],["r3","3 頭身（精緻 Q 版）"],["r35","3.5 頭身（修長 Q 版）"]];
   options.strokeColor = options.textColor.filter(x => x[0] !== "multi");
   options.shadowColor = options.strokeColor;
   const defaults = {
@@ -124,9 +136,10 @@
     stroke:"auto",strokeColor:"auto",strokeCustom:"#ffffff",
     shadow:"auto",shadowColor:"auto",shadowCustom:"#727978",
     layoutMode:"auto",spacing:"wide",background:"transparent",backgroundColor:"#ffffff",
-    platform:"chatgpt"
+    platform:"chatgpt",
+    dgGender:"",dgAge:"",dgPersona:"",dgFace:"",dgHair:"",dgOutfit:"",dgAccessory:"",dgPalette:"",dgRatio:""
   };
-  const api = { scenes, styleGuides, common, options, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
+  const api = { scenes, styleGuides, common, options, design, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StickerData = api;
 })(typeof window !== "undefined" ? window : globalThis);

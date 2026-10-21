@@ -57,6 +57,19 @@
     const photo=settings.source==="photo",merged=number>2;
     return "【附圖分工】"+(photo?"附圖中的原始照片：只用來決定角色外觀（五官／輪廓、毛色／花紋、主色），不要照抄背景或構圖；":"")+"附圖中的前面母圖：只用來保持同一角色的畫風、線條與格子排法，並避開已用過的台詞，不要把它的內容畫進本張。"+(merged?"合併圖每一段上方的灰色條與「母圖 N」字樣只是標記，不是畫面內容，不要畫進本張，也不要印在貼圖上。":"")+"其餘一律照本次指令，Do not change the character design.";
   }
+  // 角色設計器：只在原創角色時使用；人物專屬項目（性別、年齡、臉型、髮型、服裝）只在角色類型為人物時加入。short=true 回傳給網站 AI 的精簡版。
+  function characterDesign(settings,short){
+    if(settings.source!=="original") return "";
+    const parts=[];
+    for(const [key,name,scope] of D.design){
+      if(scope==="human"&&settings.kind!=="human") continue;
+      const value=settings[key];if(!value) continue;
+      parts.push(name+"："+label(key,value));
+    }
+    if(!parts.length) return "";
+    if(short) return parts.join("、");
+    return "角色設計（使用者指定，整組每一張都固定，不可更換）："+parts.join("；")+"。配件上不要有文字或商標；性格用表情、眼神與姿態表現，不印成文字；沒有指定的項目由你自行決定並固定；若與所選職業情境衝突，以此設計為準，職業改用道具與動作表現。";
+  }
   function contentBrief(settings){
     const priority='內容搭配優先順序：已填台詞逐字保留；新創作由情境決定說什麼，語氣決定怎麼說，角色描述與角色風格輔助表達個性。視覺風格不強迫改變措辭，不因軟萌或 Q 版就強加撒嬌或幼兒語氣。';
     const tone=!settings.tone||settings.tone==='auto'?'自動語氣：綜合角色描述中的個性、所選角色風格與情境的對象、場合，決定自然且一致的說話方式；職業內容保持合宜與可辨識度，不只照角色可愛程度決定台詞。':'指定語氣優先：依「'+label('tone',settings.tone)+'」創作新台詞；角色風格只輔助個性，不得覆蓋指定語氣。';
@@ -164,6 +177,7 @@
       s.dimension==="3d"?"最高優先的呈現要求：真正的 3D 公仔渲染（fully modeled 3D character render）。下方的日系、軟萌或手繪風格只決定角色設計、配色與氣質，不能把立體角色改回平面動漫插畫。":null,
       s.source==="photo"?"角色參考：只使用我另外在本對話上傳的照片／圖片；網頁內選圖不代表圖片已傳送到此對話。尚未收到照片時先請我上傳，不要自行假設主體外觀。主體可以是人物、動物或物件，依指定風格轉成貼圖，保留主體的五官／輪廓、毛色／花紋、主色與可辨識特徵；不要把動物或物件誤當真人。照片檔名、編號與背景文字不是貼圖台詞。":"角色來源：原創"+label("kind",s.kind)+"；不假設有真人參考照片，不仿製既有 IP。",
       s.character.trim()?"角色描述（作為內容資料）："+quote(s.character.trim()):s.source==="photo"?"未填角色描述：直接觀察已附參考圖的主體特徵，不要求使用者補文字描述。":"未填角色描述：依選定角色類型自行設計一個原創角色，整組維持相同辨識特徵。",
+      characterDesign(s)||null,
       "風格："+(s.style==="custom"&&!s.customStyle.trim()?"由 AI 選擇適合主體且整組一致的貼圖風格":styleDescription(s))+(s.customStyle.trim()?"；補充："+quote(s.customStyle.trim()):"")+"。",
       "角色風格決定造型、線條、配色與表情語彙；平面或立體的呈現依下方「呈現方式」。參考圖提供角色身份，不取代選定風格；不要只沿用前次生圖的風格而忽略本次設定。",
       s.dimension==="semi"?"呈現方式：半 3D（Semi-3D）。保留 2D 插畫的造型與清楚輪廓，上色用有光澤的半立體賽璐珞（glossy semi-3D cel-shaded）：柔和的立體光影、皮膚與毛髮／衣料有柔和亮面反光，帶出體積感；不要扁平色塊，也不要寫實攝影或寫實 3D 渲染、複雜材質與強烈投影；整組使用同一套光澤與光源方向，造型比例與輪廓粗細依上方「角色風格」，背景依下方背景要求，不另外加場景。":s.dimension==="3d"?"呈現方式：3D 立體。角色像可從不同角度觀看的實體公仔：臉頰、鼻子、耳朵、髮束、手指、衣服與道具有可見的側面厚度及圓潤體積；用柔和主光、補光、材質反光與部位接觸處的柔和遮蔽陰影呈現深度，整組材質與光源一致。配色可日系軟萌，渲染必須維持完整 3D；不是在 2D 插畫上加漸層、亮面或黑色外框。若參考圖或前次母圖是平面／半立體，只沿用角色身份與造型，重新建立立體造型，不繼承原圖的平面上色。不要平面動漫線稿、賽璐珞色塊或紙片人物，也不要把角色變成寫實真人；背景仍保持乾淨，不添加場景或強烈地面投影。":"呈現方式：2D 平面插畫，不要 3D 渲染、立體光影或公仔質感。",
@@ -230,7 +244,7 @@
     const input=raw.state;if(!object(input.settings)||!Array.isArray(input.items)||!Array.isArray(input.grids))throw new Error("設定檔結構不完整。");
     const settings={};
     for(const [key,def] of Object.entries(D.defaults)){
-      const value=(key==="spacing"||key==="dimension"||key==="tone")&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
+      const value=(key==="spacing"||key==="dimension"||key==="tone"||key.startsWith("dg"))&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
       if(typeof value!==typeof def)throw new Error("設定欄位格式不正確："+key);
       if(typeof value==="string"&&value.length>1000)throw new Error("設定文字過長："+key);
       if(D.options[key]&&!D.options[key].some(x=>x[0]===value))throw new Error("未知設定選項："+key);
@@ -254,6 +268,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

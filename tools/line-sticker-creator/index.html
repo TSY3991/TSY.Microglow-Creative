@@ -15,13 +15,13 @@
   <title>LINE 貼圖創作工具｜微光創作工具</title>
   <link rel="icon" href="../../assets/favicon.png?v=20261003a" type="image/png">
   <link rel="stylesheet" href="../../shared/base.css?v=20260717a">
-  <link rel="stylesheet" href="./sticker-creator.css?v=20261019e">
-  <script defer src="./sticker-data.js?v=20261020e"></script>
-  <script defer src="./sticker-core.js?v=20261021a"></script>
+  <link rel="stylesheet" href="./sticker-creator.css?v=20261021b">
+  <script defer src="./sticker-data.js?v=20261021b"></script>
+  <script defer src="./sticker-core.js?v=20261021b"></script>
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-guard.js?v=20261019f"></script>
-  <script defer src="./sticker-ai.js?v=20261019e"></script>
-  <script defer src="./sticker-app.js?v=20261020d"></script>
+  <script defer src="./sticker-ai.js?v=20261021b"></script>
+  <script defer src="./sticker-app.js?v=20261021b"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261021a"></script>
   <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
@@ -67,6 +67,20 @@
                 <label class="field" for="source"><span>角色來源</span><select id="source" data-setting="source"></select><span id="error-source" class="field-error"></span></label>
                 <div data-visible="source:original"><label class="field" for="kind"><span>原創角色類型</span><select id="kind" data-setting="kind"></select><span id="error-kind" class="field-error"></span></label></div>
                 <div class="full-width"><label class="field" for="character"><span>角色描述（選填）</span><textarea id="character" data-setting="character" rows="3" maxlength="1000"></textarea><span id="error-character" class="field-error"></span><span class="field-hint">留白時由 AI 依參考圖辨識特徵，或依原創角色類型設計外觀。</span></label></div>
+                <div class="full-width" data-visible="source:original"><details class="designer"><summary>用選單設計角色（選填；不選就由 AI 決定）</summary>
+                  <p class="field-hint">選好的項目會固定在整組每一張母圖；沒選的由 AI 自己決定。配件上不會有文字或商標。人物以外的角色只有性格、配件、主色系與頭身比例可選。</p>
+                  <div class="inline-actions"><button type="button" id="design-random" class="button small">幫我隨機搭配</button><button type="button" id="design-clear" class="button small">全部清除</button></div>
+                  <div class="field-grid">
+                  <div data-visible="kind:human"><label class="field" for="dgGender"><span>性別</span><select id="dgGender" data-setting="dgGender"></select></label></div>
+                  <div data-visible="kind:human"><label class="field" for="dgAge"><span>年齡層</span><select id="dgAge" data-setting="dgAge"></select></label></div>
+                  <div><label class="field" for="dgPersona"><span>性格</span><select id="dgPersona" data-setting="dgPersona"></select></label></div>
+                  <div data-visible="kind:human"><label class="field" for="dgFace"><span>臉型與五官</span><select id="dgFace" data-setting="dgFace"></select></label></div>
+                  <div data-visible="kind:human"><label class="field" for="dgHair"><span>髮型與髮色</span><select id="dgHair" data-setting="dgHair"></select></label></div>
+                  <div data-visible="kind:human"><label class="field" for="dgOutfit"><span>服裝</span><select id="dgOutfit" data-setting="dgOutfit"></select></label></div>
+                  <div><label class="field" for="dgAccessory"><span>配件</span><select id="dgAccessory" data-setting="dgAccessory"></select></label></div>
+                  <div><label class="field" for="dgPalette"><span>主色系</span><select id="dgPalette" data-setting="dgPalette"></select></label></div>
+                  <div><label class="field" for="dgRatio"><span>頭身比例</span><select id="dgRatio" data-setting="dgRatio"></select></label></div>
+                  </div></details></div>
                 <div id="photo-note" class="reference-upload full-width" data-visible="source:photo">
                   <label class="field" for="reference-file"><span>上傳角色參考圖</span><input id="reference-file" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="reference-help reference-status"></label>
                   <p id="reference-help" class="field-hint">可選自己、動物或物件的照片，支援 JPG、PNG、WebP，單張最多 10 MB。圖片只在本機預覽，不會傳送或保存；使用 AI 時，請把同一張圖片附到對話中。使用他人（家人、朋友、情侶）的照片前，請先確認對方同意。</p>

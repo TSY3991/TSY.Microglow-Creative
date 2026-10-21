@@ -143,3 +143,27 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   assert.doesNotMatch(C.prompt(photo),/【附圖分工】/);
   console.log('PASS framing limits and attachment roles');
 }
+{ // 角色設計器：預設不影響；原創人物才加人物專屬項目；非人物只留通用項目；照片模式不加；舊設定檔可讀；網站 AI 精簡併入
+  const base=()=>{const s=ready(8);s.settings.source='original';s.settings.kind='human';return s;};
+  const s0=base();assert.equal(C.characterDesign(s0.settings),'');assert.doesNotMatch(C.prompt(s0),/角色設計（使用者指定/);
+  const s1=base();Object.assign(s1.settings,{dgGender:'female',dgAge:'adult',dgPersona:'shy',dgFace:'dimple',dgHair:'twin',dgOutfit:'apron',dgAccessory:'glasses',dgPalette:'mist',dgRatio:'r3'});
+  const t=C.characterDesign(s1.settings);
+  assert.match(t,/性別：女性；年齡層：成年（約 31～55 歲）；性格：害羞內向；臉型與五官：酒窩與圓圓的眼睛；髮型與髮色：栗棕色雙辮子；服裝：圍裙；配件：圓框眼鏡；主色系：霧藍與暖杏色；頭身比例：3 頭身（精緻 Q 版）/);
+  assert.match(t,/配件上不要有文字或商標/);assert.match(C.prompt(s1),/角色設計（使用者指定，整組每一張都固定/);
+  assert.equal(C.prompt(s1),C.prompt(s1));
+  const s2=base();s2.settings.kind='animal';Object.assign(s2.settings,s1.settings,{kind:'animal'});
+  const t2=C.characterDesign(s2.settings);assert.doesNotMatch(t2,/性別|年齡層|臉型|髮型|服裝/);assert.match(t2,/性格：害羞內向；配件：圓框眼鏡；主色系/);
+  const s3=base();Object.assign(s3.settings,s1.settings,{source:'photo'});assert.equal(C.characterDesign(s3.settings),'');assert.doesNotMatch(C.prompt(s3),/角色設計（使用者指定/);
+  assert.equal(C.characterDesign(s1.settings,true),'性別：女性、年齡層：成年（約 31～55 歲）、性格：害羞內向、臉型與五官：酒窩與圓圓的眼睛、髮型與髮色：栗棕色雙辮子、服裝：圍裙、配件：圓框眼鏡、主色系：霧藍與暖杏色、頭身比例：3 頭身（精緻 Q 版）');
+  // 存檔與舊設定檔
+  const round=C.deserialize(C.serialize(s1));assert.equal(round.settings.dgHair,'twin');
+  const old=JSON.parse(JSON.stringify(C.serialize(s0)));for(const k of Object.keys(D.defaults).filter(k=>k.startsWith('dg')))delete old.state.settings[k];
+  assert.equal(C.deserialize(old).settings.dgGender,'');
+  const bad=JSON.parse(JSON.stringify(C.serialize(s1)));bad.state.settings.dgHair='nope';assert.throws(()=>C.deserialize(bad),/未知設定選項/);
+  // 網站 AI：未選時完全不變；選了以精簡文字併入；超過 1000 字不併入
+  s0.items=Array.from({length:8},()=>C.item(''));s1.items=Array.from({length:8},()=>C.item(''));
+  assert.equal(AI.payload(s0).context.character,s0.settings.character);
+  assert.match(AI.payload(s1).context.character,/角色設計：性別：女性、年齡層：成年/);
+  s1.settings.character='字'.repeat(990);assert.equal(AI.payload(s1).context.character,s1.settings.character);
+  console.log('PASS character designer');
+}

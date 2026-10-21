@@ -124,6 +124,20 @@
     });
     conditions();
   }
+  // 角色設計器：隨機搭配與全部清除（隨機只發生在這個按鈕，提示詞組裝本身不使用亂數，同設定結果固定）。
+  function applyDesign(values) {
+    D.design.forEach(([key])=>{state.settings[key]=values[key]||"";});
+    controls();invalidate();save();if(step===4){summary();renderMulti();}
+  }
+  $("design-random").addEventListener("click",()=>{
+    const values={};
+    D.design.forEach(([key,,scope])=>{
+      if(scope==="human"&&state.settings.kind!=="human")return;
+      const choices=D.options[key].filter(x=>x[0]);values[key]=choices[Math.floor(Math.random()*choices.length)][0];
+    });
+    applyDesign(values);status("已隨機搭配一組角色設計；不滿意可再按一次，或逐項修改。");
+  });
+  $("design-clear").addEventListener("click",()=>{applyDesign({});status("已清除角色設計，改由 AI 決定。");});
   function inputControl(tag,id,value,callback) {
     const el=node(tag);el.id=id;
     if(tag==="textarea"){el.rows=2;el.maxLength=300;}
@@ -203,7 +217,7 @@
     const info=node("dl",undefined,"summary-info");
     const entries=[
       ["角色",C.label("source",s.source)+(s.source==="original"?"・"+C.label("kind",s.kind):"")],
-      ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
+      ["角色描述",s.character.trim()||(s.source==="photo"?"依參考圖辨識":"由 AI 設計")],...(C.characterDesign(s,true)?[["角色設計",C.characterDesign(s,true)]]:[]),["呈現方式",C.label("dimension",s.dimension).split("：")[0].replace("（預設）","")],["角色風格",(s.style==="custom"&&!s.customStyle.trim()?"由 AI 搭配":C.label("style",s.style))+(s.customStyle?"・"+s.customStyle:"")],
       ["台詞模式",C.label("mode",s.mode)+"・"+C.label("textMode",s.textMode)],["情境與語氣",(s.scene==="auto"?"AI 自由發想":D.scenes[s.scene].label)+"／"+C.label("tone",s.tone).split("：")[0]],
       ["共用名稱",s.nameMode==="none"||!s.name.trim()?"不加入":C.label("nameMode",s.nameMode)+"："+s.name],
       ["字體與大小",(s.font==="custom"?(s.customFont.trim()||"由 AI 搭配"):C.label("font",s.font))+"／"+C.label("size",s.size)],
