@@ -12,7 +12,7 @@
     const character = joined && joined.length <= 1000 ? joined : s.character;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule },
+      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule+C.balanceRule(state) },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }

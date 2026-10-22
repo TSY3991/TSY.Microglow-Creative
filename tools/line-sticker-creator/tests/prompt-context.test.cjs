@@ -167,3 +167,19 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   s1.settings.character='字'.repeat(990);assert.equal(AI.payload(s1).context.character,s1.settings.character);
   console.log('PASS character designer');
 }
+{ // 相近句檢查與整組平衡規則（使用者實測：一般聊天句集中在母圖 2、「恭喜」與「恭喜發財」同時出現）
+  const texts=['恭喜發財','新年快樂','大吉大利','好運連連','平安健康','心想事成','財源滾滾','步步高升','萬事如意','吉祥如意','紅包拿來','太棒了','謝謝你','早安','晚安','收到','讚啦','加油','笑死','傻眼','真的假的','太神啦','肚子餓','太累了','沒問題','不好意思','讚讚讚','再見','OK','問號','太神祕','出發','歡呼','期待','放假囉','好運到','萬事吉','恭喜','發大財','過好年'];
+  const s=ready(8);s.settings.count=40;s.settings.mode='manual';s.grids=[16,16,8];s.items=texts.map(t=>C.item(t));
+  assert.equal(C.duplicates(s).length,0);
+  const sim=C.similar(s).map(g=>g.text);
+  for(const p of ['恭喜發財」與「恭喜','好運連連」與「好運到','萬事如意」與「萬事吉','萬事如意」與「吉祥如意','太神啦」與「太神祕'])assert.ok(sim.includes(p),p);
+  assert.deepEqual(C.similar(s).find(g=>g.text==='恭喜發財」與「恭喜').indexes,[0,37]);
+  const none=ready(8);none.settings.count=8;none.settings.mode='manual';none.items=['早安','午安','晚安','收到','好的','加油吧','再見囉','出發'].map(t=>C.item(t));assert.deepEqual(C.similar(none),[]);
+  const g=ready(8);g.settings.count=40;g.settings.mode='ai';g.settings.scene='festival';g.grids=[16,16,8];g.items=Array.from({length:40},()=>C.item(''));
+  const rule=C.balanceRule(g);assert.match(rule,/整組共 40 張，依序分成 3 組母圖（每組 16、16、8 格）/);assert.match(rule,/情境相關約 5～7 成），不要把一般聊天句集中在某一組/);assert.match(rule,/不可有意思相近或只差一兩個字的句子/);
+  assert.ok(AI.payload(g).context.scene.endsWith(rule));assert.ok(AI.payload(g).context.scene.length<=1000);
+  const one=ready(8);one.settings.count=16;one.grids=[16];one.items=Array.from({length:16},()=>C.item(''));assert.doesNotMatch(C.balanceRule(one),/依序分成/);assert.match(C.balanceRule(one),/不可有意思相近/);
+  const nt=ready(8);nt.settings.textMode='none';assert.equal(C.balanceRule(nt),'');
+  g.settings.source='original';g.settings.kind='human';const f2=C.prompt(g,2);assert.match(f2,/本張仍要有約 5～7 成的句子能直接辨識此情境/);
+  console.log('PASS similar phrases and balance rule');
+}

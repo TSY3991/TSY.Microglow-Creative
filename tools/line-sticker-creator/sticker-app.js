@@ -515,7 +515,7 @@
       if(!confirm("要把角色描述、風格與台詞（不含照片）傳到 Google Gemini，讓 AI 幫你補齊空白嗎？"))return;
       $("ai-consent").checked=true;aiAvailability();
     }
-    if(fixDuplicates){C.duplicates(state).forEach(g=>g.indexes.slice(1).forEach(i=>{state.items[i].text="";delete state.items[i].presetText;}));renderItems();invalidate();}
+    if(fixDuplicates){(fixDuplicates==="similar"?C.similar(state):C.duplicates(state)).forEach(g=>g.indexes.slice(1).forEach(i=>{state.items[i].text="";delete state.items[i].presetText;}));renderItems();invalidate();}
     $("multi-status").textContent="AI 正在安排台詞，請稍等，約需 10～60 秒…";
     await runArrange();
     $("multi-status").textContent=$("ai-status").textContent;
@@ -527,6 +527,13 @@
       const p=node("div",undefined,"notice mini-alert");
       p.append(node("strong","還有 "+blanks+" 句台詞沒填。"),node("span",aiEndpoint?"建議先讓 AI 一次補齊，這樣每張母圖的字才不會各自亂想、也不會重複。":"沒填的字會交給生圖平台各自發想，不同母圖之間可能重複。"));
       if(aiEndpoint){const b=node("button","讓 AI 幫我補齊台詞","button primary");b.type="button";b.addEventListener("click",()=>aiFromStep4(false));p.append(b);}
+      box.append(p);
+    }
+    const sims=C.similar(state);
+    if(sims.length){
+      const p=node("div",undefined,"notice mini-alert");
+      p.append(node("strong","有 "+sims.length+" 組意思相近的句子：「"+sims.slice(0,3).map(g=>g.text).join("」、「")+"」"+(sims.length>3?"…":"")),node("span",aiEndpoint?"整組貼圖的句子最好用途各不相同；可以讓 AI 把後面那句換成不同意思的。":"建議回第二步改掉其中一句，讓每句的用途都不同。"));
+      if(aiEndpoint){const b=node("button","請 AI 換掉相近的","button primary");b.type="button";b.addEventListener("click",()=>aiFromStep4("similar"));p.append(b);}
       box.append(p);
     }
     if(dups.length){

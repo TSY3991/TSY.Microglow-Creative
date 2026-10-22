@@ -39,11 +39,12 @@ assert.equal(qa.status,G.REVIEW);assert.equal(qa.auto[1].detail,'全透明：第
 assert.equal(qa.manual.length,8);assert.equal(qa.expected[2].text,'收到');
 assert.equal(G.checkAfterGeneration({count:1,stickers:[{source:1}],expected:[]}).status,G.SAFE);
 console.log('PASS content guard: blocks clear violations, reviews discretion items, keeps blessings/folk culture, never edits user text, skips risky AI suggestions');
-{ // 656 句職業／主題預設台詞：不得觸發任何內容防護（含需確認項目）、每個情境 16 句且不重複、不超過 14 字；情境詞彙同樣乾淨
-  const jobs=Object.entries(D.scenes).filter(([,v])=>v.job);assert.equal(jobs.length,41);let total=0;
-  for(const [k,v] of jobs){assert.equal(v.lines.length,16,k);assert.equal(new Set(v.lines).size,16,k);total+=v.lines.length;
+{ // 職業／主題／節慶預設台詞：不得觸發任何內容防護（含需確認項目）、不重複、不超過 14 字；情境詞彙同樣乾淨；原有 41 個職業各 40 句、新增 43 個情境各 16 句
+  const jobs=Object.entries(D.scenes).filter(([,v])=>v.job);assert.equal(jobs.length,84);let total=0;
+  for(const [k,v] of jobs){assert.ok([16,40].includes(v.lines.length),k);assert.equal(new Set(v.lines).size,v.lines.length,k);total+=v.lines.length;
     for(const t of v.lines){assert.deepEqual(G.checkText(t),[],k+'｜'+t);assert.ok(Array.from(t).length<=14,k+'｜'+t);}
-    assert.deepEqual(G.checkText(v.terms||''),[],k+' terms');}
-  assert.equal(total,656);
-  console.log('PASS 656 job lines: no guard hits, unique, short');
+    assert.deepEqual(G.checkText(v.terms||''),[],k+' terms');assert.equal((v.terms||'').split('、').length,6,k+' terms 數');}
+  assert.equal(jobs.filter(([,v])=>v.lines.length===40).length,41);assert.equal(jobs.filter(([,v])=>v.lines.length===16).length,43);
+  assert.equal(total,41*40+43*16);
+  console.log('PASS 84 job/theme/festival scenes: no guard hits, unique, short');
 }

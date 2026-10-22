@@ -36,7 +36,7 @@
   function sceneBrief(settings) {
     const scene=D.scenes[settings.scene];
     if(settings.scene==="auto")return sceneName(settings);
-    const topic=scene.job?(scene.group==="生活與主題"?"主題情境":"職業情境"):"情境";
+    const topic=scene.job?(["生活與主題","節慶與活動"].includes(scene.group)?"主題情境":"職業情境"):"情境";
     const terms=scene.terms||scene.kw;
     return topic+"："+scene.label+"。"+(terms?"情境詞彙（只作發想方向，不是固定台詞）："+terms+"。":"")+
       (settings.mode==="manual"?"逐張台詞全部依使用者原文，不因情境換字；未指定的表情、動作與道具可融入此情境。":
@@ -50,7 +50,7 @@
     const scene=D.scenes[settings.scene],raw=settings.scene!=="auto"&&scene?(scene.terms||scene.kw||""):"";
     const terms=String(raw).split(/[、，,\s]+/).filter(Boolean),pick=list=>list.filter((_,i)=>i%total===number-1);
     const t=pick(terms),p=pick(PURPOSES);
-    return "【本張發想重點】（只作發想方向，不是要印的文字，也不要畫成標籤或註解）"+(t.length?"情境方向以「"+t.join("、")+"」為主；":"")+"台詞用途以「"+p.join("、")+"」為主；其餘格子可自由搭配，但不要沿用其他母圖常見的說法。句型要交錯變化（問句、感嘆、短回應、狀聲詞、帶動作的短句），字數有長有短，仍遵守字數上限。";
+    return "【本張發想重點】（只作發想方向，不是要印的文字，也不要畫成標籤或註解）"+(t.length?"情境方向以「"+t.join("、")+"」為主；":"")+"台詞用途以「"+p.join("、")+"」為主；其餘格子可自由搭配，但不要沿用其他母圖常見的說法。本張仍要有約 5～7 成的句子能直接辨識此情境（不要整張都改成一般聊天句），句型要交錯變化（問句、感嘆、短回應、狀聲詞、帶動作的短句），字數有長有短，仍遵守字數上限。";
   }
   // 附圖分工：每張附圖只負責一件事（照片管外觀、前面的母圖管畫風與避開已用台詞），並說明合併圖的標籤條不是畫面內容。
   function attachRoles(settings,number){
@@ -160,6 +160,25 @@
     });
     return [...seen.values()].filter(x=>x.indexes.length>1);
   }
+  // 意思相近的句子：兩句共用至少 2 個連續的字，且共用部分占較短那句的一半以上（例如「恭喜」與「恭喜發財」、「好運連連」與「好運到」）。完全相同的句子由 duplicates() 處理。
+  function similar(state) {
+    const clean=t=>t.replace(/[\s，。！？、,.!?~～…\-－]/g,"").toLowerCase();
+    const list=state.items.slice(0,state.settings.count).map((e,i)=>({i,t:hasText(state,e)&&e.text.trim()?clean(e.text):"",raw:e.text.trim()})).filter(x=>x.t);
+    const out=[];
+    for(let a=0;a<list.length;a++)for(let b=a+1;b<list.length;b++){
+      const x=list[a],y=list[b];if(x.t===y.t)continue;
+      const [short,long]=x.t.length<=y.t.length?[x.t,y.t]:[y.t,x.t];if(short.length<2)continue;
+      let best=0;for(let len=short.length;len>=2&&!best;len--)for(let p=0;p+len<=short.length;p++)if(long.includes(short.slice(p,p+len))){best=len;break;}
+      if(best>=2&&best/short.length>=0.5)out.push({text:x.raw+"」與「"+y.raw,indexes:[x.i,y.i]});
+    }
+    return out;
+  }
+  // 網站 AI 一次安排整組時要遵守的平衡規則（外部 AI 看不到母圖分組，所以明寫）。
+  function balanceRule(state) {
+    const s=state.settings;if(s.textMode==="none")return "";
+    const all=plans(state);
+    return (all.length>1?"整組共 "+s.count+" 張，依序分成 "+all.length+" 組母圖（每組 "+all.map(p=>p.size).join("、")+" 格）：每一組裡「情境相關句」與「一般聊天句」的比例都要接近（情境相關約 5～7 成），不要把一般聊天句集中在某一組。":"")+"整組內不可有意思相近或只差一兩個字的句子（例如「恭喜」與「恭喜發財」、「好運連連」與「好運到」、「萬事如意」與「萬事吉」），每句的用途與用字都要不同。";
+  }
   // only：只產生某一張母圖（1 起算）的提示詞；省略則是整組一份。
   function prompt(state, only) {
     if(validate(state).length) throw new Error("請先完成設定檢查。");
@@ -268,6 +287,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);
