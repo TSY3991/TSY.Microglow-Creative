@@ -197,6 +197,7 @@
     background: [["transparent","要求 AI 生成透明背景"],["white","純白背景"],["color","自選單一底色"]],
     dimension: [["2d","2D 平面（預設）：像手繪／插畫的平面貼圖"],["semi","半 3D（Semi-3D）：2D 造型加柔和立體光影，有體積感但不是寫實 3D"],["3d","3D 立體：像公仔、黏土或 3D 動畫角色，有體積與光影"]],
     spacing: [["standard","標準：481×416 px（四周多留 15%）"],["wide","加寬：592×512 px（四周多留 30%，預設）"],["widest","最寬：703×608 px（四周多留 45%，偵測到被切到時自動使用）"]],
+    series: [["1","第 1 篇（預設）"],["2","第 2 篇（避開前面篇章的預設台詞）"],["3","第 3 篇"],["4","第 4 篇"]],
     tone: [["auto","由 AI 配合角色與情境"],["normal","正常"],["polite","禮貌"],["cute","可愛"],["healing","療癒"],["funny","搞笑"],["exaggerated","浮誇"],["gloomy","厭世"],["workplace","職場"],["professional","專業"],["warm","溫暖"]],
     platform: [["chatgpt","ChatGPT"],["gemini","Gemini"],["generic","通用版本"]]
   };
@@ -215,7 +216,7 @@
   options.strokeColor = options.textColor.filter(x => x[0] !== "multi");
   options.shadowColor = options.strokeColor;
   const defaults = {
-    source:"",kind:"",dimension:"2d",tone:"auto",character:"",style:"",customStyle:"",
+    source:"",kind:"",dimension:"2d",series:"1",prevUsed:"",tone:"auto",character:"",style:"",customStyle:"",
     mode:"ai",scene:"auto",textMode:"all",count:16,
     nameMode:"none",name:"",font:"auto",customFont:"",size:"auto",
     textColor:"auto",textCustom:"#082528",position:"auto",

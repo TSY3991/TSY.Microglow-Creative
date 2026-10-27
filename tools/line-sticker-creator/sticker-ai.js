@@ -3,6 +3,12 @@
   const C = typeof module !== "undefined" && module.exports ? require("./sticker-core.js") : root.StickerCore;
   const D = typeof module !== "undefined" && module.exports ? require("./sticker-data.js") : root.StickerData;
   const G = typeof module !== "undefined" && module.exports ? require("./sticker-guard.js") : root.StickerContentGuard;
+  // 情境欄位上限 1000 字：固定規則優先，前幾篇已用過的內容只放得下的部分。
+  function sceneText(state) {
+    const base=C.sceneBrief(state.settings)+"。"+C.contentBrief(state.settings)+C.dialogueRule+C.balanceRule(state)+C.rowRule;
+    const room=1000-base.length;
+    return room>60?base+C.prevUsedRule(state,room-60):base;
+  }
   function payload(state) {
     const issues = C.validate(state, 2);
     if (issues.length) throw new Error(issues.map(x => x.message).join(" "));
@@ -12,7 +18,7 @@
     const character = joined && joined.length <= 1000 ? joined : s.character;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: C.sceneBrief(s)+"。"+C.contentBrief(s)+C.dialogueRule+C.balanceRule(state) },
+      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: sceneText(state) },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }

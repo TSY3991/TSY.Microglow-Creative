@@ -308,6 +308,7 @@
     }
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
+    if(key==="series"&&state.settings.mode==="preset"){const n=C.releasePreset(state),filled=C.fillMissing(state);renderItems();status("已改為第 "+el.value+" 篇：換掉 "+n+" 句系統預設台詞，補入 "+filled+" 句新的；自行修改的台詞保留。"+shortNote());}
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled||shortNote())status((filled?"已補入 "+filled+" 句；原有台詞未改動。":"")+shortNote());}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
@@ -321,12 +322,20 @@
   $("settings-form").addEventListener("submit",e=>e.preventDefault());
   document.querySelectorAll("[data-step]").forEach(el=>el.addEventListener("click",()=>go(Number(el.dataset.step))));
   $("previous").addEventListener("click",()=>go(step-1));$("next").addEventListener("click",()=>go(step+1));
-  $("apply-scene").addEventListener("click",()=>replaceItems(C.pool(state.settings.scene).slice(0,state.settings.count).map(C.presetItem),"套用「"+D.scenes[state.settings.scene].label+"」。"));
+  $("apply-scene").addEventListener("click",()=>replaceItems(C.presetCandidates(state,new Set()).slice(0,state.settings.count).map(C.presetItem),"套用「"+D.scenes[state.settings.scene].label+"」。"));
   $("ai-reset-text").addEventListener("click",()=>{
     if(state.settings.mode!=="ai"||state.settings.textMode==="none")return;
     const targets=state.items.filter(x=>C.hasText(state,x));
     if(targets.some(x=>x.text.trim())&&!confirm("將所有有文字貼圖的台詞清空，交給 AI 重新創作？包含自行輸入或先前 AI 台詞。角色、表情、動作、無文字格的情境與共用名稱設定保留。"))return;
     targets.forEach(x=>{x.text="";delete x.presetText;});renderItems();invalidate();status("台詞已改為 AI 發揮。可用網站 AI 先安排，或直接產生提示詞交給生圖平台；不會自動送出 AI 請求。");
+  });
+  $("prev-capture").addEventListener("click",()=>{
+    const lines=[];state.items.slice(0,state.settings.count).forEach(x=>{const t=C.hasText(state,x)?x.text.trim():"";if(t)lines.push(t);});
+    if(!lines.length){$("prev-capture-note").textContent="目前沒有台詞可記錄。";return;}
+    const merged=[...new Set([...C.usedBefore(state.settings),...lines])];let text="";
+    for(const x of merged){const next=text?text+"\n"+x:x;if(next.length>1000)break;text=next;}
+    state.settings.prevUsed=text;$("prevUsed").value=text;invalidate();save();
+    $("prev-capture-note").textContent="已記下 "+text.split("\n").length+" 句。接著可以把「第幾篇」改成下一篇，再清空或換新台詞。";
   });
   $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state);renderItems();invalidate();status((n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。")+shortNote());});
   $("apply-bulk").addEventListener("click",()=>{

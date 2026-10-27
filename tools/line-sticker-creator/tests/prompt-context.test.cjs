@@ -172,14 +172,29 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   const s=ready(8);s.settings.count=40;s.settings.mode='manual';s.grids=[16,16,8];s.items=texts.map(t=>C.item(t));
   assert.equal(C.duplicates(s).length,0);
   const sim=C.similar(s).map(g=>g.text);
-  for(const p of ['恭喜發財」與「恭喜','好運連連」與「好運到','萬事如意」與「萬事吉','萬事如意」與「吉祥如意','太神啦」與「太神祕'])assert.ok(sim.includes(p),p);
+  for(const p of ['恭喜發財」與「恭喜','好運連連」與「好運到','萬事如意」與「萬事吉','太神啦」與「太神祕'])assert.ok(sim.includes(p),p);
   assert.deepEqual(C.similar(s).find(g=>g.text==='恭喜發財」與「恭喜').indexes,[0,37]);
   const none=ready(8);none.settings.count=8;none.settings.mode='manual';none.items=['早安','午安','晚安','收到','好的','加油吧','再見囉','出發'].map(t=>C.item(t));assert.deepEqual(C.similar(none),[]);
   const g=ready(8);g.settings.count=40;g.settings.mode='ai';g.settings.scene='festival';g.grids=[16,16,8];g.items=Array.from({length:40},()=>C.item(''));
   const rule=C.balanceRule(g);assert.match(rule,/整組共 40 張，依序分成 3 組母圖（每組 16、16、8 格）/);assert.match(rule,/情境相關約 5～7 成），不要把一般聊天句集中在某一組/);assert.match(rule,/不可有意思相近或只差一兩個字的句子/);
-  assert.ok(AI.payload(g).context.scene.endsWith(rule));assert.ok(AI.payload(g).context.scene.length<=1000);
+  assert.ok(AI.payload(g).context.scene.endsWith(rule+C.rowRule));assert.ok(AI.payload(g).context.scene.length<=1000);
   const one=ready(8);one.settings.count=16;one.grids=[16];one.items=Array.from({length:16},()=>C.item(''));assert.doesNotMatch(C.balanceRule(one),/依序分成/);assert.match(C.balanceRule(one),/不可有意思相近/);
   const nt=ready(8);nt.settings.textMode='none';assert.ok(!C.balanceRule(nt).includes('句子')&&C.balanceRule(nt).includes('表情與動作都要不同'));
   g.settings.source='original';g.settings.kind='human';const f2=C.prompt(g,2);assert.match(f2,/本張仍要有約 5～7 成的句子能直接辨識此情境/);
   console.log('PASS similar phrases and balance rule');
+}
+{ // 放寬後：節慶祝賀句型不算相近；第 N 篇預設台詞往後取、不循環；前幾篇用過的句子被排除並進入提示詞
+  const C4=require('../sticker-core.js'),D4=require('../sticker-data.js'),AI4=require('../sticker-ai.js');
+  const mk=(series,prev)=>{const s=C4.initial();Object.assign(s.settings,{source:'original',kind:'human',style:'cute',mode:'preset',scene:'work',count:8,series,prevUsed:prev||''});s.grids=[8];s.items=Array.from({length:8},()=>C4.item(''));C4.fillMissing(s);return s;};
+  const f=mk('1'),g=mk('2'),h=mk('1',f.items[0].text+'\n'+f.items[1].text);
+  const ft=f.items.map(x=>x.text),gt=g.items.map(x=>x.text);
+  assert.ok(ft.every(Boolean)&&gt.filter(Boolean).every(t=>!ft.includes(t)),'第 2 篇不與第 1 篇重複');
+  assert.ok(!h.items.some(x=>x.text===f.items[0].text||x.text===f.items[1].text),'已用過的句子被排除');
+  assert.ok(C4.prompt(h).includes('後續篇章')&&AI4.payload(h).context.scene.includes(f.items[0].text)&&AI4.payload(h).context.scene.length<=1000);
+  const fe=C4.initial();Object.assign(fe.settings,{source:'original',kind:'human',style:'cute',mode:'manual',count:8});fe.grids=[8];
+  fe.items=['新年快樂','中秋快樂','母親節快樂','父親節快樂','早安','收到','加油','好的'].map(t=>C4.item(t));
+  assert.equal(C4.similar(fe).length,0);
+  const old=C4.initial();Object.assign(old.settings,{source:'original',kind:'human',style:'cute'});delete old.settings.series;
+  assert.equal(C4.deserialize(C4.serialize(old)).settings.series,'1');
+  console.log('PASS series / prevUsed / festival similarity');
 }

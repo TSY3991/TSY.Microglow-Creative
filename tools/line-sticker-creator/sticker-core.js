@@ -87,11 +87,21 @@
     const s=state.settings;
     return (s.nameMode!=="none" && entry.includeName ? s.name.trim() : "") + entry.text.trim();
   }
+  // 前幾篇已用過的內容（每行或以頓號、逗號、｜分隔）；回傳去重後的字串清單。
+  const rowRule="每張的動作描述直接寫動作與道具，不要每句都用角色外觀開頭（例如不要每句都寫「戴著眼鏡的貓咪…」）；表情不要都套「雙眼…眉毛…嘴巴…」同一種句型，換不同切入點（視線、嘴形、肩膀、手勢、道具），場景與道具也要有變化，不要整組都在同一張桌子前。";
+  function usedBefore(settings) {
+    return [...new Set(String(settings.prevUsed||"").split(/[\r\n、，,；;｜|]+/).map(x=>x.trim()).filter(Boolean))].slice(0,120);
+  }
+  // 預設台詞候選：第 N 篇跳過前 (N-1)×張數 句（不夠的格子留白交給 AI，不會循環到前面篇章用過的句子），並排除「前幾篇已用過」的句子。
+  function presetCandidates(state, used) {
+    const s=state.settings,own=D.scenes[s.scene],before=new Set(usedBefore(s)),offset=(Number(s.series||1)-1)*s.count;
+    return (own&&own.job?own.lines:pool(s.scene)).filter(x=>!used.has(x)&&!before.has(x)).slice(offset);
+  }
   function fillMissing(state) {
     if(state.settings.mode==="ai")return 0;
     const used=new Set(state.items.map(x=>x.text.trim()).filter(Boolean));
     // 職業／主題情境只有自己的 16 句：用完就留白，交給 AI 依該情境發想，不再接通用句庫（好的、收到…）而讓後面的母圖離題。
-    const own=D.scenes[state.settings.scene],candidates=(own&&own.job?own.lines:pool(state.settings.scene)).filter(x=>!used.has(x));
+    const candidates=presetCandidates(state,used);
     let filled=0;
     while(state.items.length<state.settings.count) state.items.push(item());
     for(let i=0;i<state.settings.count;i++){
@@ -168,8 +178,11 @@
     for(let a=0;a<list.length;a++)for(let b=a+1;b<list.length;b++){
       const x=list[a],y=list[b];if(x.t===y.t)continue;
       const [short,long]=x.t.length<=y.t.length?[x.t,y.t]:[y.t,x.t];if(short.length<2)continue;
-      let best=0;for(let len=short.length;len>=2&&!best;len--)for(let p=0;p+len<=short.length;p++)if(long.includes(short.slice(p,p+len))){best=len;break;}
-      if(best>=2&&best/short.length>=0.5)out.push({text:x.raw+"」與「"+y.raw,indexes:[x.i,y.i]});
+      let best=0,at=-1;for(let len=short.length;len>=2&&!best;len--)for(let p=0;p+len<=short.length;p++)if(long.includes(short.slice(p,p+len))){best=len;at=p;break;}
+      const run=best?short.slice(at,at+best):"";
+      // 節慶祝賀句型（新年快樂／中秋快樂）共用句尾是正常的，不算相近；其餘要共用 3 字以上占一半，或 2 字占六成以上才提醒。
+      if(best&&run.endsWith("快樂")&&x.t.endsWith(run)&&y.t.endsWith(run))continue;
+      if(best>=2&&best/short.length>=(best>=3?0.5:0.6))out.push({text:x.raw+"」與「"+y.raw,indexes:[x.i,y.i]});
     }
     return out;
   }
@@ -188,6 +201,11 @@
     return out;
   }
   // 網站 AI 一次安排整組時要遵守的平衡規則（外部 AI 看不到母圖分組，所以明寫）。
+  function prevUsedRule(state, room) {
+    const list=usedBefore(state.settings);if(!list.length)return "";
+    let text="";for(const x of list){if((text+x).length+1>room)break;text+=(text?"、":"")+x;}
+    return text?"這是同一角色的後續篇章，前面篇章已用過這些台詞與動作，本篇不得使用相同或意思相近的，也不要重複相同的姿勢與場景："+text+"。":"";
+  }
   function balanceRule(state) {
     const s=state.settings,variety="整組內每張的表情與動作都要不同：同一種表情最多用 3 次，動作不可重複或只換一兩個字（例如「雙手比讚」與「單手比讚」），並依該張的台詞或用途安排，台詞、表情、動作三者意思要互相搭得上。";if(s.textMode==="none")return variety;
     const all=plans(state);
@@ -248,6 +266,8 @@
       single&&total>1&&blankHere&&elsewhere.length?"本組其他母圖已使用這些台詞，本張請不要重複："+elsewhere.map(quote).join("、")+"。":null,
       single&&total>1&&only>1&&blankHere?"【不可重複前面母圖的台詞】先讀出附圖（前面母圖）中已經印出的每一句台詞；本張新創作的台詞一律不得與它們相同，也不要只改一兩個字，或換成同樣意思、同樣句型的說法。附圖中的台詞只用來避開，不要畫進本張。":null,
       single&&total>1&&blankHere?focusBrief(s,only,total):null,
+      single&&total>1&&only>1?"【不可重複前面母圖的表情與動作】先觀察附圖（前面母圖）中每一格的表情、姿勢、手勢與道具；本張新創作的表情與動作要和它們明顯不同，不要只換方向或換道具，也不要沿用同一種開場姿勢。":null,
+      prevUsedRule(state,900)||null,
       s.textMode!=="none"?'文字排版檢查：每格的完整台詞只印一次，不額外重複字句當裝飾。文字使用正確台灣繁體字形，逐字比對要印的原文，不能自行換成形近字、簡體字或錯字。每個字與描邊的外輪廓都須清楚分開，字與字保留至少一個筆畫寬的空隙，不重疊、不黏在一起；陰影不得形成第二層字。文字區與角色分開，整段文字寬度不超過該格安全區的八成；空間不夠時縮小文字或分行，禁止壓扁字形、壓縮字距或跨格。未指定換行的短句優先單行，較長內容自然分成兩行；使用者指定的換行則照原文。生成前檢查文字長度，生成後自查有無錯字、漏字、擠字與重影。':null,
       "字體："+(s.font==="custom"?(s.customFont.trim()?quote(s.customFont.trim()):"由 AI 選擇清楚易讀且配合貼圖風格的字體"):label("font",s.font))+"；大小："+label("size",s.size)+"；顏色："+color(s,"textColor","textCustom")+"；位置："+label("position",s.position)+"。",
       "描邊："+label("stroke",s.stroke)+(s.stroke==="none"?"":"；顏色："+color(s,"strokeColor","strokeCustom"))+"。陰影："+label("shadow",s.shadow)+(s.shadow==="none"?"":"；顏色："+color(s,"shadowColor","shadowCustom"))+"。",
@@ -277,7 +297,7 @@
     const input=raw.state;if(!object(input.settings)||!Array.isArray(input.items)||!Array.isArray(input.grids))throw new Error("設定檔結構不完整。");
     const settings={};
     for(const [key,def] of Object.entries(D.defaults)){
-      const value=(key==="spacing"||key==="dimension"||key==="tone"||key.startsWith("dg"))&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
+      const value=(key==="spacing"||key==="dimension"||key==="tone"||key==="series"||key==="prevUsed"||key.startsWith("dg"))&&input.settings[key]===undefined?def:input.settings[key]; // 舊設定檔沒有此欄位
       if(typeof value!==typeof def)throw new Error("設定欄位格式不正確："+key);
       if(typeof value==="string"&&value.length>1000)throw new Error("設定文字過長："+key);
       if(D.options[key]&&!D.options[key].some(x=>x[0]===value))throw new Error("未知設定選項："+key);
@@ -301,6 +321,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={similarActions,similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={rowRule,usedBefore,presetCandidates,prevUsedRule,similarActions,similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);
