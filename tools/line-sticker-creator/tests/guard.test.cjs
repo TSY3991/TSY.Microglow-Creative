@@ -48,3 +48,16 @@ console.log('PASS content guard: blocks clear violations, reviews discretion ite
   assert.equal(total,41*40+43*16);
   console.log('PASS 84 job/theme/festival scenes: no guard hits, unique, short');
 }
+{ // 再按一次「AI 安排」：同一張有空白時，AI 先前補入且未改過的其他欄一起清掉（整組重排）；使用者自己填的不動
+  const C2=require('../sticker-core.js'),AI2=require('../sticker-ai.js'),st=C2.initial();st.settings.count=3;st.grids=[3];st.items=Array.from({length:3},()=>C2.item(''));
+  const origin={0:{text:'早安',emotion:'微笑',action:'揮手'},1:{text:'收到',emotion:'認真',action:'敬禮'}};
+  st.items[0]=Object.assign(C2.item(''),{text:'',emotion:'微笑',action:'揮手'});
+  st.items[1]=Object.assign(C2.item(''),{text:'收到',emotion:'認真',action:'我自己改的動作'});
+  st.items[2]=Object.assign(C2.item(''),{text:'',emotion:'手填表情',action:''});
+  const hasText0=C2.hasText(st,st.items[0]);
+  const cleared=AI2.regroup(st,origin);
+  if(hasText0){assert.equal(st.items[0].emotion,'');assert.equal(st.items[0].action,'');}
+  assert.equal(st.items[1].action,'我自己改的動作');assert.equal(st.items[2].emotion,'手填表情');
+  AI2.restore(st,cleared);if(hasText0){assert.equal(st.items[0].emotion,'微笑');assert.equal(st.items[0].action,'揮手');}
+  console.log('PASS regroup: AI-made fields re-arranged together, user edits kept');
+}

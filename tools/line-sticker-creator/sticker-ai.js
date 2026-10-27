@@ -60,6 +60,20 @@
     }
     return restored;
   }
+  // 同一張只要有任一欄是空的、要重新安排，就把「AI 先前補入、使用者沒改過」的其他欄一起清掉，讓台詞／表情／動作整組重排而不是新舊混搭。
+  // origin：{ 張號: { text, emotion, action } }（AI 補入的原值）；回傳被清掉的欄位，失敗時可用 restore 還原。
+  function regroup(state, origin) {
+    const cleared = [];
+    state.items.slice(0, state.settings.count).forEach((entry, index) => {
+      const made = origin && origin[index];
+      if (!made) return;
+      const keys = ["text", "emotion", "action"].filter(k => k !== "text" || C.hasText(state, entry));
+      if (!keys.some(k => !entry[k].trim())) return;
+      for (const k of keys) if (entry[k].trim() && entry[k] === made[k]) { cleared.push({ index, key: k, value: entry[k] }); entry[k] = ""; }
+    });
+    return cleared;
+  }
+  function restore(state, cleared) { for (const { index, key, value } of cleared) { const e = state.items[index]; if (e && !e[key].trim()) e[key] = value; } }
   function endpoint(value) {
     if (!value) return "";
     const url = new URL(value);
@@ -97,6 +111,6 @@
     try { const response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) }); return response.ok; }
     catch { return false; }
   }
-  const api = { missEndpoint, reportMiss, payload, suggestions, apply, applyDetailed, undo, endpoint, request };
+  const api = { regroup, restore, missEndpoint, reportMiss, payload, suggestions, apply, applyDetailed, undo, endpoint, request };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.StickerAI = api;
 })(typeof window !== "undefined" ? window : globalThis);

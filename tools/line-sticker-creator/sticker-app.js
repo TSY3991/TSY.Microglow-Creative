@@ -6,7 +6,7 @@
   let state=C.initial(),step=1,saveEnabled=false,generated=false;
   let referenceUrl="",referenceRevision=0;
   const AI=window.StickerAI,G=window.StickerContentGuard;
-  let aiEndpoint="",aiController=null,aiApplied=null,aiRevision=0;
+  let aiEndpoint="",aiController=null,aiApplied=null,aiRevision=0,aiOrigin={};
   function clearReference() {
     referenceRevision++;
     if(referenceUrl)URL.revokeObjectURL(referenceUrl);
@@ -463,11 +463,12 @@
   });
   async function runArrange() {
     if(!aiEndpoint||!$("ai-consent").checked||aiController)return;
-    let input;
+    let input,cleared=[];
     try{input=AI.payload(state);}catch(error){$("ai-status").textContent=error.message;return;}
     const hasBlank=input.items.some(x=>!x.emotion.trim()||!x.action.trim()||(x.hasText&&!x.text.trim()));
     if(!hasBlank){$("ai-status").textContent="目前沒有空白欄位；如要新的建議，請先清空想重新安排的欄位。";return;}
     clearAI();hideApplied();
+    cleared=AI.regroup(state,aiOrigin);if(cleared.length){renderItems();invalidate();try{input=AI.payload(state);}catch(error){AI.restore(state,cleared);renderItems();invalidate();$("ai-status").textContent=error.message;return;}}
     const revision=aiRevision,snapshot=JSON.stringify(C.serialize(state)),controller=new AbortController();
     aiController=controller;aiAvailability();$("ai-status").textContent="正在安排逐張內容，完成後會自動補入空白欄位。";
     const timer=setTimeout(()=>controller.abort(),65000);
@@ -476,9 +477,11 @@
       if(revision!==aiRevision)return;
       if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
       let result;
-      try{result=AI.applyDetailed(state,rows);}catch(error){$("ai-status").textContent=error.message;return;}
+      try{result=AI.applyDetailed(state,rows);}catch(error){AI.restore(state,cleared);renderItems();invalidate();$("ai-status").textContent=error.message;return;}
+      result.changes.forEach(c=>{(aiOrigin[c.index]=aiOrigin[c.index]||{})[c.key]=c.value;});
       aiController=null;renderItems();invalidate();showApplied(result);
     }catch(error){
+      if(revision===aiRevision){AI.restore(state,cleared);renderItems();invalidate();}
       if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
     }finally{clearTimeout(timer);if(revision===aiRevision){aiController=null;aiAvailability();}}
   }
