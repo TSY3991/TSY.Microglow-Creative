@@ -120,7 +120,7 @@
             }
             pieces.push({members,cell:cellOf(Math.round(sy/members.length)*w+Math.round(sx/members.length))});
           }
-          const big=pieces.filter(x=>x.members.length>=Math.max(30,cellArea*0.01));
+          const big=pieces.filter(x=>x.members.length>=Math.max(30,cellArea*0.01,stats[id].counts[x.cell]*0.1)); // 主體要占該格相連圖案的一成以上，避免較薄的那張貼圖被侵蝕到只剩一小塊、種子太小而被鄰格吞掉
           const represented=new Set(big.map(x=>x.cell));
           if(big.length>=2&&represented.size>=2&&needed.every(c=>represented.has(c))){
             for(const pc of big)for(const q of pc.members){own[q]=pc.cell;dist[q]=0;push(0,q);}
