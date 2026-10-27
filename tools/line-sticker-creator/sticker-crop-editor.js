@@ -183,7 +183,8 @@
     function close(){if(!current)return;document.removeEventListener('keydown',onKey,true);overlay.remove();current=null;if(ctx.opener&&ctx.opener.focus)ctx.opener.focus();}
     function finish(){
       const wctx=work.getContext('2d',{willReadFrequently:true}),data=wctx.getImageData(0,0,W,H);
-      if(ctx.cleanup&&C.cleanSpecks(data.data,W,H))wctx.putImageData(data,0,0); // main／tab：完成時自動清掉孤立小碎片
+      // main／tab：完成時自動清掉孤立小碎片；一般貼圖只清「肉眼幾乎看不到」的極小殘點（擦掉後留下的碎屑會撐大外框，讓圖案偏小、偏離中央，無法放大置中）
+      if(ctx.cleanup?C.cleanSpecks(data.data,W,H):C.cleanSpecks(data.data,W,H,0.0015,30))wctx.putImageData(data,0,0);
       const b=C.bounds(data.data,W,H);
       if(!b){note.textContent='畫面上沒有任何圖案了，請按「復原」或「還原」。';return;}
       const out=canvas(b.width,b.height);out.getContext('2d').drawImage(work,b.x,b.y,b.width,b.height,0,0,b.width,b.height);

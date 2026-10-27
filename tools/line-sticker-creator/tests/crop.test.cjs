@@ -281,3 +281,13 @@ console.log('PASS crop geometry, non-destructive white removal, bounds, safe fit
   assert.ok(res.cells[0].height<=50&&res.cells[1].height>=35,'上下兩張要分開：'+res.cells.map(c=>c.height).join('/'));
   console.log('PASS touching stickers with a thinner neighbour are split');
 }
+{ // 擦掉後殘留的極小碎點不可撐大外框（否則圖案偏小、偏離中央，無法放大置中）；有意義的小裝飾要保留
+  const W=300,H=300,d=new Uint8ClampedArray(W*H*4),px=(x,y,a=255)=>{const i=(y*W+x)*4;d[i]=200;d[i+1]=80;d[i+2]=60;d[i+3]=a;};
+  for(let y=20;y<120;y++)for(let x=20;x<120;x++)px(x,y);
+  for(let y=130;y<142;y++)for(let x=130;x<142;x++)px(x,y); // 12×12 小裝飾（144 px）
+  px(280,290);px(281,290);px(280,291,40); // 碎點
+  assert.equal(C.bounds(d,W,H).y+C.bounds(d,W,H).height,292);
+  assert.equal(C.cleanSpecks(d,W,H,0.0015,30),1);
+  const b=C.bounds(d,W,H);assert.deepEqual([b.x,b.y,b.x+b.width,b.y+b.height],[20,20,142,142]);
+  console.log('PASS light speck cleanup tightens bounds and keeps small decorations');
+}
