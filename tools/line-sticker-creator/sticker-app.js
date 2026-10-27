@@ -55,7 +55,7 @@
   }
   function refreshContentNotice(title){
     const box=$('content-update-notice');box.dataset.subject=title;
-    const detail=state.settings.mode==='ai'?'要依新設定重新創作，請按「將台詞交給 AI 重新創作」，再安排 AI 或產生提示詞。':state.settings.mode==='preset'?'預設句庫不會依風格或語氣改寫；換情境要按「套用預設情境台詞」，想依新設定重寫可先改選「台詞由 AI 發揮」。':'自行輸入的原文不會改寫；請手動修改，或改選「台詞由 AI 發揮」後重新創作。';
+    const detail=state.settings.mode==='ai'?'要依新設定重新創作，請按「將台詞、表情與動作交給 AI 重新創作」，再安排 AI 或產生提示詞。':state.settings.mode==='preset'?'預設句庫不會依風格或語氣改寫；換情境要按「套用預設情境台詞」，想依新設定重寫可先改選「台詞由 AI 發揮」。':'自行輸入的原文不會改寫；請手動修改，或改選「台詞由 AI 發揮」後重新創作。';
     box.hidden=false;box.textContent=title+'已變更，已有台詞會保留，尚未依新設定重寫。'+detail;status(box.textContent);if(step===4)summary();
   }
   function conditions() {
@@ -302,7 +302,7 @@
       if(state.items.length<before)status("已移除 "+(before-state.items.length)+" 筆多餘的空白項目。");
     }
     if(key==="mode"){
-      if(el.value==="ai"){const n=C.releasePreset(state);status(n?"已釋放 "+n+" 句系統預設台詞，改由 AI 發揮；自行修改的台詞保留。":"已改為 AI 發揮。已有內容保留；想重新創作可按「將台詞交給 AI 重新創作」。");}
+      if(el.value==="ai"){const n=C.releasePreset(state);status(n?"已釋放 "+n+" 句系統預設台詞，改由 AI 發揮；自行修改的台詞保留。":"已改為 AI 發揮。已有內容保留；想重新創作可按「將台詞、表情與動作交給 AI 重新創作」。");}
       if(el.value==="preset"&&state.settings.scene==="auto"){state.settings.scene="greeting";fillScenes($("scene-search").value);}
       renderItems();
     }
@@ -325,9 +325,9 @@
   $("apply-scene").addEventListener("click",()=>replaceItems(C.presetCandidates(state,new Set()).slice(0,state.settings.count).map(C.presetItem),"套用「"+D.scenes[state.settings.scene].label+"」。"));
   $("ai-reset-text").addEventListener("click",()=>{
     if(state.settings.mode!=="ai"||state.settings.textMode==="none")return;
-    const targets=state.items.filter(x=>C.hasText(state,x));
-    if(targets.some(x=>x.text.trim())&&!confirm("將所有有文字貼圖的台詞清空，交給 AI 重新創作？包含自行輸入或先前 AI 台詞。角色、表情、動作、無文字格的情境與共用名稱設定保留。"))return;
-    targets.forEach(x=>{x.text="";delete x.presetText;});renderItems();invalidate();status("台詞已改為 AI 發揮。可用網站 AI 先安排，或直接產生提示詞交給生圖平台；不會自動送出 AI 請求。");
+    const rows=state.items.slice(0,state.settings.count),targets=rows.filter(x=>C.hasText(state,x));
+    if(rows.some(x=>x.text.trim()||x.emotion.trim()||x.action.trim())&&!confirm("將這一組的台詞、表情與動作／道具全部清空，交給 AI 重新創作？包含自行輸入或先前 AI 的內容。角色設定、無文字格的情境說明與共用名稱保留。"))return;
+    targets.forEach(x=>{x.text="";delete x.presetText;});rows.forEach(x=>{x.emotion="";x.action="";});aiOrigin={};renderItems();invalidate();status("台詞、表情與動作已清空，改由 AI 重新發揮。可用網站 AI 先安排，或直接產生提示詞交給生圖平台；不會自動送出 AI 請求。");
   });
   $("prev-capture").addEventListener("click",()=>{
     const lines=[];state.items.slice(0,state.settings.count).forEach(x=>{const t=C.hasText(state,x)?x.text.trim():"";if(t)lines.push(t);});

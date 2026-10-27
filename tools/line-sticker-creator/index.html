@@ -21,7 +21,7 @@
   <script defer src="./sticker-ai-config.js?v=20261014d"></script>
   <script defer src="./sticker-guard.js?v=20261019f"></script>
   <script defer src="./sticker-ai.js?v=20261027c"></script>
-  <script defer src="./sticker-app.js?v=20261027c"></script>
+  <script defer src="./sticker-app.js?v=20261027d"></script>
   <link rel="stylesheet" href="./sticker-crop.css?v=20261016f">
   <script defer src="./sticker-crop-core.js?v=20261021a"></script>
   <script defer src="./sticker-crop-editor.js?v=20261016i"></script>
@@ -105,8 +105,8 @@
                 <label class="field" for="nameMode"><span>整組共用名稱</span><select id="nameMode" data-setting="nameMode"></select><span id="error-nameMode" class="field-error"></span></label>
                 <div data-visible="nameMode:person,shop"><label class="field" for="name"><span>人名／店名（選填）</span><input id="name" data-setting="name" type="text" maxlength="1000"><span id="error-name" class="field-error"></span><span class="field-hint">會直接接在台詞前方，中間不加標點；摘要會顯示實際要印的完整文字。逐張可關閉。</span></label></div>
               </div>
-              <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用預設情境台詞</button><button type="button" class="button" id="fill-missing">補入預設台詞</button><button type="button" class="button" id="ai-reset-text">將台詞交給 AI 重新創作</button></div>
-              <p class="field-hint">「台詞由 AI 發揮」預設留白，不套固定句庫。可交給下方網站 AI 先創作，或由生圖平台依提示詞發想；已有自行輸入與先前 AI 台詞會保留，想重做請按「將台詞交給 AI 重新創作」。字體、顏色的 AI 設定只影響文字外觀。</p>
+              <div class="inline-actions"><button type="button" class="button" id="apply-scene">套用預設情境台詞</button><button type="button" class="button" id="fill-missing">補入預設台詞</button><button type="button" class="button" id="ai-reset-text">將台詞、表情與動作交給 AI 重新創作</button></div>
+              <p class="field-hint">「台詞由 AI 發揮」預設留白，不套固定句庫。可交給下方網站 AI 先創作，或由生圖平台依提示詞發想；已有自行輸入與先前 AI 台詞會保留，想重做請按「將台詞、表情與動作交給 AI 重新創作」。字體、顏色的 AI 設定只影響文字外觀。</p>
               <p id="content-update-notice" class="notice" role="status" hidden></p>
               <section class="notice ai-planner" aria-labelledby="ai-title">
                 <h3 id="ai-title">AI 安排台詞、表情與動作</h3>
