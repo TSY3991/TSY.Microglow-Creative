@@ -173,11 +173,25 @@
     }
     return out;
   }
+  // 重複的動作：動作完全相同，或共用連續 3 字以上且占較短那句六成以上（例如「雙手比讚」與「單手比讚」）。表情本來就會重複，不列入。
+  function similarActions(state) {
+    const clean=t=>t.replace(/[\s，。！？、,.!?~～…\-－]/g,"").toLowerCase();
+    const list=state.items.slice(0,state.settings.count).map((e,i)=>({i,t:clean(e.action||""),raw:(e.action||"").trim()})).filter(x=>x.t);
+    const out=[],used=new Set();
+    for(let a=0;a<list.length;a++)for(let b=a+1;b<list.length;b++){
+      const x=list[a],y=list[b];let hit=x.t===y.t;
+      if(!hit){const [short,long]=x.t.length<=y.t.length?[x.t,y.t]:[y.t,x.t];if(short.length<3)continue;
+        let best=0;for(let len=short.length;len>=3&&!best;len--)for(let p=0;p+len<=short.length;p++)if(long.includes(short.slice(p,p+len))){best=len;break;}
+        hit=best>=3&&best/short.length>=0.6;}
+      if(hit)out.push({text:x.raw+"」與「"+y.raw,indexes:[x.i,y.i]});
+    }
+    return out;
+  }
   // 網站 AI 一次安排整組時要遵守的平衡規則（外部 AI 看不到母圖分組，所以明寫）。
   function balanceRule(state) {
-    const s=state.settings;if(s.textMode==="none")return "";
+    const s=state.settings,variety="整組內每張的表情與動作都要不同：同一種表情最多用 3 次，動作不可重複或只換一兩個字（例如「雙手比讚」與「單手比讚」），並依該張的台詞或用途安排，台詞、表情、動作三者意思要互相搭得上。";if(s.textMode==="none")return variety;
     const all=plans(state);
-    return (all.length>1?"整組共 "+s.count+" 張，依序分成 "+all.length+" 組母圖（每組 "+all.map(p=>p.size).join("、")+" 格）：每一組裡「情境相關句」與「一般聊天句」的比例都要接近（情境相關約 5～7 成），不要把一般聊天句集中在某一組。":"")+"整組內不可有意思相近或只差一兩個字的句子（例如「恭喜」與「恭喜發財」、「好運連連」與「好運到」、「萬事如意」與「萬事吉」），每句的用途與用字都要不同。";
+    return (all.length>1?"整組共 "+s.count+" 張，依序分成 "+all.length+" 組母圖（每組 "+all.map(p=>p.size).join("、")+" 格）：每一組裡「情境相關句」與「一般聊天句」的比例都要接近（情境相關約 5～7 成），不要把一般聊天句集中在某一組。":"")+"整組內不可有意思相近或只差一兩個字的句子（例如「恭喜」與「恭喜發財」、「好運連連」與「好運到」、「萬事如意」與「萬事吉」），每句的用途與用字都要不同。"+variety;
   }
   // only：只產生某一張母圖（1 起算）的提示詞；省略則是整組一份。
   function prompt(state, only) {
@@ -287,6 +301,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={similarActions,similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

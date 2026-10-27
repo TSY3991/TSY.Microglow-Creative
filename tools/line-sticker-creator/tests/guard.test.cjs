@@ -61,3 +61,10 @@ console.log('PASS content guard: blocks clear violations, reviews discretion ite
   AI2.restore(st,cleared);if(hasText0){assert.equal(st.items[0].emotion,'微笑');assert.equal(st.items[0].action,'揮手');}
   console.log('PASS regroup: AI-made fields re-arranged together, user edits kept');
 }
+{ // 相似動作偵測：完全相同或幾乎相同才列出；不同動作不誤報
+  const C3=require('../sticker-core.js'),st=C3.initial();st.settings.count=4;st.grids=[4];
+  st.items=['雙手比讚','單手比讚','揮手','揮手'].map(x=>Object.assign(C3.item(''),{action:x}));
+  assert.equal(C3.similarActions(st).length,2);
+  st.items=['雙手比讚','揮手','抱著枕頭','舉杯歡呼'].map(x=>Object.assign(C3.item(''),{action:x}));assert.equal(C3.similarActions(st).length,0);
+  console.log('PASS similarActions');
+}

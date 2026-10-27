@@ -179,7 +179,7 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   const rule=C.balanceRule(g);assert.match(rule,/整組共 40 張，依序分成 3 組母圖（每組 16、16、8 格）/);assert.match(rule,/情境相關約 5～7 成），不要把一般聊天句集中在某一組/);assert.match(rule,/不可有意思相近或只差一兩個字的句子/);
   assert.ok(AI.payload(g).context.scene.endsWith(rule));assert.ok(AI.payload(g).context.scene.length<=1000);
   const one=ready(8);one.settings.count=16;one.grids=[16];one.items=Array.from({length:16},()=>C.item(''));assert.doesNotMatch(C.balanceRule(one),/依序分成/);assert.match(C.balanceRule(one),/不可有意思相近/);
-  const nt=ready(8);nt.settings.textMode='none';assert.equal(C.balanceRule(nt),'');
+  const nt=ready(8);nt.settings.textMode='none';assert.ok(!C.balanceRule(nt).includes('句子')&&C.balanceRule(nt).includes('表情與動作都要不同'));
   g.settings.source='original';g.settings.kind='human';const f2=C.prompt(g,2);assert.match(f2,/本張仍要有約 5～7 成的句子能直接辨識此情境/);
   console.log('PASS similar phrases and balance rule');
 }
