@@ -190,7 +190,7 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   const ft=f.items.map(x=>x.text),gt=g.items.map(x=>x.text);
   assert.ok(ft.every(Boolean)&&gt.filter(Boolean).every(t=>!ft.includes(t)),'第 2 篇不與第 1 篇重複');
   assert.ok(!h.items.some(x=>x.text===f.items[0].text||x.text===f.items[1].text),'已用過的句子被排除');
-  assert.ok(C4.prompt(h).includes('後續篇章')&&AI4.payload(h).context.scene.includes(f.items[0].text)&&AI4.payload(h).context.scene.length<=1000);
+  assert.ok(!C4.prompt(h).includes('後續篇章')&&!C4.prompt(h).includes(f.items[0].text+'、')&&C4.prompt(h).includes('全年齡、友善')&&!C4.prompt(h).includes('毒品')&&AI4.payload(h).context.scene.includes(f.items[0].text)&&AI4.payload(h).context.scene.length<=1000);
   const fe=C4.initial();Object.assign(fe.settings,{source:'original',kind:'human',style:'cute',mode:'manual',count:8});fe.grids=[8];
   fe.items=['新年快樂','中秋快樂','母親節快樂','父親節快樂','早安','收到','加油','好的'].map(t=>C4.item(t));
   assert.equal(C4.similar(fe).length,0);
