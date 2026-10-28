@@ -29,8 +29,8 @@
   <script defer src="./sticker-crop-app.js?v=20261021a"></script>
   <script defer src="./sticker-tabs.js?v=20261016a"></script>
   <link rel="stylesheet" href="./sticker-anim.css?v=20261028b">
-  <script defer src="./sticker-anim-core.js?v=20261028a"></script>
-  <script defer src="./sticker-anim-app.js?v=20261028a"></script>
+  <script defer src="./sticker-anim-core.js?v=20261028b"></script>
+  <script defer src="./sticker-anim-app.js?v=20261028b"></script>
   <script defer src="./sticker-mode.js?v=20261028a"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
@@ -275,6 +275,7 @@
           <label class="field" for="anim-delay"><span>每個畫格停留 <output id="anim-delay-out" for="anim-delay"></output></span><input id="anim-delay" type="range" min="60" max="500" step="10" value="150"></label>
           <label class="field" for="anim-loops"><span>播放次數 <output id="anim-loops-out" for="anim-loops"></output></span><input id="anim-loops" type="range" min="1" max="4" step="1" value="4"></label>
         </div>
+        <label class="field" for="anim-still"><span>商店與靜止時顯示的畫格</span><select id="anim-still"><option value="1">畫格 1（動作起點）</option><option value="2">畫格 2</option><option value="3">畫格 3（建議）</option><option value="4">畫格 4（動作最大幅度）</option></select><span class="field-hint">LINE 在商店與靜止時只顯示動畫的第一個畫格，請選最能代表這張貼圖的那格；播放順序會從這格開始，仍是循環。</span></label>
         <p id="anim-time" class="field-hint" role="status"></p>
         <fieldset class="brand-panel"><legend>品牌小標記（選填）</legend>
           <label class="field" for="anim-brand-text"><span>品牌名稱（最多 24 字）</span><input id="anim-brand-text" type="text" maxlength="24" placeholder="例如：微光創作室" autocomplete="off"></label>

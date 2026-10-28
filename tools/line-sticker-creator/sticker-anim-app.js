@@ -97,7 +97,7 @@
   // ---------- ② 裁切與合成 ----------
   let files = [], stickers = [], selected = 0, prepared = null, busy = false, revision = 0, spotCache = new Map(), timer = 0;
   const status = text => { $("anim-status").textContent = text; };
-  const seq = A.SEQUENCE;
+  let seq = A.sequence(state.settings.still);
   function invalidate() { revision++; prepared = null; if ($("anim-ready")) $("anim-ready").hidden = true; if ($("anim-review")) $("anim-review").checked = false; controls(); }
   function controls() {
     const ready = stickers.length === state.settings.count && stickers.every(s => s);
@@ -207,6 +207,11 @@
     const tile = canvas(Math.ceil(text.length * 8) + 90, 100), t = tile.getContext("2d"); t.translate(tile.width / 2, tile.height / 2); t.rotate(-.35); t.font = "8px sans-serif"; t.textAlign = "center"; t.textBaseline = "middle"; t.lineWidth = 2; t.lineJoin = "round"; t.strokeStyle = "#ffffff"; t.strokeText(text, 0, 0); t.fillStyle = "#181818"; t.fillText(text, 0, 0);
     g.save(); g.globalAlpha = alpha * .35; g.globalCompositeOperation = "source-atop"; g.fillStyle = g.createPattern(tile, "repeat"); g.fillRect(0, 0, target.width, target.height); g.restore();
   }
+  function posterize(c, bits) {
+    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height), p = d.data, sh = 8 - bits, half = (1 << sh) >> 1;
+    for (let i = 0; i < p.length; i += 4) { if (!p[i + 3]) continue; p[i] = Math.min(255, ((p[i] >> sh) << sh) + half); p[i + 1] = Math.min(255, ((p[i + 1] >> sh) << sh) + half); p[i + 2] = Math.min(255, ((p[i + 2] >> sh) << sh) + half); }
+    g.putImageData(d, 0, 0);
+  }
   function render(s, k, target) { frameAt(s, k, target, A.STICKER.width, A.STICKER.height, 8); stamp(target, s); }
 
   function renderResults() {
@@ -241,22 +246,28 @@
     if (busy) return; busy = true; controls(); const token = revision, entries = [], rows = []; let issues = 0;
     try {
       status("正在合成 APNG 並檢查規格…");
+      // 單檔必須小於 1 MB：先用原色編碼，超過就逐級減少顏色（只動 RGB、不動透明度）再重編，直到小於上限（留一點餘裕）。
+      const LIMIT = 1000 * 1000, LEVELS = [8, 6, 5, 4];
       const play = async (s, W, H, pad, brand) => {
-        const frames = [];
-        for (const k of seq) { const c = canvas(W, H); frameAt(s, k, c, W, H, pad); if (brand) stamp(c, s); frames.push(await bytesOf(c)); c.width = c.height = 1; }
-        return A.apng(frames, state.settings.delay, state.settings.loops);
+        for (const bits of LEVELS) {
+          const frames = [];
+          for (const k of seq) { const c = canvas(W, H); frameAt(s, k, c, W, H, pad); if (brand) stamp(c, s); if (bits < 8) posterize(c, bits); frames.push(await bytesOf(c)); c.width = c.height = 1; }
+          const data = A.apng(frames, state.settings.delay, state.settings.loops);
+          if (data.length < LIMIT || bits === LEVELS[LEVELS.length - 1]) return { data, bits, frames };
+        }
       };
       for (let i = 0; i < stickers.length; i++) {
         if (token !== revision) throw new Error("設定已變更，請重新檢查。");
         const s = stickers[i]; if (!s) { rows.push(["" + (i + 1), "沒有圖案"]); issues++; continue; }
-        const data = await play(s, A.STICKER.width, A.STICKER.height, 8, true), problems = A.specIssues({ bytes: data.length, frames: seq.length, loops: state.settings.loops, delay: state.settings.delay, width: A.STICKER.width, height: A.STICKER.height, transparent: state.settings.background === "transparent" });
+        const made = await play(s, A.STICKER.width, A.STICKER.height, 8, true), data = made.data, dist = A.distinct(made.frames);
+        const problems = A.specIssues({ bytes: data.length, effective: dist.effective, allSame: dist.allSame, frames: seq.length, loops: state.settings.loops, delay: state.settings.delay, width: A.STICKER.width, height: A.STICKER.height, transparent: state.settings.background === "transparent" });
         entries.push({ name: String(i + 1).padStart(2, "0") + ".png", data }); issues += problems.length ? 1 : 0;
-        rows.push([String(i + 1).padStart(2, "0"), Math.ceil(data.length / 1024) + " KB・" + seq.length + " 畫格・" + (seq.length * state.settings.delay / 1000).toFixed(2) + " 秒×" + state.settings.loops + " 次" + (problems.length ? "｜不合格：" + problems.join("；") : "｜合格")]);
+        rows.push([String(i + 1).padStart(2, "0"), Math.ceil(data.length / 1024) + " KB・" + seq.length + " 畫格・" + (seq.length * state.settings.delay / 1000).toFixed(2) + " 秒×" + state.settings.loops + " 次" + (made.bits < 8 ? "（為了小於 1 MB，已自動減少顏色）" : "") + (problems.length ? "｜不合格：" + problems.join("；") : "｜合格")]);
       }
       const main = stickers[selected]; if (!main) throw new Error("主要圖片的那一張沒有圖案，請改選。");
-      const mainData = await play(main, A.MAIN.width, A.MAIN.height, 8, false);
+      const mainData = (await play(main, A.MAIN.width, A.MAIN.height, 8, false)).data;
       if (mainData.length >= 1024 * 1024) { rows.push(["main", Math.ceil(mainData.length / 1024) + " KB｜不合格：要小於 1 MB"]); issues++; } else rows.push(["main", Math.ceil(mainData.length / 1024) + " KB・240×240 動畫｜合格"]);
-      const tc = canvas(A.TAB.width, A.TAB.height); frameAt(main, 2, tc, A.TAB.width, A.TAB.height, 4);
+      const tc = canvas(A.TAB.width, A.TAB.height); frameAt(main, seq[0], tc, A.TAB.width, A.TAB.height, 4);
       entries.unshift({ name: "tab.png", data: K.png72(await bytesOf(tc)) }, { name: "main.png", data: mainData });
       if (token !== revision) throw new Error("設定已變更，請重新檢查。");
       const list = $("anim-spec"); list.replaceChildren(); rows.forEach(r => list.append(el("li", r[0] + "：" + r[1], /不合格|沒有/.test(r[1]) ? "anim-error" : "")));
@@ -273,10 +284,11 @@
       status("已下載 ZIP（" + Math.ceil(zip.length / 1024) + " KB），內含 main.png、tab.png 與 01.png 起的動態貼圖。請解壓檢查後再到 LINE Creators Market 上傳；此工具不會代為發布，也不保證通過審核。");
     } catch (error) { status("下載未完成：" + error.message); }
   };
+  $("anim-still").addEventListener("change", () => { state.settings.still = Number($("anim-still").value); seq = A.sequence(state.settings.still); save(); invalidate(); });
   for (const [id, key] of [["anim-delay", "delay"], ["anim-loops", "loops"], ["anim-brand-opacity", "brandOpacity"]]) $(id).addEventListener("input", () => { state.settings[key] = Number($(id).value); save(); invalidate(); if (stickers.length) { spotCache = new Map(); if (key === "brandOpacity") stickers.forEach(s => s && s.canvas && render(s, 0, s.canvas)); } });
   $("anim-brand-text").addEventListener("input", () => { state.settings.brandText = $("anim-brand-text").value; save(); spotCache = new Map(); invalidate(); });
   $("anim-review").addEventListener("change", controls);
-  $("anim-delay").value = state.settings.delay; $("anim-loops").value = state.settings.loops; $("anim-brand-text").value = state.settings.brandText; $("anim-brand-opacity").value = state.settings.brandOpacity;
+  $("anim-still").value = String(state.settings.still); $("anim-delay").value = state.settings.delay; $("anim-loops").value = state.settings.loops; $("anim-brand-text").value = state.settings.brandText; $("anim-brand-opacity").value = state.settings.brandOpacity;
   window.addEventListener("anim-tab-change", event => { if (event.detail === "crop" && stickers.length) startAnim(); else stopAnim(); });
   setupForm(); renderFiles(); controls();
 })();

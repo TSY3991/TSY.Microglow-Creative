@@ -7,6 +7,8 @@
 
   const COUNTS = [8, 16, 24];
   const SEQUENCE = [0, 1, 2, 3, 2, 1]; // 4 個關鍵畫格來回播放：1-2-3-4-3-2，共 6 畫格（LINE 要求 5～20 畫格）
+  // 商店與靜止時只顯示「第一個畫格」：把來回播放的順序轉到從指定畫格（1～4）開始，仍然是循環。
+  function sequence(still) { const at = Math.max(0, SEQUENCE.indexOf((Number(still) || 1) - 1)); return SEQUENCE.slice(at).concat(SEQUENCE.slice(0, at)); }
   const CELL = { width: 592, height: 512 }, SAFE = { width: 370, height: 320 }; // 與靜態母圖相同的格子與安全區
   const STICKER = { width: 320, height: 270 }, MAIN = { width: 240, height: 240 }, TAB = { width: 96, height: 74 };
   const BLOCKS = [[1, 2, 5, 6], [3, 4, 7, 8], [9, 10, 13, 14], [11, 12, 15, 16]], BLOCK_NAME = ["左上", "右上", "左下", "右下"];
@@ -43,7 +45,7 @@
   function initial() {
     const s = {
       source: "", kind: "", character: "", style: "", customStyle: "", dimension: "2d", background: "transparent",
-      count: 8, textMode: "ai", delay: 150, loops: 4, brandText: "", brandOpacity: 12, items: []
+      count: 8, textMode: "ai", delay: 150, loops: 4, still: 3, brandText: "", brandOpacity: 12, items: []
     };
     return resize({ settings: s });
   }
@@ -84,6 +86,7 @@
     }
     if (!(s.delay >= 60 && s.delay <= 500)) add("delay", "每個畫格停留時間請設在 60～500 毫秒。");
     if (!(s.loops >= 1 && s.loops <= 4)) add("loops", "播放次數只能是 1～4 次。");
+    if (!(s.still >= 1 && s.still <= 4)) add("still", "靜止時顯示的畫格請選 1～4。");
     if (SEQUENCE.length * s.delay * s.loops > 4000) add("loops", "播放總長超過 4 秒（LINE 上限）：請縮短停留時間或減少播放次數。");
     return out;
   }
@@ -205,9 +208,17 @@
     });
     return { animated: true, width: p.width, height: p.height, frames: v.getUint32(0), loops: v.getUint32(4), delays };
   }
+  // 相同的連續畫格會被 LINE 合併成一格；全部畫格相同則無法動態播放（上傳會出錯）。frames 為各畫格的 PNG 位元組。
+  function distinct(frames) {
+    const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+    let n = 0; frames.forEach((f, i) => { if (i === 0 || !same(f, frames[i - 1])) n++; });
+    return { effective: n, allSame: frames.every(f => same(f, frames[0])) };
+  }
   // info：{ bytes, frames, loops, delay, width, height, transparent }；回傳不符合 LINE 動態貼圖規格的項目。
   function specIssues(info) {
     const out = [], total = info.frames * info.delay * info.loops;
+    if (info.allSame) out.push("所有畫格都相同，無法動態播放（LINE 上傳會出錯）");
+    else if (info.effective !== undefined && info.effective < 5) out.push("相同的連續畫格會被 LINE 合併，實際只剩 " + info.effective + " 格，要 5～20 格");
     if (info.frames < 5 || info.frames > 20) out.push("畫格數 " + info.frames + "，要 5～20 格");
     if (info.width > STICKER.width || info.height > STICKER.height || (info.width < 270 && info.height < 270)) out.push("尺寸 " + info.width + "×" + info.height + "，要在 320×270 以內且一邊 ≥270");
     if (info.bytes >= 1024 * 1024) out.push("檔案 " + Math.ceil(info.bytes / 1024) + " KB，要小於 1 MB");
@@ -217,6 +228,6 @@
     if (info.transparent === false) out.push("背景不是透明");
     return out;
   }
-  const api = { COUNTS, SEQUENCE, CELL, SAFE, STICKER, MAIN, TAB, BLOCKS, ACTIONS, actionById, initial, item, resize, motionOf, labelOf, phases, mothers, validate, blocked, prompt, apng, inspect, specIssues, parsePng };
+  const api = { COUNTS, SEQUENCE, sequence, distinct, CELL, SAFE, STICKER, MAIN, TAB, BLOCKS, ACTIONS, actionById, initial, item, resize, motionOf, labelOf, phases, mothers, validate, blocked, prompt, apng, inspect, specIssues, parsePng };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.StickerAnim = api;
 })(typeof window !== "undefined" ? window : globalThis);

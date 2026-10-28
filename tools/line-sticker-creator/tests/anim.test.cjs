@@ -39,3 +39,15 @@ const base=()=>{const s=A.initial();Object.assign(s.settings,{source:'original',
  const bad=A.specIssues({bytes:2e6,frames:4,loops:4,delay:300,width:400,height:200,transparent:false});assert.ok(bad.length>=5,bad.join('|'));
  assert.ok(A.specIssues({...ok,frames:21}).some(x=>/畫格數/.test(x))&&A.specIssues({...ok,loops:5}).length===1&&A.specIssues({...ok,width:200,height:200}).length===1);}
 console.log('PASS animated sticker: settings, prompts, APNG assembly, spec checks');
+{ // 靜止畫格：播放順序從指定畫格開始，仍是 1-2-3-4-3-2 的循環；LINE 會合併相同的連續畫格，全部相同則無法播放
+  assert.deepEqual(A.sequence(1),[0,1,2,3,2,1]);assert.deepEqual(A.sequence(3),[2,3,2,1,0,1]);assert.deepEqual(A.sequence(4),[3,2,1,0,1,2]);assert.equal(A.sequence(2)[0],1);
+  for(const k of [1,2,3,4])assert.equal(new Set(A.sequence(k)).size,4);
+  const f=n=>Uint8Array.of(n,n,n);
+  assert.deepEqual(A.distinct([f(1),f(2),f(3),f(4),f(3),f(2)]),{effective:6,allSame:false});
+  assert.deepEqual(A.distinct([f(1),f(1),f(3),f(4),f(3),f(3)]),{effective:4,allSame:false});
+  assert.deepEqual(A.distinct([f(1),f(1),f(1)]),{effective:1,allSame:true});
+  const ok={bytes:300*1024,frames:6,loops:4,delay:150,width:320,height:270,transparent:true};
+  assert.ok(A.specIssues({...ok,effective:4}).some(x=>/合併/.test(x)));assert.ok(A.specIssues({...ok,effective:1,allSame:true}).some(x=>/無法動態播放/.test(x)));assert.deepEqual(A.specIssues({...ok,effective:6,allSame:false}),[]);
+  const s=base();s.settings.still=5;assert.ok(A.validate(s).some(x=>x.field==='still'));
+  console.log('PASS still frame, merged-frame checks');
+}
