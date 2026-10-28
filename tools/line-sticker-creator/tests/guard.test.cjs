@@ -68,3 +68,9 @@ console.log('PASS content guard: blocks clear violations, reviews discretion ite
   st.items=['雙手比讚','揮手','抱著枕頭','舉杯歡呼'].map(x=>Object.assign(C3.item(''),{action:x}));assert.equal(C3.similarActions(st).length,0);
   console.log('PASS similarActions');
 }
+{ // 羊年特輯專用句：不觸發防護、不重複、≤14 字、不與新年情境既有句重複
+  const G2=require('../sticker-guard.js'),D2=require('../sticker-data.js');
+  assert.equal(new Set(D2.goatLines).size,D2.goatLines.length);
+  for(const l of D2.goatLines){assert.deepEqual(G2.checkText(l),[],l);assert.ok(Array.from(l).length<=14,l);assert.ok(!D2.scenes.job_newyear.lines.includes(l),l);}
+  console.log('PASS goat lines');
+}

@@ -557,6 +557,16 @@
       if(aiEndpoint){const b=node("button","請 AI 換掉相似動作","button primary");b.type="button";b.addEventListener("click",()=>aiFromStep4("actions"));p.append(b);}
       box.append(p);
     }
+    const gc=C.goatCheck(state);
+    if(gc&&!gc.ok){
+      const p=node("div",undefined,"notice mini-alert");
+      p.append(node("strong","羊年特輯：目前只有 "+gc.hit+" 張的台詞或畫面和羊年、過年有關（至少要 8 張）。"+(gc.blank?"另有 "+gc.blank+" 格台詞未填，補完後請再看一次。":"")),node("span","不符合時整組會被退回；可把情境改為「新年過年」，或自行改成拜年、羊年諧音、年前放假的句子。"));
+      box.append(p);
+    }
+    if(state.settings.style==="goat"){
+      const nh=C.nameHints(state);
+      if(nh.length){const p=node("div",undefined,"notice mini-alert");p.append(node("strong","第 "+nh.slice(0,8).map(i=>i+1).join("、")+" 張的台詞可能含姓名或暱稱。"),node("span","羊年特輯規定貼圖不可含姓名或暱稱，請確認；若只是一般稱呼可忽略。"));box.append(p);}
+    }
     if(dups.length){
       const p=node("div",undefined,"notice mini-alert");
       p.append(node("strong","有 "+dups.length+" 句台詞重複："+dups.slice(0,3).map(g=>"「"+g.text+"」").join("、")+(dups.length>3?"…":"")),node("span",aiEndpoint?"可以讓 AI 把重複的換成新的。":"請回第二步改掉重複的句子。"));

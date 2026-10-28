@@ -204,3 +204,14 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   s.settings.nameMode='shop';s.settings.name='小明';assert.ok(C5.validate(s,3).some(e=>e.field==='nameMode'));
   console.log('PASS goat-year special');
 }
+{ // 羊年特輯補強：照片來源不可做成個人照片、特輯張數檢查、暱稱提醒、專用句優先
+  const C6=require('../sticker-core.js'),D6=require('../sticker-data.js');
+  const mk=src=>{const s=C6.initial();Object.assign(s.settings,{source:src,kind:src==='original'?'human':'',style:'goat',mode:'preset',scene:'job_newyear',count:8});s.grids=[8];s.items=Array.from({length:8},()=>C6.item(''));return s;};
+  assert.ok(C6.prompt(mk('photo')).includes('不得做成個人照片貼圖')&&!C6.prompt(mk('original')).includes('不得做成個人照片貼圖'));
+  const f=mk('original');C6.fillMissing(f);assert.deepEqual(f.items.map(x=>x.text),D6.goatLines.slice(0,8));assert.ok(C6.goatCheck(f).ok);
+  const m=mk('original');m.settings.mode='manual';m.items=['早安','收到','好的','謝謝','加油','晚安','辛苦了','哈哈'].map(t=>C6.item(t));
+  const g=C6.goatCheck(m);assert.equal(g.hit,0);assert.ok(!g.ok);assert.equal(C6.goatCheck(Object.assign(mk('original'),{}) ).blank,8);
+  m.items[0].text='小明加油';m.items[1].text='阿花新年快樂';assert.deepEqual(C6.nameHints(m),[0,1]);m.items[0].text='小心喔';assert.deepEqual(C6.nameHints(m),[1]);
+  m.settings.style='cute';assert.equal(C6.goatCheck(m),null);
+  console.log('PASS goat extras');
+}

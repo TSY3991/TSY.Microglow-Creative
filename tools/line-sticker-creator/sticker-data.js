@@ -227,7 +227,9 @@
     platform:"chatgpt",
     dgGender:"",dgAge:"",dgPersona:"",dgFace:"",dgHair:"",dgOutfit:"",dgAccessory:"",dgPalette:"",dgRatio:""
   };
-  const api = { scenes, styleGuides, common, options, design, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
+  // 羊年賀歲特輯專用句：選「羊年賀歲」風格且情境為新年過年時，優先於一般新年句使用。
+  const goatLines = ["三羊開泰","喜氣洋洋","羊羊得意","羊年行大運","咩～新年好","羊氣滿滿","羊福滿滿","咩咩發大財","羊你好運","福氣羊羊"];
+  const api = { goatLines, scenes, styleGuides, common, options, design, defaults, counts:[8,16,24,32,40], tool:"microglow-line-sticker-creator", version:1 };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StickerData = api;
 })(typeof window !== "undefined" ? window : globalThis);
