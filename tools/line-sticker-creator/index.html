@@ -28,6 +28,10 @@
   <script defer src="./sticker-brand.js?v=20261019b"></script>
   <script defer src="./sticker-crop-app.js?v=20261021a"></script>
   <script defer src="./sticker-tabs.js?v=20261016a"></script>
+  <link rel="stylesheet" href="./sticker-anim.css?v=20261028b">
+  <script defer src="./sticker-anim-core.js?v=20261028a"></script>
+  <script defer src="./sticker-anim-app.js?v=20261028a"></script>
+  <script defer src="./sticker-mode.js?v=20261028a"></script>
   <link rel="stylesheet" href="./microglow-draft.css?v=20261015a">
 </head>
 <body class="line-sticker-tool">
@@ -37,10 +41,11 @@
       <div class="nav-links"><a class="return-link" href="../../">回創作工具大廳</a><a class="return-link" href="https://tsy3991.github.io/TSY.Microglow-Website/">入口網站</a></div>
     </nav>
     <header class="hero">
-      <div class="hero-copy"><p class="eyebrow">Microglow Creative</p><h1>LINE 貼圖創作工具</h1><p class="hero-description">讓日常的小表情，<br>成為聊天裡的一點微光。</p><p class="hero-caption">設定角色、寫下台詞，把你的想法整理成生圖提示詞。</p><span class="draft-badge"><span class="status-dot" aria-hidden="true"></span>提示詞產生工具・一般靜態貼圖</span></div>
+      <div class="hero-copy"><p class="eyebrow">Microglow Creative</p><h1>LINE 貼圖創作工具</h1><p class="hero-description">讓日常的小表情，<br>成為聊天裡的一點微光。</p><p class="hero-caption">設定角色、寫下台詞，把你的想法整理成生圖提示詞。</p><span class="draft-badge"><span class="status-dot" aria-hidden="true"></span><span id="hero-kind">提示詞產生工具・一般靜態貼圖</span></span></div>
       <div class="hero-art"><img class="hero-preview" src="../../assets/creative-previews/line-sticker-entry-v2.jpg?v=20261014a" alt="貼圖創作示意插畫：揮手、抱愛心與睡覺的可愛角色" width="640" height="640" decoding="async"></div>
     </header>
     <div id="crop-browser-help" class="notice" hidden><strong>你正在 App 內建瀏覽器（例如 LINE）。</strong><p>這裡可能無法下載 ZIP；而且換到 Chrome／Safari 時，母圖與裁切進度都不會帶過去。所以請「一開始」就換瀏覽器，不要做完才換。設定可先按「匯出設定檔」帶過去，母圖到新瀏覽器再重新加入。</p><div class="inline-actions"><button id="crop-copy-url" class="button" type="button">複製網址，貼到 Chrome／Safari 開啟</button></div><input id="crop-page-url" class="full-width" type="text" readonly aria-label="本頁網址，供手動複製" hidden></div>
+    <nav class="mode-tabs kind-tabs" role="tablist" aria-label="貼圖類型"><button type="button" role="tab" id="kind-static" aria-selected="true">靜態貼圖</button><button type="button" role="tab" id="kind-anim" aria-selected="false" tabindex="-1">動態貼圖</button></nav>
     <nav class="mode-tabs" role="tablist" aria-label="工具功能"><button type="button" role="tab" id="tab-prompt" aria-controls="creator" aria-selected="true">① 設定並產生提示詞</button><button type="button" role="tab" id="tab-crop" aria-controls="sticker-crop" aria-selected="false" tabindex="-1">② 母圖裁切與下載</button></nav>
     <section class="notice" id="usage-guide" aria-labelledby="usage-title">
       <h2 id="usage-title">使用方式｜這是提示詞產生工具</h2>
@@ -227,6 +232,65 @@
       <p class="field-hint">規格依 <a href="https://creator.line.me/zh-hant/guideline/sticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>，查證日期：2026-10-14。</p>
     </section>
     <section class="panel save-panel" aria-labelledby="save-title"><h2 id="save-title">留住這份設定</h2><label class="check-field"><input type="checkbox" id="save-local"><span>儲存在目前瀏覽器</span></label><p class="field-hint">只保存文字設定，不含照片；取消勾選會移除這個工具的瀏覽器草稿。</p><div class="save-actions"><button type="button" id="export" class="button">匯出設定檔</button><button type="button" id="import" class="button">匯入設定檔</button><input type="file" id="import-file" accept=".json,application/json" hidden><button type="button" id="clear" class="button">清除瀏覽器草稿</button></div><p id="save-status" class="field-hint" role="status"></p></section>
+    <div id="anim-root" class="tab-off">
+      <nav class="mode-tabs" role="tablist" aria-label="動態貼圖功能"><button type="button" role="tab" id="anim-tab-prompt" aria-controls="anim-creator" aria-selected="true">① 設定並產生動態提示詞</button><button type="button" role="tab" id="anim-tab-crop" aria-controls="anim-crop" aria-selected="false" tabindex="-1">② 母圖裁切與合成動畫</button></nav>
+      <section class="notice" id="anim-guide" aria-labelledby="anim-guide-title">
+        <h2 id="anim-guide-title">動態貼圖｜使用方式</h2>
+        <p><strong>本工具幫你整理動態貼圖的生圖提示詞，並把生成的母圖合成 LINE 規格的動畫（APNG）；不會在本網站直接生成圖片。</strong></p>
+        <ol>
+          <li>設定角色與風格，為每一張貼圖選一個動作（也可以自訂）。</li>
+          <li>複製各張母圖的提示詞，到 ChatGPT 或 Gemini 生成母圖（每張母圖 4×4 格，共 4 組動作，每組 4 個連續畫格）。</li>
+          <li>回到「② 母圖裁切與合成動畫」加入母圖，工具會自動裁出每組 4 個畫格，以「1→2→3→4→3→2」來回播放成循環動畫。</li>
+          <li>檢查動畫與規格後，下載 ZIP（main.png、tab.png 與 01.png 起的 APNG）。</li>
+        </ol>
+        <p class="field-hint">LINE 動態貼圖規格：8／16／24 張；每張 APNG、5～20 畫格、單張 &lt;1 MB、320×270 以內且一邊 ≥270、播放 1～4 次且總長不超過 4 秒、背景透明；主要圖片 240×240 APNG、標籤圖片 96×74 PNG。規格依 <a href="https://creator.line.me/zh-hant/guideline/animationsticker/" target="_blank" rel="noopener noreferrer">LINE 官方製作準則</a>，查證日期：2026-10-19；實際上傳前請再核對官方頁面。</p>
+      </section>
+      <section id="anim-creator" class="panel" aria-labelledby="anim-creator-title">
+        <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▶</span><div><h2 id="anim-creator-title">設定並產生動態提示詞</h2><p>角色、風格與每張貼圖的動作；設定只存在這個瀏覽器，不會上傳。</p></div></div>
+        <div class="field-grid">
+          <label class="field" for="anim-source"><span>角色來源</span><select id="anim-source"></select></label>
+          <label class="field" id="anim-kind-field" for="anim-kind" hidden><span>原創角色類型</span><select id="anim-kind"></select></label>
+          <label class="field" for="anim-style"><span>角色風格</span><select id="anim-style"></select></label>
+          <label class="field" for="anim-dimension"><span>呈現方式</span><select id="anim-dimension"></select></label>
+          <label class="field" for="anim-background"><span>背景</span><select id="anim-background"></select></label>
+          <label class="field" for="anim-count"><span>貼圖張數</span><select id="anim-count"></select></label>
+          <label class="field" for="anim-textmode"><span>貼圖文字</span><select id="anim-textmode"></select></label>
+        </div>
+        <label class="field" for="anim-character"><span>角色描述（選填）</span><textarea id="anim-character" rows="3" maxlength="1000" placeholder="例如：戴圓框眼鏡、短捲髮，笑起來很親切的角色"></textarea></label>
+        <label class="field" id="anim-custom-style-field" for="anim-custom-style" hidden><span>自訂風格描述</span><textarea id="anim-custom-style" rows="2" maxlength="1000"></textarea></label>
+        <h3>每張貼圖的動作與文字</h3>
+        <p class="field-hint">每張貼圖有 4 個畫格；選好動作會自動帶入預設文字，可以改。選「自訂動作」時，用 → 分成 4 個畫格描述。文字最多 8 字較清楚；請不要放姓名、網址、電話或廣告。</p>
+        <div id="anim-items"></div>
+        <div id="anim-issues-box" class="notice" role="status" hidden><strong>設定檢查</strong><ul id="anim-issues"></ul></div>
+        <p id="anim-plan" class="notice"></p>
+        <div id="anim-prompts"></div>
+      </section>
+      <section id="anim-crop" class="panel crop-panel tab-off" aria-labelledby="anim-crop-title">
+        <div class="panel-heading"><span class="section-symbol" aria-hidden="true">▧</span><div><h2 id="anim-crop-title">母圖裁切與合成動畫</h2><p>把生成的母圖帶回來，合成 LINE 動態貼圖（APNG）。</p></div></div>
+        <p>圖片只在目前瀏覽器處理，不上傳網站或 Gemini，也不存入瀏覽器草稿；重新整理頁面後需重新選圖。</p>
+        <label class="field" for="anim-files"><span>加入母圖（可多選，依檔名排序）</span><input id="anim-files" type="file" multiple accept="image/png,image/jpeg,image/webp"><span class="field-hint">PNG、JPG、WebP，單張最多 20 MB；母圖要是 4×4 等分格，最好是透明背景。</span></label>
+        <p id="anim-files-hint" class="field-hint"></p>
+        <div id="anim-mothers"></div>
+        <div class="field-grid">
+          <label class="field" for="anim-delay"><span>每個畫格停留 <output id="anim-delay-out" for="anim-delay"></output></span><input id="anim-delay" type="range" min="60" max="500" step="10" value="150"></label>
+          <label class="field" for="anim-loops"><span>播放次數 <output id="anim-loops-out" for="anim-loops"></output></span><input id="anim-loops" type="range" min="1" max="4" step="1" value="4"></label>
+        </div>
+        <p id="anim-time" class="field-hint" role="status"></p>
+        <fieldset class="brand-panel"><legend>品牌小標記（選填）</legend>
+          <label class="field" for="anim-brand-text"><span>品牌名稱（最多 24 字）</span><input id="anim-brand-text" type="text" maxlength="24" placeholder="例如：微光創作室" autocomplete="off"></label>
+          <label class="field" for="anim-brand-opacity"><span>標記明顯程度 <output id="anim-brand-level" for="anim-brand-opacity">12%</output></span><input id="anim-brand-opacity" type="range" min="4" max="30" value="12"></label>
+          <p class="field-hint">標記只合成在輸出的貼圖上，4 個畫格用同一個位置，播放時不會跳動；不能防止移除或盜用。</p>
+        </fieldset>
+        <div class="inline-actions"><button id="anim-run" class="button primary" type="button" disabled>裁切並合成動畫</button><button id="anim-clear" class="button" type="button" disabled>移除全部母圖</button></div>
+        <p id="anim-status" role="status" aria-live="polite">尚未加入母圖。</p>
+        <div id="anim-results"></div>
+        <div class="inline-actions"><button id="anim-check" class="button primary" type="button" disabled>檢查規格並準備下載</button></div>
+        <div id="anim-spec-box" class="notice" hidden><strong>規格檢查</strong><ul id="anim-spec"></ul></div>
+        <label class="check-field"><input id="anim-review" type="checkbox"><span>我已逐張檢查動作是否連續、角色是否一致、文字與透明背景，並確認主要圖片。</span></label>
+        <button id="anim-download" class="button primary" type="button" disabled>打包並下載 ZIP</button>
+        <p class="notice">下載後請解壓檢查，再至 LINE Creators Market 上傳。此工具不會代為發布，也不保證通過審核。</p>
+      </section>
+    </div>
     <footer><span>微光創作工具</span><p>一點靈感，一點微光。</p><span>試用版・生成效果需自行核對</span></footer>
   </main>
 </body>
