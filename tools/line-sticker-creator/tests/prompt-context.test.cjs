@@ -198,3 +198,9 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   assert.equal(C4.deserialize(C4.serialize(old)).settings.series,'1');
   console.log('PASS series / prevUsed / festival similarity');
 }
+{ // 羊年賀歲特輯：風格可選、提示詞帶特輯條件、共用名稱被擋
+  const C5=require('../sticker-core.js'),s=C5.initial();Object.assign(s.settings,{source:'original',kind:'human',style:'goat',mode:'ai',scene:'job_newyear',count:8});s.grids=[8];s.items=Array.from({length:8},()=>C5.item(''));
+  const p=C5.prompt(s);assert.ok(p.includes('羊年賀歲貼圖特輯')&&p.includes('羊角帽'));
+  s.settings.nameMode='shop';s.settings.name='小明';assert.ok(C5.validate(s,3).some(e=>e.field==='nameMode'));
+  console.log('PASS goat-year special');
+}

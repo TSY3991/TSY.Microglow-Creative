@@ -309,6 +309,7 @@
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
     if(key==="series"&&state.settings.mode==="preset"){const n=C.releasePreset(state),filled=C.fillMissing(state);renderItems();status("已改為第 "+el.value+" 篇：換掉 "+n+" 句系統預設台詞，補入 "+filled+" 句新的；自行修改的台詞保留。"+shortNote());}
+    if(key==="style"&&el.value==="goat"&&state.settings.scene!=="job_newyear"&&state.settings.mode!=="manual"){state.settings.scene="job_newyear";fillScenes($("scene-search").value);if(state.settings.mode==="preset")C.fillMissing(state);renderItems();status("已選羊年賀歲特輯：台詞情境已自動改為「新年過年」；特輯規定不可含姓名或暱稱，且至少 8 張要和羊年或過年有關。");}
     if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled||shortNote())status((filled?"已補入 "+filled+" 句；原有台詞未改動。":"")+shortNote());}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
