@@ -93,13 +93,16 @@
     return [...new Set(String(settings.prevUsed||"").split(/[\r\n、，,；;｜|]+/).map(x=>x.trim()).filter(Boolean))].slice(0,120);
   }
   // 預設台詞候選：第 N 篇跳過前 (N-1)×張數 句（不夠的格子留白交給 AI，不會循環到前面篇章用過的句子），並排除「前幾篇已用過」的句子。
-  function presetCandidates(state, used) {
+  function shuffle(list, rnd) { const a=list.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  function rotate(list, seed) { const n=list.length,k=((seed%n)+n)%n; return list.slice(k).concat(list.slice(0,k)); }
+  function hash(text) { let h=2166136261; for(const ch of String(text)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;} return h; }
+  function presetCandidates(state, used, rnd) {
     const s=state.settings,own=D.scenes[s.scene],before=new Set(usedBefore(s)),offset=(Number(s.series||1)-1)*s.count;
-    const base=own&&own.job?own.lines:pool(s.scene),list=s.style==="goat"&&s.scene==="job_newyear"?[...D.goatLines,...base.filter(x=>!D.goatLines.includes(x))]:base;
+    const base=own&&own.job?own.lines:pool(s.scene),list=s.style==="goat"&&s.scene==="job_newyear"?(()=>{const rest=base.filter(x=>!D.goatLines.includes(x));return rnd?[...shuffle(D.goatLines,rnd),...shuffle(rest,rnd)]:[...D.goatLines,...rest];})():base;
     return list.filter(x=>!used.has(x)&&!before.has(x)).slice(offset);
   }
   // 羊年賀歲特輯：至少 8 張的台詞或畫面要與羊年、拜年祝福、過年日常有關。回傳符合張數、尚未填的格數與是否已達標。
-  const goatWords=/羊|咩|新年|過年|新春|春節|拜年|恭喜|發財|紅包|團圓|圍爐|年菜|年假|連假|放假|春聯|福|吉|如意|財源|開泰|喜氣|大年|除夕|年貨|壓歲/;
+  const goatWords=/羊|咩|年|新年|過年|新春|春節|拜年|恭喜|發財|紅包|團圓|圍爐|年菜|年假|連假|放假|春聯|福|吉|如意|財源|開泰|喜氣|大年|除夕|年貨|壓歲/;
   function goatCheck(state) {
     const s=state.settings;if(s.style!=="goat")return null;
     const rows=state.items.slice(0,s.count),hit=rows.filter(x=>goatWords.test((x.text||"")+(x.emotion||"")+(x.action||""))).length,blank=rows.filter(x=>hasText(state,x)&&!x.text.trim()).length;
@@ -110,11 +113,13 @@
     const re=/[@＠]|(小|阿|老)(明|華|花|美|玉|強|偉|傑|宏|芳|珍|雲|龍|虎|鳳|蓮|菊|蘭|梅|智|豪|婷|君|瑜|慧|瑩)/;
     return state.items.slice(0,state.settings.count).map((x,i)=>re.test(x.text||"")?i:-1).filter(i=>i>=0);
   }
-  function fillMissing(state) {
+  // 羊年用語參考詞庫：依角色描述旋轉起點，不同角色的提示詞會帶出不同的詞，避免每個角色都出現同樣幾句。
+  function goatBank(s, n) { return rotate(D.goatLines, hash((s.character || "") + "|" + (s.style || "") + "|" + (s.count || ""))).slice(0, n).join("、"); }
+  function fillMissing(state, rnd) {
     if(state.settings.mode==="ai")return 0;
     const used=new Set(state.items.map(x=>x.text.trim()).filter(Boolean));
     // 職業／主題情境只有自己的 16 句：用完就留白，交給 AI 依該情境發想，不再接通用句庫（好的、收到…）而讓後面的母圖離題。
-    const candidates=presetCandidates(state,used);
+    const candidates=presetCandidates(state,used,rnd);
     let filled=0;
     while(state.items.length<state.settings.count) state.items.push(item());
     for(let i=0;i<state.settings.count;i++){
@@ -262,7 +267,7 @@
       s.background==="transparent"?"背景要求：真正透明背景（alpha transparency）。不要畫出棋盤格、灰白方格、馬賽克或任何「透明示意」圖案；不要用白色、灰色或其他顏色填滿背景代替透明；只去除背景殘留的白邊、灰邊與不應出現的底色。角色與文字的描邊依下方設定，指定的白色或灰色描邊須保留；關閉描邊時不另加描邊。若生成工具不支援真透明，先明確說明限制，不要用棋盤格或白底假裝已透明。":s.background==="white"?"背景：純白色，整張母圖與各格一致。":"背景：單一純色 "+s.backgroundColor+"，整張母圖與各格一致。",
       "",
       "【內容守則（LINE 審核）】",
-      s.style==="goat"?"本組要參加 LINE「羊年賀歲貼圖特輯」：至少 8 張（建議過半）的台詞或畫面要和羊年賀歲、羊年諧音（例如羊羊得意、喜氣洋洋、三羊開泰）、拜年祝福、年前期待放假、連假聊天殺時間或其他過年日常有關；不可出現姓名或暱稱。"+(s.source==="photo"?"本組不得做成個人照片貼圖：一律轉成插畫或公仔風格，不保留照片的寫實質感、背景或原照片版面，也不要讓角色看起來像直接貼上的真人照片。":""):null,
+      s.style==="goat"?"本組要參加 LINE「羊年賀歲貼圖特輯」：至少 8 張（建議過半）的台詞或畫面要和羊年賀歲、羊年諧音（可參考的羊年用語：「"+goatBank(s,12)+"」；每個角色請挑不同的組合，不要總是用最前面的幾個，也請自己創作羊年吉祥話與諧音梗，「羊」音近陽、洋、揚、養，「咩」可當語助詞；不用卡通角色名、姓名或暱稱）、拜年祝福、年前期待放假、連假聊天殺時間或其他過年日常有關；不可出現姓名或暱稱。"+(s.source==="photo"?"本組不得做成個人照片貼圖：一律轉成插畫或公仔風格，不保留照片的寫實質感、背景或原照片版面，也不要讓角色看起來像直接貼上的真人照片。":""):null,
       "角色照本次設定繪製，不替換成其他角色；不要畫或模仿任何既有卡通、動漫、遊戲角色、吉祥物或名人。",
       "角色若本身有宗教或民俗身分（服飾、頭冠、法器等），依原設定保留，不刪除也不替換；一般祝福、祈福與節慶問候可以使用。",
       "自行發想的台詞、動作與道具：不寫勸人信教、要求參加宗教活動、捐獻或貶抑任何宗教；不寫選舉、政黨宣傳或政治攻擊；不加入購買連結、廣告、募款、QR code、電話、社群帳號或未指定的品牌文字。",
@@ -335,6 +340,6 @@
     if(settings.mode==="preset"&&settings.scene==="auto")settings.scene="greeting";
     return {settings,items,grids};
   }
-  const api={goatCheck,nameHints,rowRule,usedBefore,presetCandidates,prevUsedRule,similarActions,similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
+  const api={goatBank,shuffle,goatCheck,nameHints,rowRule,usedBefore,presetCandidates,prevUsedRule,similarActions,similar,balanceRule,characterDesign,attachRoles,presetShortfall,focusBrief,contentBrief,dialogueRule,styleDescription,sceneBrief,sceneName,SAFE,CELL,SPACING,cellFor,motherSize,initial,item,presetItem,releasePreset,trimEmpty,blank,printed,clone,label,autoGrids,pool,hasText,finalText,fillMissing,resize,validate,plans,prompt,duplicates,serialize,deserialize};
   if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.StickerCore=api;
 })(typeof window!=="undefined"?window:globalThis);

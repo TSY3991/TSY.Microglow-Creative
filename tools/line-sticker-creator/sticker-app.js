@@ -262,7 +262,7 @@
   const shortNote=()=>{const n=C.presetShortfall(state);return n?"這個情境預設只有 "+D.scenes[state.settings.scene].lines.length+" 句，另外 "+n+" 格留白，會由 AI 依「"+D.scenes[state.settings.scene].label+"」情境設計台詞；也可以按第四步的「讓 AI 幫我補齊台詞」先排好。":"";};
   function go(target) {
     if(target>step){
-      if(state.settings.mode==="preset"){C.fillMissing(state);renderItems();}
+      if(state.settings.mode==="preset"){C.fillMissing(state,goatRnd());renderItems();}
       if(!errors(C.validate(state,target-1)))return;
       if(target>=4&&shortNote())status(shortNote());
     }
@@ -308,9 +308,9 @@
     }
     if(key==="layoutMode"){if(el.value==="auto")state.grids=C.autoGrids(state.settings.count);renderGrids();}
     if(["textMode","nameMode"].includes(key))renderItems();
-    if(key==="series"&&state.settings.mode==="preset"){const n=C.releasePreset(state),filled=C.fillMissing(state);renderItems();status("已改為第 "+el.value+" 篇：換掉 "+n+" 句系統預設台詞，補入 "+filled+" 句新的；自行修改的台詞保留。"+shortNote());}
-    if(key==="style"&&el.value==="goat"&&state.settings.scene!=="job_newyear"&&state.settings.mode!=="manual"){state.settings.scene="job_newyear";fillScenes($("scene-search").value);if(state.settings.mode==="preset")C.fillMissing(state);renderItems();status("已選羊年賀歲特輯：台詞情境已自動改為「新年過年」；特輯規定不可含姓名或暱稱，且至少 8 張要和羊年或過年有關。");}
-    if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state);renderItems();if(filled||shortNote())status((filled?"已補入 "+filled+" 句；原有台詞未改動。":"")+shortNote());}
+    if(key==="series"&&state.settings.mode==="preset"){const n=C.releasePreset(state),filled=C.fillMissing(state,goatRnd());renderItems();status("已改為第 "+el.value+" 篇：換掉 "+n+" 句系統預設台詞，補入 "+filled+" 句新的；自行修改的台詞保留。"+shortNote());}
+    if(key==="style"&&el.value==="goat"&&state.settings.scene!=="job_newyear"&&state.settings.mode!=="manual"){state.settings.scene="job_newyear";fillScenes($("scene-search").value);if(state.settings.mode==="preset")C.fillMissing(state,goatRnd());renderItems();status("已選羊年賀歲特輯：台詞情境已自動改為「新年過年」；特輯規定不可含姓名或暱稱，且至少 8 張要和羊年或過年有關。");}
+    if(key==="scene"&&state.settings.mode==="preset"){const filled=C.fillMissing(state,goatRnd());renderItems();if(filled||shortNote())status((filled?"已補入 "+filled+" 句；原有台詞未改動。":"")+shortNote());}
     if(key==="source"&&el.value!=="photo")clearReference();
     conditions();invalidate();
     if(key==='mode'&&!$('content-update-notice').hidden)refreshContentNotice($('content-update-notice').dataset.subject||'設定');
@@ -338,7 +338,7 @@
     state.settings.prevUsed=text;$("prevUsed").value=text;invalidate();save();
     $("prev-capture-note").textContent="已記下 "+text.split("\n").length+" 句。接著可以把「第幾篇」改成下一篇，再清空或換新台詞。";
   });
-  $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state);renderItems();invalidate();status((n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。")+shortNote());});
+  $("fill-missing").addEventListener("click",()=>{const n=C.fillMissing(state,goatRnd());renderItems();invalidate();status((n?"已補入 "+n+" 句，請確認或修改。":"目前沒有可補的文字空缺；無文字格子不補台詞。")+shortNote());});
   $("apply-bulk").addEventListener("click",()=>{
     const lines=$("bulk").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     if(!lines.length)return status("請先貼上台詞。");
@@ -534,6 +534,7 @@
     await runArrange();
     $("multi-status").textContent=$("ai-status").textContent;
   }
+  function goatRnd(){return state.settings.style==="goat"?Math.random:undefined;}
   function renderAlerts() {
     const box=$("multi-alerts");box.replaceChildren();
     const blanks=state.items.slice(0,state.settings.count).filter(x=>C.hasText(state,x)&&!x.text.trim()).length,dups=C.duplicates(state);

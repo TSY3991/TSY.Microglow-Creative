@@ -215,3 +215,18 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   m.settings.style='cute';assert.equal(C6.goatCheck(m),null);
   console.log('PASS goat extras');
 }
+{ // 羊年詞庫：夠多、乾淨、不重複、不含既有 IP 角色名；預設台詞可混抽；提示詞與網站 AI 的參考詞庫會隨角色變動
+  const C7=require('../sticker-core.js'),D7=require('../sticker-data.js'),G7=require('../sticker-guard.js'),AI7=require('../sticker-ai.js');
+  assert.ok(D7.goatLines.length>=50);assert.equal(new Set(D7.goatLines).size,D7.goatLines.length);
+  for(const l of D7.goatLines){assert.deepEqual(G7.checkText(l),[],l);assert.ok(Array.from(l).length<=8,l);assert.ok(!/喜羊羊|美羊羊|懶羊羊|暖羊羊|沸羊羊|慢羊羊|灰太狼/.test(l),l);assert.ok(!D7.scenes.job_newyear.lines.includes(l),l);}
+  const mk=(ch)=>{const s=C7.initial();Object.assign(s.settings,{source:'original',kind:'human',style:'goat',mode:'preset',scene:'job_newyear',count:8,character:ch});s.grids=[8];s.items=Array.from({length:8},()=>C7.item(''));return s;};
+  const seeded=n=>()=>{n=(n*1664525+1013904223)%4294967296;return n/4294967296;};
+  for(let k=1;k<=30;k++){const x=mk('甲');C7.fillMissing(x,seeded(k));assert.ok(C7.goatCheck(x).ok);assert.equal(new Set(x.items.map(i=>i.text)).size,8);}
+  const a=mk('甲'),b=mk('甲');C7.fillMissing(a,seeded(1));C7.fillMissing(b,seeded(2));
+  assert.notDeepEqual(a.items.map(x=>x.text),b.items.map(x=>x.text));
+  const f=mk('甲');C7.fillMissing(f);assert.deepEqual(f.items.map(x=>x.text),D7.goatLines.slice(0,8));
+  assert.notEqual(C7.goatBank({character:'戴眼鏡的上班族',style:'goat',count:8},12),C7.goatBank({character:'圓臉的小貓',style:'goat',count:8},12));
+  const pa=C7.prompt(mk('戴眼鏡的上班族')),pb=C7.prompt(mk('圓臉的小貓'));assert.ok(pa.includes('可參考的羊年用語')&&pa.includes('諧音梗')&&pa!==pb);
+  const sc=AI7.payload(mk('戴眼鏡的上班族')).context.scene;assert.ok(sc.includes('羊年賀歲特輯')&&sc.includes('諧音梗')&&sc.length<=1000,String(sc.length));
+  console.log('PASS goat vocabulary');
+}
