@@ -491,8 +491,13 @@
       result.changes.forEach(c=>{(aiOrigin[c.index]=aiOrigin[c.index]||{})[c.key]=c.value;});
       aiController=null;renderItems();invalidate();showApplied(result);
     }catch(error){
-      if(revision===aiRevision){AI.restore(state,cleared);renderItems();invalidate();}
-      if(revision===aiRevision)$("ai-status").textContent=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
+      if(revision===aiRevision){
+        // 更新畫面會遞增 aiRevision；先保存失敗原因，再一次完成還原與顯示。
+        const message=controller.signal.aborted?"等待逾時，原有內容保留，請稍後再試。":error instanceof TypeError?"無法連上網站 AI，仍可手動設定；請稍後再試。":error.message;
+        aiController=null;
+        AI.restore(state,cleared);renderItems();invalidate();
+        $("ai-status").textContent=message;
+      }
     }finally{clearTimeout(timer);if(revision===aiRevision){aiController=null;aiAvailability();}}
   }
   $("ai-arrange").addEventListener("click",runArrange);
