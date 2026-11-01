@@ -239,3 +239,17 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   }
   console.log('PASS goat scene budget');
 }
+
+// PASS guard retry avoid note
+{
+  const AI = require("../sticker-ai.js"), C2 = require("../sticker-core.js");
+  const st = C2.initial(); Object.assign(st.settings,{source:"original",kind:"animal",style:"goat"}); C2.resize(st,40);
+  if (st) {
+    st.settings.character = "x".repeat(300);
+    const p = AI.payload(st, ["飲酒", "賭博相關"]);
+    if (p.context.scene.length > 1000) throw new Error("avoid scene > 1000: " + p.context.scene.length);
+    if (!/上一輪有內容不符合 LINE 規範（飲酒、賭博相關）/.test(p.context.scene)) throw new Error("avoid note missing");
+    if (/上一輪有內容/.test(AI.payload(st).context.scene)) throw new Error("avoid note leaked");
+  }
+  console.log("PASS guard retry avoid note");
+}

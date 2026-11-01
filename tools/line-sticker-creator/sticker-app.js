@@ -490,6 +490,18 @@
       if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
       let result;
       try{result=AI.applyDetailed(state,rows);}catch(error){AI.restore(state,cleared);renderItems();invalidate();$("ai-status").textContent=error.message;return;}
+      // 被 LINE 規範檢查擋下而留白的欄位，自動請 AI 避開該類內容重寫，最多再試兩次；重試失敗就保留已補入的結果。
+      for(let round=0;round<2&&result.skipped.length&&revision===aiRevision;round++){
+        const avoid=result.skipped.map(x=>x.label).filter((l,i,a)=>a.indexOf(l)===i);
+        $("ai-status").textContent="部分內容不符合 LINE 規範，正在請 AI 重新安排那幾張…";
+        try{
+          const more=await AI.request(aiEndpoint,AI.payload(state,avoid),controller.signal);
+          if(revision!==aiRevision)break;
+          const next=AI.applyDetailed(state,more);
+          result={filled:result.filled+next.filled,changes:result.changes.concat(next.changes),skipped:next.skipped};
+        }catch{break;}
+      }
+      if(revision!==aiRevision){if(/^部分內容|^正在安排/.test($("ai-status").textContent))$("ai-status").textContent="設定已變更或已取消，這次 AI 回覆未套用；請重新安排。";return;}
       result.changes.forEach(c=>{(aiOrigin[c.index]=aiOrigin[c.index]||{})[c.key]=c.value;});
       aiController=null;renderItems();invalidate();showApplied(result);
     }catch(error){

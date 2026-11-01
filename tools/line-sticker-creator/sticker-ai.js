@@ -4,16 +4,19 @@
   const D = typeof module !== "undefined" && module.exports ? require("./sticker-data.js") : root.StickerData;
   const G = typeof module !== "undefined" && module.exports ? require("./sticker-guard.js") : root.StickerContentGuard;
   // 情境欄位上限 1000 字：固定規則優先，前幾篇已用過的內容只放得下的部分。
-  function sceneText(state) {
+  function sceneText(state, avoid) {
     const base=C.sceneBrief(state.settings)+"。"+C.contentBrief(state.settings)+C.dialogueRule+C.balanceRule(state)+C.rowRule;
     // 羊年用語依剩餘字數取用：固定規則優先，放不下就少帶幾個詞，最後只留短句，確保整段不超過 1000 字。
     const goatNote=n=>"羊年賀歲特輯：台詞要多樣，"+(n?"可參考這些羊年用語（每次挑不同的組合，不要只用最前面幾個）："+C.goatBank(state.settings,n)+"；":"")+"請自己創作羊年吉祥話與諧音梗（「羊」音近陽、洋、揚、養，「咩」可當語助詞），不用卡通角色名、姓名或暱稱。";
     let goat="";
     if(state.settings.style==="goat"){for(const n of [16,12,8,4,0]){goat=goatNote(n);if(base.length+goat.length<=1000)break;}if(base.length+goat.length>1000)goat="";}
-    const room=1000-base.length-goat.length;
-    return (room>60?base+C.prevUsedRule(state,room-60):base)+goat;
+    // 上一輪被 LINE 規範檢查擋下的類型：重排時請 AI 避開（只在放得下時附上）。
+    const avoidNote=avoid&&avoid.length?"上一輪有內容不符合 LINE 規範（"+avoid.join("、")+"），這次請完全避開相關字詞與畫面。":"";
+    const fixed=base+goat+(base.length+goat.length+avoidNote.length<=1000?avoidNote:"");
+    const room=1000-fixed.length;
+    return (room>60?base+C.prevUsedRule(state,room-60):base)+goat+(fixed.length>base.length+goat.length?avoidNote:"");
   }
-  function payload(state) {
+  function payload(state, avoid) {
     const issues = C.validate(state, 2);
     if (issues.length) throw new Error(issues.map(x => x.message).join(" "));
     const s = state.settings;
@@ -22,7 +25,7 @@
     const character = joined && joined.length <= 1000 ? joined : s.character;
     return {
       count: s.count,
-      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: sceneText(state) },
+      context: { source: s.source, kind: C.label("kind", s.kind), character, style: C.styleDescription(s), customStyle: s.customStyle, scene: sceneText(state, avoid) },
       items: state.items.map((x, i) => ({ id: i + 1, text: x.text, emotion: x.emotion, action: x.action, hasText: C.hasText(state, x) }))
     };
   }
