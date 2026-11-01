@@ -230,3 +230,12 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
   const sc=AI7.payload(mk('戴眼鏡的上班族')).context.scene;assert.ok(sc.includes('羊年賀歲特輯')&&sc.includes('諧音梗')&&sc.length<=1000,String(sc.length));
   console.log('PASS goat vocabulary');
 }
+{ // 羊年特輯：各張數、最長的母圖分組與長描述下，送給後端的情境文字都不超過 1000 字，且羊年提醒仍在
+  const C8=require('../sticker-core.js'),AI8=require('../sticker-ai.js');
+  const grids={8:[8],16:[16],24:[12,12],32:[8,8,8,8],40:[8,8,8,8,8]};
+  for(const count of [8,16,24,32,40])for(const scene of ['job_newyear','festival','auto'])for(const ch of ['戴眼鏡的上班族','留著長捲髮、戴圓框眼鏡、穿格子襯衫與牛仔褲、背著大背包的二十多歲插畫家，表情常常很無奈卻很可愛'.repeat(5)]){
+    const s=C8.initial();Object.assign(s.settings,{source:'original',kind:'human',style:'goat',mode:'ai',scene,count,character:ch.slice(0,1000)});s.grids=grids[count];s.items=Array.from({length:count},()=>C8.item(''));
+    const sc=AI8.payload(s).context.scene;assert.ok(sc.length<=1000,count+' '+scene+' '+sc.length);assert.ok(sc.includes('羊年賀歲特輯')&&sc.includes('諧音梗'),count+' '+scene);
+  }
+  console.log('PASS goat scene budget');
+}

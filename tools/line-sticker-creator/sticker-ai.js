@@ -6,7 +6,10 @@
   // 情境欄位上限 1000 字：固定規則優先，前幾篇已用過的內容只放得下的部分。
   function sceneText(state) {
     const base=C.sceneBrief(state.settings)+"。"+C.contentBrief(state.settings)+C.dialogueRule+C.balanceRule(state)+C.rowRule;
-    const goat=state.settings.style==="goat"?"羊年賀歲特輯：台詞要多樣，可參考這些羊年用語（每次挑不同的組合，不要只用最前面幾個，請自己創作羊年吉祥話與諧音梗，例如「羊」音近陽、洋、揚、養，「咩」可當語助詞；不用卡通角色名、姓名或暱稱）："+C.goatBank(state.settings,16)+"。":"";
+    // 羊年用語依剩餘字數取用：固定規則優先，放不下就少帶幾個詞，最後只留短句，確保整段不超過 1000 字。
+    const goatNote=n=>"羊年賀歲特輯：台詞要多樣，"+(n?"可參考這些羊年用語（每次挑不同的組合，不要只用最前面幾個）："+C.goatBank(state.settings,n)+"；":"")+"請自己創作羊年吉祥話與諧音梗（「羊」音近陽、洋、揚、養，「咩」可當語助詞），不用卡通角色名、姓名或暱稱。";
+    let goat="";
+    if(state.settings.style==="goat"){for(const n of [16,12,8,4,0]){goat=goatNote(n);if(base.length+goat.length<=1000)break;}if(base.length+goat.length>1000)goat="";}
     const room=1000-base.length-goat.length;
     return (room>60?base+C.prevUsedRule(state,room-60):base)+goat;
   }
