@@ -442,6 +442,7 @@
     $("ai-arrange").disabled=!aiEndpoint||!$("ai-consent").checked||!!aiController;
     $("ai-cancel").hidden=!aiController;
     $("ai-arrange").textContent=aiController?"AI 安排中…":"AI 安排台詞、表情與動作";
+    $("ai-hint").textContent=!aiEndpoint?"網站 AI 尚未啟用，仍可手動填寫。":!$("ai-consent").checked?"按鈕是灰色的：請先勾選上方「同意將上述文字內容傳送至 Gemini」。":"";
   }
   function clearAI(message) {
     const hadWork=!!aiController;
@@ -472,7 +473,8 @@
     $("ai-status").textContent="已復原 "+restored+" 個 AI 補入的欄位；你之後自己改過的欄位不受影響。";
   });
   async function runArrange() {
-    if(!aiEndpoint||!$("ai-consent").checked||aiController)return;
+    if(aiController){$("ai-status").textContent="AI 還在安排中，請稍候；等不及可按「取消等待」。";return;}
+    if(!aiEndpoint||!$("ai-consent").checked)return;
     let input,cleared=[];
     try{input=AI.payload(state);}catch(error){$("ai-status").textContent=error.message;return;}
     const hasBlank=input.items.some(x=>!x.emotion.trim()||!x.action.trim()||(x.hasText&&!x.text.trim()));
@@ -484,7 +486,7 @@
     const timer=setTimeout(()=>controller.abort(),65000);
     try{
       const rows=await AI.request(aiEndpoint,input,controller.signal);
-      if(revision!==aiRevision)return;
+      if(revision!==aiRevision){if(/^正在安排/.test($("ai-status").textContent))$("ai-status").textContent="設定已變更或已取消，這次 AI 回覆未套用；請重新安排。";return;}
       if(snapshot!==JSON.stringify(C.serialize(state))){clearAI("設定已變更，請重新安排。");return;}
       let result;
       try{result=AI.applyDetailed(state,rows);}catch(error){AI.restore(state,cleared);renderItems();invalidate();$("ai-status").textContent=error.message;return;}
