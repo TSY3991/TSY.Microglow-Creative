@@ -248,8 +248,14 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
     st.settings.character = "x".repeat(300);
     const p = AI.payload(st, ["飲酒", "賭博相關"]);
     if (p.context.scene.length > 1000) throw new Error("avoid scene > 1000: " + p.context.scene.length);
-    if (!/上一輪有內容不符合 LINE 規範（飲酒、賭博相關）/.test(p.context.scene)) throw new Error("avoid note missing");
+    if (!/上一輪有內容不能用（飲酒、賭博相關）/.test(p.context.scene)) throw new Error("avoid note missing");
     if (/上一輪有內容/.test(AI.payload(st).context.scene)) throw new Error("avoid note leaked");
+  }
+  {
+    const t = C2.initial(); Object.assign(t.settings,{source:"original",kind:"animal",style:"cute",prevUsed:"羊年行大運、恭喜發財"}); C2.resize(t,8);
+    const rows = Array.from({length:8},(_,i)=>({id:i+1,text:i===0?"羊年行大運！":i===1?"恭喜 發財":"新句"+i,emotion:"笑",action:"揮手"}));
+    const r = AI.applyDetailed(t, rows);
+    if (r.skipped.length!==2 || t.items[0].text!=="" || t.items[1].text!=="" || t.items[2].text!=="新句2") throw new Error("prevUsed duplicates not skipped");
   }
   console.log("PASS guard retry avoid note");
 }

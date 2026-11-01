@@ -461,7 +461,7 @@
     });
     aiApplied={changes:result.changes};$("ai-preview").hidden=false;
     const skipped=(result.skipped||[]).map(x=>x.index+1).filter((n,i,a)=>a.indexOf(n)===i);
-    $("ai-status").textContent="AI 已補入 "+result.filled+" 個空白欄位，原有內容未更動；提示詞會直接使用這些內容。可在下方逐張修改，或按「復原這次補入」。"+(skipped.length?"第 "+skipped.join("、")+" 張的 AI 建議可能不符合 LINE 規範，已略過並保持空白；可再按一次讓 AI 重新安排，或自行填寫。":"");
+    $("ai-status").textContent="AI 已補入 "+result.filled+" 個空白欄位，原有內容未更動；提示詞會直接使用這些內容。可在下方逐張修改，或按「復原這次補入」。"+(skipped.length?"第 "+skipped.join("、")+" 張的 AI 建議可能不符合 LINE 規範或與前篇台詞重複，已略過並保持空白；可再按一次讓 AI 重新安排，或自行填寫。":"");
     status("已套用 AI 內容；尚未生成圖片。");
   }
   $("ai-consent").addEventListener("change",()=>{if(!$("ai-consent").checked)clearAI("已取消同意，已中止等待。");aiAvailability();});
@@ -493,7 +493,7 @@
       // 被 LINE 規範檢查擋下而留白的欄位，自動請 AI 避開該類內容重寫，最多再試兩次；重試失敗就保留已補入的結果。
       for(let round=0;round<2&&result.skipped.length&&revision===aiRevision;round++){
         const avoid=result.skipped.map(x=>x.label).filter((l,i,a)=>a.indexOf(l)===i);
-        $("ai-status").textContent="部分內容不符合 LINE 規範，正在請 AI 重新安排那幾張…";
+        $("ai-status").textContent="部分內容不符合規範或與前篇重複，正在請 AI 重新安排那幾張…";
         try{
           const more=await AI.request(aiEndpoint,AI.payload(state,avoid),controller.signal);
           if(revision!==aiRevision)break;

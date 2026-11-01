@@ -11,7 +11,7 @@
     let goat="";
     if(state.settings.style==="goat"){for(const n of [16,12,8,4,0]){goat=goatNote(n);if(base.length+goat.length<=1000)break;}if(base.length+goat.length>1000)goat="";}
     // 上一輪被 LINE 規範檢查擋下的類型：重排時請 AI 避開（只在放得下時附上）。
-    const avoidNote=avoid&&avoid.length?"上一輪有內容不符合 LINE 規範（"+avoid.join("、")+"），這次請完全避開相關字詞與畫面。":"";
+    const avoidNote=avoid&&avoid.length?"上一輪有內容不能用（"+avoid.join("、")+"），這次請完全避開相關字詞與畫面，並寫出全新的不同台詞。":"";
     const fixed=base+goat+(base.length+goat.length+avoidNote.length<=1000?avoidNote:"");
     const room=1000-fixed.length;
     return (room>60?base+C.prevUsedRule(state,room-60):base)+goat+(fixed.length>base.length+goat.length?avoidNote:"");
@@ -51,10 +51,13 @@
   function applyDetailed(state, rows) {
     const validated = suggestions({ items: rows }, payload(state));
     const changes = [], skipped = [];
+    const norm = t => String(t).replace(/[\s！!。.，,？?～~…]/g, "");
+    const used = new Set(C.usedBefore(state.settings).map(norm));
     validated.forEach(x => {
       const entry = state.items[x.id - 1];
       for (const key of ["text", "emotion", "action"]) {
         if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) {
+          if (key === "text" && used.has(norm(x[key]))) { skipped.push({ index: x.id - 1, key, label: "前篇已用過「" + x[key] + "」" }); continue; }
           const hits = G ? G.checkText(x[key]) : [];
           if (hits.length) { skipped.push({ index: x.id - 1, key, label: hits[0].label }); continue; }
           entry[key] = x[key]; changes.push({ index: x.id - 1, key, value: x[key] });
