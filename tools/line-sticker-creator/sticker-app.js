@@ -491,7 +491,7 @@
       let result;
       try{result=AI.applyDetailed(state,rows);}catch(error){AI.restore(state,cleared);renderItems();invalidate();$("ai-status").textContent=error.message;return;}
       // 被 LINE 規範檢查擋下而留白的欄位，自動請 AI 避開該類內容重寫，最多再試兩次；重試失敗就保留已補入的結果。
-      for(let round=0;round<3&&result.skipped.length&&revision===aiRevision;round++){
+      for(let round=0;round<4&&result.skipped.length&&revision===aiRevision;round++){
         const avoid=result.skipped.map(x=>x.label).filter((l,i,a)=>a.indexOf(l)===i);
         $("ai-status").textContent="部分內容不符合規範或與前篇重複，正在請 AI 重新安排那幾張…";
         try{
