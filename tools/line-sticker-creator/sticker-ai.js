@@ -69,7 +69,15 @@
         }
       }
     });
-    return { filled: changes.length, changes, skipped };
+    // 台詞被擋下的那一張，這次補入的表情與動作一併退回：留著它們，重排時 Gemini 得替既定的表情與動作硬配一句不同的台詞，常回空字串而整批失敗（502）。整張留白才能重新創作。
+    const blocked = new Set(skipped.filter(x => x.key === "text").map(x => x.index));
+    const kept = changes.filter(c => {
+      if (!blocked.has(c.index) || c.key === "text") return true;
+      const entry = state.items[c.index];
+      if (entry[c.key] === c.value) entry[c.key] = "";
+      return false;
+    });
+    return { filled: kept.length, changes: kept, skipped };
   }
   function apply(state, rows) { return applyDetailed(state, rows).filled; }
   // 只復原「仍等於 AI 補入值」的欄位；使用者後來改過的不動。
@@ -104,9 +112,9 @@
   async function request(url, input, signal) {
     const target = endpoint(url);
     if (!target) throw new Error("網站 AI 尚未啟用。");
-    // 502 是 Gemini 偶發的「這次輸出不完整」（筆數、欄位缺漏等），同樣內容再問一次通常就會成功：最多自動再試 2 次。
+    // 502 是 Gemini 偶發的「這次輸出不完整」（筆數、欄位缺漏等），同樣內容再問一次通常就會成功：最多自動再試 1 次。
     let response;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal });
       if (response.status !== 502) break;
     }

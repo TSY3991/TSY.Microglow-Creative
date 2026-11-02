@@ -255,7 +255,7 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
     const t = C2.initial(); Object.assign(t.settings,{source:"original",kind:"animal",style:"cute",prevUsed:"羊年行大運、恭喜發財"}); C2.resize(t,8);
     const rows = Array.from({length:8},(_,i)=>({id:i+1,text:i===0?"羊年行大運！":i===1?"恭喜 發財":"新句"+i,emotion:"笑",action:"揮手"}));
     const r = AI.applyDetailed(t, rows);
-    if (r.skipped.length!==2 || t.items[0].text!=="" || t.items[1].text!=="" || t.items[2].text!=="新句2") throw new Error("prevUsed duplicates not skipped");
+    if (r.skipped.length!==2 || t.items[0].emotion!=="" || t.items[0].action!=="" || t.items[1].emotion!=="" || t.items[2].emotion!=="笑" || t.items[0].text!=="" || t.items[1].text!=="" || t.items[2].text!=="新句2") throw new Error("prevUsed duplicates not skipped");
   }
   console.log("PASS guard retry avoid note");
 }
