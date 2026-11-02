@@ -29,9 +29,9 @@ state.settings.nameMode='shop';state.settings.name='小明麵店';assert.equal(G
 // 網站 AI 補內容：有風險的建議不套用（保持空白），其餘照常
 state.settings.nameMode='none';state.settings.name='';
 const s2=C.initial();Object.assign(s2.settings,state.settings);s2.grids=[8];s2.items=Array.from({length:8},()=>C.item(''));s2.items[0].text='我自己寫的';
-const rows=Array.from({length:8},(_,i)=>({id:i+1,text:i===1?'上YouTube':i===2?'一起參香':'早安',emotion:'微笑',action:'揮手'}));
+const rows=Array.from({length:8},(_,i)=>({id:i+1,text:i===1?'上YouTube':i===2?'一起參香':'早安'+i,emotion:'微笑',action:'揮手'}));
 const res=AI.applyDetailed(s2,rows);
-assert.equal(s2.items[0].text,'我自己寫的');assert.equal(s2.items[1].text,'');assert.equal(s2.items[2].text,'');assert.equal(s2.items[3].text,'早安');
+assert.equal(s2.items[0].text,'我自己寫的');assert.equal(s2.items[1].text,'');assert.equal(s2.items[2].text,'');assert.equal(s2.items[3].text,'早安3');
 assert.deepEqual(res.skipped.map(x=>x.index+':'+x.key).sort(),['1:text','2:text']);
 // 生成後 QA
 const qa=G.checkAfterGeneration({count:3,stickers:[{source:1},{source:null},{source:1,opaque:true,clipped:true}],expected:['早安','','收到']});

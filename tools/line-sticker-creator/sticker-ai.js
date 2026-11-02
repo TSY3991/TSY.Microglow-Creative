@@ -47,6 +47,8 @@
         if ((key !== "text" || original.hasText) && !row[key].trim()) throw new Error("AI 回傳內容不完整，原有內容保留。");
       }
       if(original.hasText&&!original.text.trim()&&Array.from(row.text).length>8)throw new Error("AI 第 "+x.id+" 句超過 8 字，尚未套用；原有內容保留。請再安排一次，或自行填入短句。");
+      // 選填的備選台詞（Worker 較新版本才有）：格式不符就忽略，不影響主要內容。
+      if (Array.isArray(x.alts)) { const alts = x.alts.filter(a => typeof a === "string").map(a => a.trim()).filter(a => a && Array.from(a).length <= 8); if (alts.length) row.alts = alts.slice(0, 3); }
       return row;
     });
     return rows.sort((a, b) => a.id - b.id);
@@ -58,14 +60,24 @@
     const changes = [], skipped = [];
     const norm = t => String(t).replace(/[\s！!。.，,？?～~…]/g, "");
     const used = new Set(C.usedBefore(state.settings).map(norm));
+    state.items.slice(0, state.settings.count).forEach(e => { if (e.text.trim()) used.add(norm(e.text)); });
     validated.forEach(x => {
       const entry = state.items[x.id - 1];
       for (const key of ["text", "emotion", "action"]) {
         if (!entry[key].trim() && (key !== "text" || C.hasText(state, entry)) && x[key]) {
-          if (key === "text" && used.has(norm(x[key]))) { skipped.push({ index: x.id - 1, key, label: "前篇已用過「" + x[key] + "」" }); continue; }
-          const hits = G ? G.checkText(x[key]) : [];
-          if (hits.length) { skipped.push({ index: x.id - 1, key, label: hits[0].label }); continue; }
-          entry[key] = x[key]; changes.push({ index: x.id - 1, key, value: x[key] });
+          // 台詞：主句不能用（前篇已用過、同組已有或有審核風險）就依序換備選句，全都不行才留白。
+          const options = key === "text" ? [x.text, ...(x.alts || [])] : [x[key]];
+          let value = "", why = null;
+          for (const option of options) {
+            if (!option) continue;
+            if (key === "text" && used.has(norm(option))) { why = why || "前篇已用過或重複「" + option + "」"; continue; }
+            const hits = G ? G.checkText(option) : [];
+            if (hits.length) { why = why || hits[0].label; continue; }
+            value = option; break;
+          }
+          if (!value) { skipped.push({ index: x.id - 1, key, label: why || "內容不符" }); continue; }
+          if (key === "text") used.add(norm(value));
+          entry[key] = value; changes.push({ index: x.id - 1, key, value });
         }
       }
     });

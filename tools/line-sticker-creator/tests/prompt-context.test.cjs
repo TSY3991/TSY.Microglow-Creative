@@ -257,5 +257,22 @@ test('透明背景去除殘邊但保留指定白色或灰色描邊，不影響�
     const r = AI.applyDetailed(t, rows);
     if (r.skipped.length!==2 || t.items[0].emotion!=="" || t.items[0].action!=="" || t.items[1].emotion!=="" || t.items[2].emotion!=="笑" || t.items[0].text!=="" || t.items[1].text!=="" || t.items[2].text!=="新句2") throw new Error("prevUsed duplicates not skipped");
   }
+  {
+    // 備選台詞：主句重複／違規時依序換備選，全部不行才留白；同組內也不重複。
+    const t = C2.initial(); Object.assign(t.settings,{source:"original",kind:"animal",style:"cute",prevUsed:"恭喜發財"}); C2.resize(t,8);
+    const rows = Array.from({length:8},(_,i)=>({id:i+1,text:"句"+i,emotion:"笑",action:"揮手"}));
+    rows[0].text="恭喜發財"; rows[0].alts=["恭喜發財！","新年快樂"];
+    rows[1].text="上YouTube"; rows[1].alts=["一起參香","平安喜樂"];
+    rows[2].text="新年快樂"; rows[2].alts=["新年快樂！","全新句"];
+    rows[3].text="恭喜發財"; rows[3].alts=["恭喜發財"];
+    const r = AI.applyDetailed(t, rows);
+    const got = t.items.map(x => x.text);
+    if (got[0] !== "新年快樂" || got[1] !== "平安喜樂") throw new Error("alts not used: " + got);
+    if (got[2] !== "全新句") throw new Error("batch dup not avoided: " + got);
+    if (got[3] !== "" || r.skipped.length !== 1 || t.items[3].emotion !== "") throw new Error("exhausted slot should stay whole-blank: " + JSON.stringify(r.skipped));
+    // 舊版 Worker（沒有 alts）仍可運作
+    const t2 = C2.initial(); Object.assign(t2.settings,{source:"original",kind:"animal",style:"cute"}); C2.resize(t2,8);
+    if (AI.applyDetailed(t2, Array.from({length:8},(_,i)=>({id:i+1,text:"甲"+i,emotion:"笑",action:"揮手"}))).filled !== 24) throw new Error("legacy rows");
+  }
   console.log("PASS guard retry avoid note");
 }
