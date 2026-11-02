@@ -104,7 +104,12 @@
   async function request(url, input, signal) {
     const target = endpoint(url);
     if (!target) throw new Error("網站 AI 尚未啟用。");
-    const response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal });
+    // 502 是 Gemini 偶發的「這次輸出不完整」（筆數、欄位缺漏等），同樣內容再問一次通常就會成功：最多自動再試 2 次。
+    let response;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch(target, { method: "POST", mode: "cors", credentials: "omit", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input), signal });
+      if (response.status !== 502) break;
+    }
     if (!response.ok) {
       const message = { 400: "請檢查角色與逐張內容。", 403: "目前網站沒有使用這項 AI 服務的權限。", 413: "內容太多，請縮短描述後再試。", 429: "AI 免費額度或使用頻率已達限制，請稍後再試；仍可手動設定。", 503: "網站 AI 尚未啟用或暫時無法使用，仍可手動設定。", 504: "AI 回覆逾時，原有內容保留，請稍後再試。" };
       const known={
