@@ -18,7 +18,7 @@
 .line-sticker-tool .cut-row input[type=range]{width:100%;accent-color:#197c70}
 .line-sticker-tool .cut-row input[type=number]{width:100%;min-height:40px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:center;-moz-appearance:textfield;appearance:textfield}
 .line-sticker-tool .cut-row input[type=number]::-webkit-outer-spin-button,.line-sticker-tool .cut-row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-@media(min-width:900px){.line-sticker-tool .crop-mother{grid-template-columns:minmax(0,600px) minmax(0,1fr)}.line-sticker-tool .crop-mother-view{position:sticky;top:12px}.line-sticker-tool .cut-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:900px){.line-sticker-tool .crop-mother{grid-template-columns:minmax(0,600px) minmax(0,1fr)}.line-sticker-tool .crop-mother-view{position:sticky;top:calc(12px + env(safe-area-inset-top,0px))}.line-sticker-tool .cut-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .line-sticker-tool .crop-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin:1.5rem 0}
 .line-sticker-tool .crop-sticker canvas,.line-sticker-tool .crop-special canvas{display:block;max-width:100%;height:auto;background-color:#f4f4f4;background-image:conic-gradient(#ddd 25%,transparent 0 50%,#ddd 0 75%,transparent 0);background-size:20px 20px;border-radius:8px}
 .line-sticker-tool [data-backdrop=dark] canvas{background:#26333a}
@@ -56,3 +56,5 @@
 .line-sticker-tool .brand-panel{min-width:0;margin:1.2rem 0;padding:1rem;border:1px solid var(--line);border-radius:16px}
 .line-sticker-tool .brand-panel input[type=range]{width:100%;accent-color:var(--teal);min-height:28px;padding:0;border:0;background:transparent}
 .line-sticker-tool #crop-brand-preview{display:block;width:100%;max-width:1110px;height:auto;background:#26333a}
+
+.line-sticker-tool .editor-overlay { padding:calc(12px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px)); }

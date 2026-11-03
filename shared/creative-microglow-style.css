@@ -86,3 +86,20 @@ body::before {
   outline: 3px solid #087f72;
   outline-offset: 4px;
 }
+
+@media (prefers-color-scheme:dark) {
+ :root { --creative-style-version:20261103b; color-scheme:dark; --page:#102527; --panel:#193336; --panel-soft:#203d40; --ink:#f6f3e9; --ink-soft:#d4e2de; --muted:#b5c9c4; --line:#526b6b; --teal:#8ee0cf; --teal-dark:#8ee0cf; --teal-soft:#204d48; --gold:#ffcf70; --gold-soft:#493b20; --shadow:0 4px 0 #203d40,0 12px 28px #0008; --soft-shadow:0 3px 0 #203d40,0 8px 18px #0007; --deep-shadow:0 5px 0 #203d40,0 16px 34px #0009; }
+ body { background:radial-gradient(ellipse at 12% 0%,#22463f 0,transparent 48%),linear-gradient(150deg,#102527,#193336 65%,#142c2e); }
+ body::before { background:radial-gradient(ellipse at 100% 6%,#493b2077,transparent 44%); }
+ :is(.lobby-hero,.detail-hero,.tool-card,.image-tool-card,.detail-section,.creative-dialog,.empty-state) { background-color:var(--panel); color:var(--ink); border-color:var(--line); }
+ :is(.lobby-hero,.detail-hero) { background-image:linear-gradient(145deg,#193336,#203d40); }
+ :is(.lobby-hero,.detail-hero)::after { background:radial-gradient(circle at 35% 35%,rgba(142,224,207,.12),transparent 30%),conic-gradient(from 210deg,#204d48,#203d40,#493b20,#204d48); }
+ :is(.lobby-hero,.detail-hero) { background-image:linear-gradient(145deg,#193336,#203d40); }
+ :is(.lobby-hero,.detail-hero)::after { background:radial-gradient(circle at 35% 35%,rgba(142,224,207,.12),transparent 30%),conic-gradient(from 210deg,#204d48,#203d40,#493b20,#204d48); }
+ :is(.back-link,.tool-button) { background:#203d40; color:#d4e2de; border-color:#526b6b; box-shadow:0 3px 0 #102527,inset 0 1px 0 #ffffff14; }
+ :is(.primary-link,.copy-button,.tool-filters [aria-pressed="true"]) { background:linear-gradient(#8ee0cf,#63c4b1); color:#102527; border-color:#8ee0cf; box-shadow:0 4px 0 #193336; }
+ .tool-button:disabled { background:#203d40; color:#b5c9c4; border-color:#526b6b; }
+ .eyebrow { background:#493b20; color:#ffcf70; } .tool-tags span,.platform-badges .tool-tags span { background:#204d48; color:#d4e2de; }
+ .detail-button,.tool-title-button,.tool-category,.tool-card-copy p { color:#8ee0cf; } .prompt-details pre { background:#203d40; color:#d4e2de; }
+ html body :is(a,button,[tabindex]):focus-visible { outline-color:#ffcf70 !important; box-shadow:0 0 0 5px #ffcf7033; }
+}
