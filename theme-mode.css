@@ -5,3 +5,13 @@
 .tsy-theme-toggle:focus-visible { outline: 3px solid #0a887e; outline-offset: 3px; }
 :root[data-theme="dark"] .tsy-theme-toggle { color: var(--ink, #f6f3e9); background: var(--panel, #193336); border-color: var(--line, #526b6b); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
 :root[data-theme="dark"] .tsy-theme-toggle:focus-visible { outline-color: #8ee0cf; }
+
+/* Full light/dark text contrast review. */
+
+:root:not([data-theme="dark"]){--muted:#56645f;--teal:#08766e}
+:root:not([data-theme="dark"]) .primary-link{background:#07635e;color:#fff}
+:root:not([data-theme="dark"]) .tool-button:not(:disabled):is(.copy-button,[aria-pressed="true"]){background:#07635e;color:#fff}
+:root:not([data-theme="dark"]) .tool-button:disabled{color:#52604d}
+:root:not([data-theme="dark"]) .line-sticker-tool :is(.button.primary,.step-nav [aria-current],.mode-tabs button[aria-selected="true"],.sticker-kind-tabs button[aria-selected="true"]){background:#07635e;color:#fff}
+:root:not([data-theme="dark"]) .line-sticker-tool :is(input,textarea)::placeholder{color:#52604d}
+:root[data-theme="dark"] .line-sticker-tool :is(.step-actions,footer){background:#193336;color:#d4e2de}
